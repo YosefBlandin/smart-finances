@@ -1,0 +1,11 @@
+<button
+  [type]="type"
+  [disabled]="disabled"
+  class="button"
+  [ngClass]="buttonClass"
+>
+  <ng-content *ngIf="!isLoading"></ng-content>
+  <ng-container *ngIf="isLoading">
+    <app-loading-spinner [color]="spinnerColor"></app-loading-spinner>
+  </ng-container>
+</button>
