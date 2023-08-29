@@ -1,6 +1,6 @@
-<header>
-  <nav>
-    <section>
+<header class="header">
+  <nav class="nav-container">
+    <section class="nav-container__title-container">
       <p>
         <strong> Smart Finances </strong>
       </p>
@@ -22,47 +22,61 @@
       </ul>
     </section>
 
-    <section>
-      <button>Log In</button>
-      <button>Register</button>
+    <section class="nav-container__buttons-container">
+      <app-button [spinnerColor]="'black'" [buttonClass]="'secondary'">
+        Log In
+      </app-button>
+      <app-button [spinnerColor]="'black'" [buttonClass]="'primary'">
+        Get in touch
+      </app-button>
     </section>
   </nav>
 </header>
 
-<main>
-  <h1>
-    Manage your personal finances in a <strong>smart</strong> and
-    <strong>easily</strong> way
-  </h1>
-
-  <section>
-    <app-button [spinnerColor]="'black'" [buttonClass]="'primary'">
-      Sign up for free
-    </app-button>
-
-    <hr />
-    <p>Or continue with</p>
+<main class="home-container">
+  <section class="home-container__hero-container">
     <section>
-      <app-button [spinnerColor]="'black'" [buttonClass]="'secondary'">
-        Google
-      </app-button>
-      <app-button [spinnerColor]="'black'" [buttonClass]="'secondary'">
-        Apple
-      </app-button>
+      <section class="hero-container__titles-section">
+        <span>Impacting lives across the world</span>
+        <h1>Where you can know the destiny of your money</h1>
+        <h2>Build the future that you want</h2>
+      </section>
+
+      <section class="hero-container__buttons-container">
+        <app-button [spinnerColor]="'black'" [buttonClass]="'primary'">
+          Try for free
+        </app-button>
+        <app-button [spinnerColor]="'black'" [buttonClass]="'secondary'">
+          Get in touch
+        </app-button>
+      </section>
+    </section>
+
+    <section>
+      <picture>
+        <img
+          src="../../../../../assets/svg/chart.svg"
+          alt="Charts about excelent results"
+        />
+      </picture>
     </section>
   </section>
 
-  <section>
-    <picture>
-      <img
-        src="../../../../../assets/svg/chart.svg"
-        alt="Charts about excelent results"
-      />
-    </picture>
+  <section class="home-container__banner">
+    <section class="banner-container">
+      <h2>Track your finances as never before</h2>
+      <p>
+        By tracking your spending, you get a clear picture of your financial
+        situation. This helps you to create a budget and plan your finances
+        better. When you have a clear idea of how much money you have coming in
+        and going out, you can allocate your funds better, pay off debts, and
+        save for future expenses.
+      </p>
+    </section>
   </section>
 </main>
 
-<footer>
+<footer class="footer">
   <p>Smart Finances All Rights Reserved</p>
   <p>Developed By <strong>Yosef Blandin</strong></p>
 </footer>
