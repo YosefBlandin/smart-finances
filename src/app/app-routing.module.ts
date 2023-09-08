@@ -3,10 +3,20 @@ import { RouterModule, Routes } from '@angular/router';
 
 const routes: Routes = [
 	{
-		path: "**",
+		path: "dashboard",
+		loadChildren: () => import("./modules/dashboard/dashboard.module")
+			.then((module) => module.DashboardModule)
+	},
+	{
+		path: "home",
 		loadChildren: () => import("./modules/home/home.module")
 			.then((module) => module.HomeModule)
-	}
+	},
+	{
+		path: "**",
+		pathMatch: "prefix",
+		redirectTo: "home"
+	},
 ];
 
 @NgModule({
