@@ -1,162 +1,220 @@
-<section class="bg-black">
-
-  <section class="xl:max-w-[1400px] mx-auto">
-
-    <header class="flex justify-center items-center bg-black py-16 px-4">
-      <p class="text-white text-center font-black text-xl">Yosef Blandin</p>
-    </header>
-
-    <section class="mt-16 px-4 bg-black text-white min-h-[30vh]">
-      <h1 class="text-3xl md:text-6xl font-black mb-2 text-center">A Balance Between <br /> Speed And Scalability
-      </h1>
-      <p class="text-lg md:text-2xl font-medium mb-6 text-center">Scalable frontend that evolves with your
-        business.</p>
-      <section class="flex gap-x-6 justify-center">
-        <button mat-stroked-button color="primary"
-          class="font-bold h-11 min-h-11 2xl:h-12 2xl:min-h-12 w-full md:w-48 border-[--mat-badge-background-color]">
-          Get Inspired
-        </button>
-        <button mat-raised-button color="accent" class="font-bold h-11 min-h-11 2xl:h-12 2xl:min-h-12 w-full md:w-48">
-          Reach Out
-        </button>
-      </section>
-    </section>
-  </section>
-
-  <section class="mt-20 bg-white pt-20 pb-20 px-2">
-    <h1 class="text-3xl md:text-6xl font-black mb-2 text-center">
-      Get Inspired
-    </h1>
-    <p class="text-lg md:text-2xl font-medium mb-0 text-center">Quality, Scalability, Speed.</p>
-    <section class="flex justify-center mt-20">
-      @for (project of professionalProjects; track project.name; let index = $index;) {
-      <article class="project-card relative bg-gray-100 w-full h-full max-w-screen-xl object-cover">
-        <img class="object-cover" [src]="project.image" [alt]="project.name" />
-        <section class="bottom-card-section absolute left-1/2 transform -translate-x-1/2 bottom-20">
-          <h3 class="text-center font-black text-4xl mb-2">{{ project.name }}</h3>
-          <p class="text-center text-xl mb-4">{{ project.description }}</p>
-          <section class="flex justify-center gap-4 mx-auto">
-            <button mat-flat-button color="primary"
-              class="font-bold h-11 min-h-11 2xl:h-12 2xl:min-h-12 w-full md:w-48 rounded-full">
-              Learn More
-            </button>
-            <button mat-raised-button color="accent"
-              class="font-bold h-11 min-h-11 2xl:h-12 2xl:min-h-12 w-full md:w-48 rounded-full">
-              Visit
-            </button>
-          </section>
-        </section>
-      </article>
-      }
-    </section>
-  </section>
-
-  <section class="bg-black">
-    <section class=" text-white py-20 xl:max-w-[1400px] mx-auto">
-      <h2 class="text-3xl md:text-6xl font-black mb-2 text-center">
-        Recommendations
-      </h2>
-      <p class="text-lg md:text-2xl font-medium mb-0 text-center">
-        People Who Trust
-      </p>
-      <section class="w-full flex gap-x-10 gap-y-4 flex-wrap md:flex-nowrap px-4 md:px-0 pt-20">
-        @for (person of recommendations; track person.name) {
-        <article class="relative w-full bg-[rgb(245,245,245)] text-black rounded-2xl shadow-lg shadow-gray-800">
-          <section class="h-60">
-            <img class="object-cover h-full w-full rounded-t-2xl" [src]="person.bgImg"
-              [alt]="person.name + 'Company background'" />
-          </section>
-          <img class="-mt-36 rounded-full mx-auto w-52 h-52 object-cover" [src]="person.profileImg"
-            [alt]="person.name" />
-          <section class="-mt-12 py-20 px-10">
-            <p class="text-2xl font-bold text-center mb-2">{{ person.name }}</p>
-            <p class="text-md font-bold text-center mb-4 opacity-80">{{ person.occupation }}</p>
-            <p class="text-md">{{ person.description }}</p>
-          </section>
-        </article>
-        }
-      </section>
-
-    </section>
-  </section>
-
-  <section class="bg-white text-black pt-20">
+<section class="bg-[--mat-badge-background-color]">
     <section class="xl:max-w-[1400px] mx-auto">
-      <h2 class="text-3xl md:text-6xl font-black mb-2 text-center">
-        About Me
-      </h2>
-      <p class="text-lg md:text-2xl font-medium mb-0 text-center">
-        Who is Yosef Blandin.
-      </p>
-      <section class="w-full flex gap-x-10 flex-wrap lg:flex-nowrap pt-0 pb-10">
-        <article
-          class="flex flex-col lg:grid lg:grid-cols-12 items-center xl:justify-items-center gap-x-16 px-4 lg:px-10 py-20 rounded-lg">
-          <section class="lg:col-start-1 lg:col-end-5 self-center">
-            <img class="rounded-full max-w-72 lg:max-w-sm " src="../../../../assets/images/yosef-img.jpg"
-              alt="Yosef Blandin" />
-          </section>
-          <section class="lg:ml-2 mt-6 lg:mt-0 lg:col-start-6 xl:col-start-5 lg:col-end-13 self-center">
-            <h2 class="font-extrabold text-xl md:text-3xl mb-6">I'm a Front-end developer for
-              SaaS businesses.</h2>
-            <p class="text-xl mb-6">
-              I'm the professional they come when businesses have difficulties creating its products
-              interfaces, putting the design on code and when designing its project front-end architecture
-              based on
-              business
-              needs.
+        <header
+            class="flex justify-center items-center bg-[--mat-badge-background-color] py-16 px-4"
+        >
+            <p class="text-black text-center font-black text-xl">
+                Smart Finances
             </p>
+        </header>
 
-            <p class="text-xl mb-6">
-              Working with many clients teached me the importance of a good architecture, good practices,
-              agile
-              methodologies and last but not least, having an understanding of the business gives a
-              cutting-edge advantage in order to create solutions that scale.
+        <section
+            class="mt-16 px-4 bg-[--mat-badge-background-color] text-black min-h-[30vh]"
+        >
+            <h1 class="text-3xl md:text-6xl font-black mb-2 text-center">
+                Saving Is Easy <br />
+                With The Right Tool
+            </h1>
+            <p class="text-lg md:text-2xl font-medium mb-6 text-center">
+                Being financially protected requires awareness of our expenses
             </p>
-
-            <p class="text-xl mb-6">
-              I noticed how often developers are focused just on the technical perspective, ignoring all
-              the aspects I
-              mentioned before, that's why I decided to be different, learning the things that aren't
-              technical is
-              equally important in order to think out of the box, hence, providing a greater value to the
-              business.
-            </p>
-          </section>
-
-        </article>
-      </section>
-    </section>
-
-
-  </section>
-
-
-
-  <footer class="pt-10 md:pt-20 pb-14 bg-[--mat-badge-background-color]">
-    <section class="xl:max-w-[1400px] mx-auto text-black">
-
-      <section class="flex flex-col md:flex-row items-center justify-center mt-8 px-4 md:px-14">
-
-        <section class="flex flex-col max-w-lg">
-          <p class=" font-black text-xl mb-4 text-center">Yosef Blandin</p>
-          <p class=" text-md text-center">Skilled in Front-end Technologies such as Angular,
-            React.js, Redux,
-            EcmaScript,
-            TypeScript, JavaScript, Jest and React Native (Expo) for mobile applications.
-          </p>
-
-          <section class="flex justify-between mt-4">
-            <a href="https://www.linkedin.com/in/yosefblandin/" class=" cursor-pointer underline">LinkedIn</a>
-            <a href="https://github.com/YosefBlandin" class=" cursor-pointer underline">Github</a>
-            <a href="https://medium.com/@yosefblandin" class=" cursor-pointer underline">Medium</a>
-          </section>
+            <section class="flex gap-x-6 justify-center">
+                <button
+                    mat-raised-button
+                    color="accent"
+                    class="font-bold h-11 min-h-11 2xl:h-12 2xl:min-h-12 w-full md:w-48"
+                >
+                    Start Free Trial
+                </button>
+            </section>
         </section>
-
-      </section>
-
-
-      <p class=" font-bold text-center mt-16">© All Rights Reserved.</p>
     </section>
 
-  </footer>
+    <section class="mt-20 bg-white pt-20 pb-20 px-2">
+        <h2 class="text-xl md:text-4xl font-black mb-2 text-center">
+            Financial Sharpness
+        </h2>
+        <p class="text-lg md:text-xl font-medium mb-0 text-center">
+            Predict Your Future.
+        </p>
+        <section class="flex justify-center mt-20">
+            @for (cardItem of cardItems; track cardItem.name; let index =
+            $index;) {
+            <article
+                class="project-card relative bg-gray-100 w-full h-full max-w-screen-xl object-cover"
+            >
+                <img
+                    class="object-cover"
+                    [src]="cardItem.image"
+                    [alt]="cardItem.name"
+                />
+                <section
+                    class="bottom-card-section absolute left-1/2 transform -translate-x-1/2 bottom-20"
+                >
+                    <h3 class="text-center font-black text-4xl mb-2">
+                        {{ cardItem.title }}
+                    </h3>
+                    <p class="text-center text-xl mb-4">
+                        {{ cardItem.subtitle }}
+                    </p>
+                    <section class="flex justify-center gap-4 mx-auto">
+                        <button
+                            mat-flat-button
+                            color="primary"
+                            class="font-bold h-11 min-h-11 2xl:h-12 2xl:min-h-12 w-full md:w-48 rounded-full"
+                        >
+                            Learn More
+                        </button>
+                        <button
+                            mat-raised-button
+                            color="accent"
+                            class="font-bold h-11 min-h-11 2xl:h-12 2xl:min-h-12 w-full md:w-48 rounded-full"
+                        >
+                            Visit
+                        </button>
+                    </section>
+                </section>
+            </article>
+            }
+        </section>
+    </section>
+
+    <section class="bg-black">
+        <section class="text-white py-20 xl:max-w-[1400px] mx-auto">
+            <h2 class="text-3xl md:text-6xl font-black mb-2 text-center">
+                Recommendations
+            </h2>
+            <p class="text-lg md:text-2xl font-medium mb-0 text-center">
+                People Who Trust
+            </p>
+            <section
+                class="w-full flex gap-x-10 gap-y-4 flex-wrap md:flex-nowrap px-4 md:px-0 pt-20"
+            >
+                @for (person of recommendations; track person.name) {
+                <article
+                    class="relative w-full bg-[rgb(245,245,245)] text-black rounded-2xl shadow-lg shadow-gray-800"
+                >
+                    <section class="h-60">
+                        <img
+                            class="object-cover h-full w-full rounded-t-2xl"
+                            [src]="person.bgImg"
+                            [alt]="person.name + 'Company background'"
+                        />
+                    </section>
+                    <img
+                        class="-mt-36 rounded-full mx-auto w-52 h-52 object-cover"
+                        [src]="person.profileImg"
+                        [alt]="person.name"
+                    />
+                    <section class="-mt-12 py-20 px-10">
+                        <p class="text-2xl font-bold text-center mb-2">
+                            {{ person.name }}
+                        </p>
+                        <p
+                            class="text-md font-bold text-center mb-4 opacity-80"
+                        >
+                            {{ person.occupation }}
+                        </p>
+                        <p class="text-md">{{ person.description }}</p>
+                    </section>
+                </article>
+                }
+            </section>
+        </section>
+    </section>
+
+    <section class="bg-white text-black pt-20">
+        <section class="xl:max-w-[1400px] mx-auto">
+            <h2 class="text-3xl md:text-6xl font-black mb-2 text-center">
+                About Me
+            </h2>
+            <p class="text-lg md:text-2xl font-medium mb-0 text-center">
+                Who is Yosef Blandin.
+            </p>
+            <section
+                class="w-full flex gap-x-10 flex-wrap lg:flex-nowrap pt-0 pb-10"
+            >
+                <article
+                    class="flex flex-col lg:grid lg:grid-cols-12 items-center xl:justify-items-center gap-x-16 px-4 lg:px-10 py-20 rounded-lg"
+                >
+                    <section class="lg:col-start-1 lg:col-end-5 self-center">
+                        <img
+                            class="rounded-full max-w-72 lg:max-w-sm"
+                            src="../../../../assets/images/yosef-img.jpg"
+                            alt="Yosef Blandin"
+                        />
+                    </section>
+                    <section
+                        class="lg:ml-2 mt-6 lg:mt-0 lg:col-start-6 xl:col-start-5 lg:col-end-13 self-center"
+                    >
+                        <h2 class="font-extrabold text-xl md:text-3xl mb-6">
+                            I'm a Front-end developer for SaaS businesses.
+                        </h2>
+                        <p class="text-xl mb-6">
+                            I'm the professional they come when businesses have
+                            difficulties creating its products interfaces,
+                            putting the design on code and when designing its
+                            project front-end architecture based on business
+                            needs.
+                        </p>
+
+                        <p class="text-xl mb-6">
+                            Working with many clients teached me the importance
+                            of a good architecture, good practices, agile
+                            methodologies and last but not least, having an
+                            understanding of the business gives a cutting-edge
+                            advantage in order to create solutions that scale.
+                        </p>
+
+                        <p class="text-xl mb-6">
+                            I noticed how often developers are focused just on
+                            the technical perspective, ignoring all the aspects
+                            I mentioned before, that's why I decided to be
+                            different, learning the things that aren't technical
+                            is equally important in order to think out of the
+                            box, hence, providing a greater value to the
+                            business.
+                        </p>
+                    </section>
+                </article>
+            </section>
+        </section>
+    </section>
+
+    <footer class="pt-10 md:pt-20 pb-14 bg-[--mat-badge-background-color]">
+        <section class="xl:max-w-[1400px] mx-auto text-black">
+            <section
+                class="flex flex-col md:flex-row items-center justify-center mt-8 px-4 md:px-14"
+            >
+                <section class="flex flex-col max-w-lg">
+                    <p class="font-black text-xl mb-4 text-center">
+                        Smart Finances
+                    </p>
+                    <p class="text-md text-center">
+                        Made for people who want to become financially secure.
+                    </p>
+
+                    <section class="flex justify-between mt-4">
+                        <a
+                            href="https://www.linkedin.com/in/yosefblandin/"
+                            class="cursor-pointer underline"
+                            >LinkedIn</a
+                        >
+                        <a
+                            href="https://github.com/YosefBlandin"
+                            class="cursor-pointer underline"
+                            >Github</a
+                        >
+                        <a
+                            href="https://medium.com/@yosefblandin"
+                            class="cursor-pointer underline"
+                            >Medium</a
+                        >
+                    </section>
+                </section>
+            </section>
+
+            <p class="font-bold text-center mt-16">© All Rights Reserved.</p>
+        </section>
+    </footer>
 </section>

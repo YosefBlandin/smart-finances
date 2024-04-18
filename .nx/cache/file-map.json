@@ -82,6 +82,48 @@
   "fileMap": {
     "nonProjectFiles": [],
     "projectFileMap": {
+      "e2e": [
+        {
+          "file": "e2e/.eslintrc.json",
+          "hash": "16745924632016023354"
+        },
+        {
+          "file": "e2e/cypress.config.ts",
+          "hash": "12586416982398116375",
+          "deps": [
+            "npm:@nx/cypress",
+            "npm:cypress"
+          ]
+        },
+        {
+          "file": "e2e/project.json",
+          "hash": "3818272022930899229"
+        },
+        {
+          "file": "e2e/src/e2e/app.cy.ts",
+          "hash": "2588220647650846806"
+        },
+        {
+          "file": "e2e/src/fixtures/example.json",
+          "hash": "11785586596216172004"
+        },
+        {
+          "file": "e2e/src/support/app.po.ts",
+          "hash": "11157016311132186162"
+        },
+        {
+          "file": "e2e/src/support/commands.ts",
+          "hash": "5397443931564808659"
+        },
+        {
+          "file": "e2e/src/support/e2e.ts",
+          "hash": "1054106023200826784"
+        },
+        {
+          "file": "e2e/tsconfig.json",
+          "hash": "14696052795473435316"
+        }
+      ],
       "smart-finances": [
         {
           "file": ".angular/cache/17.1.1/vite/deps/@angular_cdk_stepper.js",
@@ -485,15 +527,11 @@
         },
         {
           "file": ".gitignore",
-          "hash": "3009140142791806673"
+          "hash": "3067887321736876610"
         },
         {
           "file": "LICENSE",
           "hash": "12842049877250234949"
-        },
-        {
-          "file": "README.md",
-          "hash": "9897275118121782606"
         },
         {
           "file": "jest.config.ts",
@@ -1036,7 +1074,7 @@
         },
         {
           "file": "src/app/landing/pages/home/home.component.html",
-          "hash": "9536682339754034920"
+          "hash": "13909496801456399572"
         },
         {
           "file": "src/app/landing/pages/home/home.component.spec.ts",
@@ -1047,7 +1085,7 @@
         },
         {
           "file": "src/app/landing/pages/home/home.component.ts",
-          "hash": "16398154666281191071",
+          "hash": "11990137608665147678",
           "deps": [
             "npm:@angular/common",
             "npm:@angular/core",
@@ -1302,7 +1340,7 @@
         },
         {
           "file": "src/assets/theme.scss",
-          "hash": "9679960547944633755"
+          "hash": "15534144448050818816"
         },
         {
           "file": "src/environments/environment.development.ts",
@@ -1318,7 +1356,7 @@
         },
         {
           "file": "src/index.html",
-          "hash": "16244417146033226964"
+          "hash": "9858785697319001074"
         },
         {
           "file": "src/main.ts",
@@ -1357,48 +1395,6 @@
         {
           "file": "tsconfig.spec.json",
           "hash": "16287279946930924495"
-        }
-      ],
-      "e2e": [
-        {
-          "file": "e2e/.eslintrc.json",
-          "hash": "16745924632016023354"
-        },
-        {
-          "file": "e2e/cypress.config.ts",
-          "hash": "12586416982398116375",
-          "deps": [
-            "npm:@nx/cypress",
-            "npm:cypress"
-          ]
-        },
-        {
-          "file": "e2e/project.json",
-          "hash": "3818272022930899229"
-        },
-        {
-          "file": "e2e/src/e2e/app.cy.ts",
-          "hash": "2588220647650846806"
-        },
-        {
-          "file": "e2e/src/fixtures/example.json",
-          "hash": "11785586596216172004"
-        },
-        {
-          "file": "e2e/src/support/app.po.ts",
-          "hash": "11157016311132186162"
-        },
-        {
-          "file": "e2e/src/support/commands.ts",
-          "hash": "5397443931564808659"
-        },
-        {
-          "file": "e2e/src/support/e2e.ts",
-          "hash": "1054106023200826784"
-        },
-        {
-          "file": "e2e/tsconfig.json",
-          "hash": "14696052795473435316"
         }
       ]
     }
