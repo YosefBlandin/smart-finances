@@ -1,0 +1,63 @@
+<div [class.pointer-events-none]="disabledCustom" [class.opacity-60]="disabledCustom" class=" {{ containerClasses }}">
+
+  @if(type === 'textarea') {
+
+  <mat-form-field class="w-full" [appearance]="inputAppareance" [tabIndex]="tabIndex">
+    <mat-label>{{
+      label
+      }}</mat-label>
+    <textarea matInput [placeholder]="placeholder" [(ngModel)]="value" [disabled]="disabled"
+      [autocomplete]="autoComplete" (input)="onInput($event)" [class.border]="formControl.errors && formControl.touched"
+      [class.border-red-500]="formControl.errors && formControl.touched"></textarea>
+  </mat-form-field>
+
+  } @else if(type === 'date') {
+
+  <mat-form-field class="w-full" [appearance]="inputAppareance" [tabIndex]="tabIndex">
+    <mat-label>{{
+      label
+      }}</mat-label>
+    <input matInput [matDatepicker]="picker" class="text-sm" [placeholder]="placeholder" [(ngModel)]="value"
+      [disabled]="disabled" [autocomplete]="autoComplete" (input)="onInput($event)"
+      [class.border]="formControl.errors && formControl.touched"
+      [class.border-red-500]="formControl.errors && formControl.touched" [min]="toDate(minDate)" [max]="toDate(maxDate)"
+      [class.opacity-60]="disabled">
+    <mat-datepicker-toggle matIconSuffix [for]="picker" a></mat-datepicker-toggle>
+    <mat-datepicker #picker></mat-datepicker>
+  </mat-form-field>
+
+  } @else {
+  <mat-form-field class="w-full" [appearance]="inputAppareance" [tabIndex]="tabIndex">
+    <mat-label>{{
+      label
+      }}</mat-label>
+    <input matInput [type]="includeVisibilityEye && isVisible() ? 'text' : type" [placeholder]="placeholder"
+      [(ngModel)]="value" [disabled]="disabled" [autocomplete]="autoComplete" (input)="onInput($event)"
+      [class.opacity-60]="disabled" [errorStateMatcher]="errorStateMatcher" />
+    @if (includeVisibilityEye && type === "password") {
+    <mat-icon class="cursor-pointer" matSuffix (click)="onToggleVisibility($event)">{{isVisible() ? 'visibility' :
+      'visibility_off'}}</mat-icon>
+    }
+    <mat-error>
+      @if (formControl.getError('required')) {
+
+      <span>Este campo requerido</span>
+
+      } @else if (formControl.getError('maxlength')) {
+
+      <span>Ingrese máximo {{ formControl.errors?.['maxlength'].requiredLength }} {{
+        formControl.errors?.['maxlength'].requiredLength <= 1 ? "carácter" : "caracteres" }}</span>
+
+          } @else if (formControl.getError('minlength')) {
+
+          <span>Ingrese mínimo {{ formControl.errors?.['minlength'].requiredLength }} {{
+            formControl.errors?.['minlength'].requiredLength <= 1 ? "carácter" : "caracteres" }}</span>
+
+              } @else if(formControl.errors) {
+              <span>{{ getObjPropValue(formControl.errors) }}</span>
+              }
+    </mat-error>
+  </mat-form-field>
+  }
+
+</div>

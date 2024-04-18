@@ -1,0 +1,8 @@
+.user-avatar-container {
+	position: relative;
+}
+
+.user-avatar-menu {
+	position: absolute;
+	right: 0;
+}
