@@ -3064,3 +3064,35 @@
 [NX Daemon Server] - 2024-04-18T19:49:31.158Z - [WATCHER]: Stopping the watcher for /home/work-user/smart-finances (sources)
 [NX Daemon Server] - 2024-04-18T19:49:31.162Z - [WATCHER]: Stopping the watcher for /home/work-user/smart-finances (outputs)
 [NX Daemon Server] - 2024-04-18T19:49:31.162Z - Server stopped because: "Lock file changed"
+[NX Daemon Server] - 2024-04-18T19:51:45.469Z - Started listening on: /tmp/4943449a1f190eee03fa/d.sock
+[NX Daemon Server] - 2024-04-18T19:51:45.473Z - [WATCHER]: Subscribed to changes within: /home/work-user/smart-finances (native)
+[NX Daemon Server] - 2024-04-18T19:51:45.476Z - Established a connection. Number of open connections: 1
+[NX Daemon Server] - 2024-04-18T19:51:45.478Z - Established a connection. Number of open connections: 2
+[NX Daemon Server] - 2024-04-18T19:51:45.482Z - Closed a connection. Number of open connections: 1
+[NX Daemon Server] - 2024-04-18T19:51:45.485Z - [REQUEST]: Client Request for Project Graph Received
+[NX Daemon Server] - 2024-04-18T19:51:45.488Z - [REQUEST]: Updated workspace context based on watched changes, recomputing project graph...
+[NX Daemon Server] - 2024-04-18T19:51:45.488Z - [REQUEST]: 
+[NX Daemon Server] - 2024-04-18T19:51:45.488Z - [REQUEST]: 
+[NX Daemon Server] - 2024-04-18T19:51:45.643Z - [REQUEST]: Responding to the client. project-graph
+[NX Daemon Server] - 2024-04-18T19:51:45.663Z - Done responding to the client project-graph
+[NX Daemon Server] - 2024-04-18T19:51:45.664Z - Handled REQUEST_PROJECT_GRAPH. Handling time: 158. Response time: 21.
+[NX Daemon Server] - 2024-04-18T19:51:45.665Z - Time taken for 'total for creating and serializing project graph' 157.866019ms
+[NX Daemon Server] - 2024-04-18T19:51:45.748Z - [REQUEST]: Client Request for Project Graph Received
+[NX Daemon Server] - 2024-04-18T19:51:45.749Z - [REQUEST]: Responding to the client. project-graph
+[NX Daemon Server] - 2024-04-18T19:51:45.753Z - Time taken for 'total for creating and serializing project graph' 0.8516009999999596ms
+[NX Daemon Server] - 2024-04-18T19:51:45.758Z - Done responding to the client project-graph
+[NX Daemon Server] - 2024-04-18T19:51:45.759Z - Handled REQUEST_PROJECT_GRAPH. Handling time: 1. Response time: 10.
+[NX Daemon Server] - 2024-04-18T19:51:45.791Z - [REQUEST]: Client Request for Project Graph Received
+[NX Daemon Server] - 2024-04-18T19:51:45.791Z - [REQUEST]: Responding to the client. project-graph
+[NX Daemon Server] - 2024-04-18T19:51:45.793Z - Time taken for 'total for creating and serializing project graph' 0.3527169999999842ms
+[NX Daemon Server] - 2024-04-18T19:51:45.794Z - Done responding to the client project-graph
+[NX Daemon Server] - 2024-04-18T19:51:45.795Z - Handled REQUEST_PROJECT_GRAPH. Handling time: 0. Response time: 4.
+[NX Daemon Server] - 2024-04-18T19:51:46.062Z - [REQUEST]: Responding to the client. handleRequestFileData
+[NX Daemon Server] - 2024-04-18T19:51:46.062Z - Done responding to the client handleRequestFileData
+[NX Daemon Server] - 2024-04-18T19:51:46.062Z - Handled REQUEST_FILE_DATA. Handling time: 1. Response time: 0.
+[NX Daemon Server] - 2024-04-18T19:51:46.458Z - Closed a connection. Number of open connections: 0
+[NX Daemon Server] - 2024-04-18T19:52:17.739Z - [WATCHER]: .gitignore was modified
+[NX Daemon Server] - 2024-04-18T19:52:17.740Z - [WATCHER]: Processing file changes in outputs
+[NX Daemon Server] - 2024-04-18T19:52:17.740Z - [WATCHER]: Stopping the watcher for /home/work-user/smart-finances (sources)
+[NX Daemon Server] - 2024-04-18T19:52:17.740Z - [WATCHER]: Stopping the watcher for /home/work-user/smart-finances (outputs)
+[NX Daemon Server] - 2024-04-18T19:52:17.740Z - Server stopped because: "Stopping the daemon the set of ignored files changed (native)"
