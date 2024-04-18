@@ -1,0 +1,201 @@
+<div class="mat-elevation-z2 w-100 overflow-x-scroll" [class.overflow-hidden-custom]="isLoadingDeleteRow">
+
+
+  @if (isLoadingData) {
+  <section class="flex gap-4">
+    <div class="skeleton-box w-full" style="height: 30px;"></div>
+    <div class="skeleton-box w-40" style="height: 30px;"></div>
+  </section>
+  <div>
+    <table class="w-full">
+      <thead>
+        <tr>
+          <th>
+            <div class="skeleton-box w-100 rounded"></div>
+          </th>
+          <th>
+            <div class="skeleton-box w-100 rounded"></div>
+          </th>
+          <th>
+            <div class="skeleton-box w-100 rounded"></div>
+          </th>
+          <th>
+            <div class="skeleton-box w-100 rounded"></div>
+          </th>
+          <th>
+            <div class="skeleton-box w-100 rounded"></div>
+          </th>
+          <th>
+            <div class="skeleton-box w-100 rounded"></div>
+          </th>
+        </tr>
+      </thead>
+
+      <tbody class="skeleton-body">
+        <tr>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+          <td>
+            <div class="skeleton-box w-100 rounded"></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  } @else {
+  <section class="flex flex-col md:flex-row md:justify-between items-center gap-x-8 px-4 py-2 pt-6 w-full">
+    <mat-form-field style="width: 100%;" class="max-w-lg w-full" appearance="outline">
+      <mat-label>Filtrado por busqueda</mat-label>
+      <input matInput (keyup)="applyFilter($event)" placeholder="Filtrar por busqueda" #input>
+    </mat-form-field>
+
+    <ng-content select="[tableHeaderButtons]">
+
+    </ng-content>
+
+  </section>
+  <table mat-table matSort [dataSource]="matData" class="mat-elevation-z8 table"
+    (matSortChange)="handleSortData($event)">
+
+
+    @for (column of matData.data[0] | keyvalue ; track $index) {
+    <ng-container [matColumnDef]="returnAsString(column.key)">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header class="capitalize"> {{ column.key }} </th>
+
+      @if (column.key === "acciones" && column.value) {
+      <td mat-cell *matCellDef="let element">
+        <smart-finances-data-table-actions-component (_handleAction)="handleAction($event)" [actions]="column.value" />
+      </td>
+      } @else {
+      <td mat-cell *matCellDef="let element"> {{ element[returnAsString(column.key)] }} </td>
+      }
+    </ng-container>
+    }
+
+    <tr mat-header-row *matHeaderRowDef="getObjectKeys(matData.data[0])"></tr>
+
+    <tr mat-row *matRowDef="let row; columns: getObjectKeys(matData.data[0]);" (click)="handleRowClick(row.id)"
+      class="hover:bg-gray-100" [class.skeleton-box]="row.id === rowIdClicked() && isLoadingDeleteRow"
+      [ngStyle]="{height: row.id === rowIdClicked() && isLoadingDeleteRow && '52px'}">
+    </tr>
+
+    <tr class="mat-row h-32" *matNoDataRow>
+      <td class="mat-cell text-center" colspan="12">No se han encontrado usuarios</td>
+    </tr>
+  </table>
+  }
+  <mat-paginator [pageSizeOptions]="pageSizeOptions"></mat-paginator>
+</div>

@@ -1,0 +1,88 @@
+.overflow-hidden-custom {
+  overflow-x: hidden !important;
+}
+
+td {
+  max-width: 200px;
+  white-space: wrap;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-box {
+  height: 1em;
+  margin: 20px;
+  position: relative;
+  overflow: hidden;
+  background-color: #e8e8e8;
+}
+
+.skeleton-box::after {
+  z-index: 10;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.2) 20%,
+    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: shimmer 1s infinite;
+  content: '';
+}
+
+.skeleton-box td::after {
+  z-index: 10;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.2) 20%,
+    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: shimmer 1s infinite;
+  content: '';
+}
+
+.skeleton-body {
+  padding: 40px;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.skeleton-body thead tr {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.skeleton-body th,
+.skeleton-body td {
+  padding: 8px;
+  margin: 8px;
+  border: 1px solid #ddd; /* Add borders to cells */
+}
+
+.skeleton-body th {
+  margin: 10px;
+  background-color: #f2f2f2; /* Header background color */
+}
+
+.skeleton-footer {
+  display: grid;
+  grid-template-columns: 1fr 0.2fr;
+}

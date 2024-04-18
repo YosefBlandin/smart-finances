@@ -1,0 +1,25 @@
+<div class="relative inline-block text-left">
+  <div>
+    <button tabindex="0" (blur)="hiddeMenu()" (click)="handleToggleMenu()" type="button"
+      class="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+      id="menu-button" aria-expanded="true" aria-haspopup="true">
+
+      <mat-icon class="cursor-pointer">person</mat-icon>
+    </button>
+  </div>
+
+  <div
+    class="absolute right-0 opacity-0 scale-95 z-[100] mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none transition ease-out duration-100 pointer-events-none"
+    [class.opacity-100]="showMenu" [class.scale-100]="showMenu" [class.ease-in]="!showMenu"
+    [class.pointer-events-auto]="showMenu">
+    <div class="py-1">
+      <button
+        class="text-gray-700 block px-4 py-3 text-sm text-left hover:bg-gray-50 transition-all duration-100 w-full"
+        type="menu" (click)="_handleNavigate('change-password')">Cambiar
+        contraseña</button>
+      <button type="button"
+        class="text-gray-700 block px-4 py-3 text-left text-sm hover:bg-gray-50 transition-all duration-100 w-full"
+        type="menu" id="menu-item-3" (click)="_handleLogout()">Cerrar sesión</button>
+    </div>
+  </div>
+</div>

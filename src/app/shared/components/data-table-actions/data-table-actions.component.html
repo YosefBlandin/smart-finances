@@ -1,0 +1,6 @@
+<div class="flex items-center">
+	@for (action of actions; track $index) {
+	<mat-icon (click)="handleAction(action.actionName, elementIndex)" class="mr-2 cursor-pointer">{{ action.icon
+		}}</mat-icon>
+	}
+</div>

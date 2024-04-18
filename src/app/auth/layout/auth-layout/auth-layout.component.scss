@@ -1,0 +1,20 @@
+.hero-section {
+  display: none;
+}
+
+.content-section {
+  height: 100%;
+}
+
+@media screen and (min-width: 1024px) {
+  .layout-container {
+    display: grid;
+    height: 100vh;
+    grid-template-columns: 0.5fr 1fr;
+  }
+  .hero-section {
+    display: flex;
+    flex-direction: column;
+    background-color: #000;
+  }
+}
