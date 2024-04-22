@@ -14,7 +14,7 @@ import {
   ɵɵdefineInjector,
   ɵɵdefineNgModule,
   ɵɵdirectiveInject
-} from "./chunk-HJCMLZGO.js";
+} from "./chunk-R2QZJ24Z.js";
 import {
   Observable,
   ReplaySubject,
@@ -23,10 +23,10 @@ import {
   asyncScheduler,
   switchMap,
   throttleTime
-} from "./chunk-WSA2QMXP.js";
+} from "./chunk-E2H5IIOR.js";
 import {
   __async
-} from "./chunk-SFFCLR5V.js";
+} from "./chunk-JN3CWD3G.js";
 
 // node_modules/ngx-echarts/fesm2022/ngx-echarts.mjs
 var ChangeFilterV2 = class {
@@ -505,7 +505,7 @@ var provideEcharts = () => {
   return {
     provide: NGX_ECHARTS_CONFIG,
     useFactory: () => ({
-      echarts: () => import("./echarts-AQIGTU2B.js")
+      echarts: () => import("./echarts-7SG6BBOD.js")
     })
   };
 };

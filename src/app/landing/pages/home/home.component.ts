@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { MatButton } from '@angular/material/button';
-import { BrowserModule } from '@angular/platform-browser';
 import { ButtonComponent } from '@shared/components';
 
 @Component({
@@ -11,7 +10,7 @@ import { ButtonComponent } from '@shared/components';
     templateUrl: './home.component.html',
     styleUrl: './home.component.css',
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent {
     public isContainerAnimation = false;
     public cardItems: any[] = [
         {
@@ -49,19 +48,4 @@ export class HomeComponent implements OnInit {
             bgImg: '../../../../assets/images/nsur-bg.jpeg',
         },
     ];
-
-    ngOnInit(): void {
-        this.startCarousel();
-    }
-
-    private startCarousel() {
-        setInterval(() => {
-            // const leftElement = this.professionalProjects[0];
-            // const centerElement = this.professionalProjects[1];
-            // const rightElement = this.professionalProjects[2];
-            // this.professionalProjects[0] = centerElement;
-            // this.professionalProjects[1] = rightElement;
-            // this.professionalProjects[2] = leftElement;
-        }, 3000);
-    }
 }

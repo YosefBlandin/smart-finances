@@ -1,4 +1,4 @@
-import "./chunk-SFFCLR5V.js";
+import "./chunk-JN3CWD3G.js";
 
 // node_modules/jwt-decode/build/esm/index.js
 var InvalidTokenError = class extends Error {

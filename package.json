@@ -39,6 +39,7 @@
     "@angular-eslint/template-parser": "~17.0.0",
     "@angular/cli": "~17.1.0",
     "@angular/compiler-cli": "~17.1.0",
+    "@angular/fire": "^17.0.1",
     "@angular/language-service": "~17.1.0",
     "@angular/material": "^17.1.2",
     "@nx/angular": "17.3.0",

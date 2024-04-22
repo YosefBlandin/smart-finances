@@ -30,6 +30,7 @@
     "@angular-eslint/template-parser": "~17.0.0",
     "@angular/cli": "~17.1.0",
     "@angular/compiler-cli": "~17.1.0",
+    "@angular/fire": "^17.0.1",
     "@angular/language-service": "~17.1.0",
     "@nx/cypress": "17.3.1",
     "@nx/eslint": "17.3.1",
@@ -127,7 +128,7 @@
       "smart-finances": [
         {
           "file": ".gitignore",
-          "hash": "3067887321736876610"
+          "hash": "9440066397234596368"
         },
         {
           "file": "LICENSE",
@@ -150,11 +151,11 @@
         },
         {
           "file": "package-lock.json",
-          "hash": "608099626953892569"
+          "hash": "8972527744844037847"
         },
         {
           "file": "package.json",
-          "hash": "12124358504134697861",
+          "hash": "6091141014705107002",
           "deps": [
             "npm:@angular/animations",
             "npm:@angular/cdk",
@@ -184,6 +185,7 @@
             "npm:@angular-eslint/template-parser",
             "npm:@angular/cli",
             "npm:@angular/compiler-cli",
+            "npm:@angular/fire",
             "npm:@angular/language-service",
             "npm:@nx/cypress",
             "npm:@nx/eslint",
@@ -433,7 +435,7 @@
         },
         {
           "file": "src/app/app.component.ts",
-          "hash": "5189919517839963342",
+          "hash": "11075265092473206023",
           "deps": [
             "npm:@angular/core",
             "npm:@angular/router"
@@ -441,12 +443,13 @@
         },
         {
           "file": "src/app/app.config.ts",
-          "hash": "18298578741287004829",
+          "hash": "15401999430889540844",
           "deps": [
             "npm:@angular/core",
             "npm:@angular/router",
             "npm:@angular/common",
-            "npm:@angular/platform-browser"
+            "npm:@angular/platform-browser",
+            "npm:@angular/fire"
           ]
         },
         {
@@ -685,12 +688,11 @@
         },
         {
           "file": "src/app/landing/pages/home/home.component.ts",
-          "hash": "11990137608665147678",
+          "hash": "6617286213022731409",
           "deps": [
             "npm:@angular/common",
             "npm:@angular/core",
-            "npm:@angular/material",
-            "npm:@angular/platform-browser"
+            "npm:@angular/material"
           ]
         },
         {
@@ -895,6 +897,10 @@
           "hash": "3244421341483603138"
         },
         {
+          "file": "src/assets/images/prototype.svg",
+          "hash": "4305656547251494002"
+        },
+        {
           "file": "src/assets/images/smart-finances.png",
           "hash": "3620002845171675080"
         },
@@ -908,11 +914,11 @@
         },
         {
           "file": "src/environments/environment.development.ts",
-          "hash": "11874920319776579197"
+          "hash": "5024045266566056125"
         },
         {
           "file": "src/environments/environment.ts",
-          "hash": "4828676443111327420"
+          "hash": "16799186967100591190"
         },
         {
           "file": "src/favicon.ico",
@@ -959,14 +965,6 @@
         {
           "file": "tsconfig.spec.json",
           "hash": "16287279946930924495"
-        },
-        {
-          "file": ".angular/cache/17.1.1/vite/deps_temp_a0d714f7/package.json",
-          "hash": "8630294688235076505"
-        },
-        {
-          "file": "src/assets/images/prototype.svg",
-          "hash": "4305656547251494002"
         }
       ]
     }
