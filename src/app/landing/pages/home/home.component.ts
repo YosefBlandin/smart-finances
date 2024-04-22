@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { MatButton } from '@angular/material/button';
+import { Router } from '@angular/router';
 import { ButtonComponent } from '@shared/components';
 
 @Component({
@@ -11,6 +12,8 @@ import { ButtonComponent } from '@shared/components';
     styleUrl: './home.component.css',
 })
 export class HomeComponent {
+    constructor(private router: Router) {}
+
     public isContainerAnimation = false;
     public cardItems: any[] = [
         {
@@ -48,4 +51,8 @@ export class HomeComponent {
             bgImg: '../../../../assets/images/nsur-bg.jpeg',
         },
     ];
+
+    public navigateToLogin() {
+        this.router.navigate(['auth']);
+    }
 }

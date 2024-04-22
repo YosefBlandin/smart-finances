@@ -506,7 +506,7 @@
         },
         {
           "file": "src/app/auth/pages/login/login.component.html",
-          "hash": "9260302996569166984"
+          "hash": "5297596180588122671"
         },
         {
           "file": "src/app/auth/pages/login/login.component.scss",
@@ -521,13 +521,15 @@
         },
         {
           "file": "src/app/auth/pages/login/login.component.ts",
-          "hash": "7260233866039817508",
+          "hash": "12062310433306470649",
           "deps": [
             "npm:@angular/core",
             "npm:@angular/material",
             "npm:@angular/router",
             "npm:@angular/forms",
-            "npm:@angular/common"
+            "npm:@angular/common",
+            "npm:@angular/fire",
+            "npm:rxjs"
           ]
         },
         {
@@ -677,7 +679,7 @@
         },
         {
           "file": "src/app/landing/pages/home/home.component.html",
-          "hash": "2590757247919987169"
+          "hash": "5100063113146768987"
         },
         {
           "file": "src/app/landing/pages/home/home.component.spec.ts",
@@ -688,11 +690,12 @@
         },
         {
           "file": "src/app/landing/pages/home/home.component.ts",
-          "hash": "6617286213022731409",
+          "hash": "9934637920941187143",
           "deps": [
             "npm:@angular/common",
             "npm:@angular/core",
-            "npm:@angular/material"
+            "npm:@angular/material",
+            "npm:@angular/router"
           ]
         },
         {
@@ -965,6 +968,10 @@
         {
           "file": "tsconfig.spec.json",
           "hash": "16287279946930924495"
+        },
+        {
+          "file": "src/assets/images/logo.jpg",
+          "hash": "3644576348644573819"
         }
       ]
     }
