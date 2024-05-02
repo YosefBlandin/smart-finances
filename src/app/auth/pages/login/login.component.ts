@@ -24,7 +24,13 @@ import { LoginService } from '../../services/login/login.service';
 import { ButtonComponent, InputComponent } from '@shared/components';
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
-import { Auth, User, user, authState } from '@angular/fire/auth';
+import {
+    Auth,
+    User,
+    user,
+    authState,
+    createUserWithEmailAndPassword,
+} from '@angular/fire/auth';
 import { Subscription } from 'rxjs';
 @Component({
     selector: 'smart-finances-login',
@@ -46,23 +52,15 @@ import { Subscription } from 'rxjs';
     styleUrl: './login.component.scss',
 })
 export class LoginComponent implements OnInit, OnDestroy {
-    constructor(private LoginService: LoginService, private router: Router) {
-        this.userSubscription = this.user$.subscribe((aUser: User | null) => {
-            console.log(aUser);
-        });
-    }
-    private auth: Auth = inject(Auth);
-    private user$ = user(this.auth);
+    constructor(private LoginService: LoginService, private router: Router) {}
     private userSubscription!: Subscription;
-    private authState$ = authState(this.auth);
-    private authStateSubscription!: Subscription;
 
     public isLoading: WritableSignal<boolean> = signal(false);
     public loginForm: FormGroup<{
-        username: FormControl<string>;
+        email: FormControl<string>;
         password: FormControl<string>;
     }> = new FormGroup({
-        username: new FormControl('', {
+        email: new FormControl('', {
             nonNullable: true,
             validators: [Validators.required, Validators.maxLength(40)],
         }),
@@ -80,9 +78,7 @@ export class LoginComponent implements OnInit, OnDestroy {
         });
     }
 
-    ngOnDestroy() {
-        this.userSubscription.unsubscribe();
-    }
+    ngOnDestroy() {}
 
     public handleLogin(): void {
         this.isLoading.set(true);
@@ -93,8 +89,6 @@ export class LoginComponent implements OnInit, OnDestroy {
     }
 
     private handleLoginResponse(response: string | number): void {
-        console.log(response);
-
         this.router.navigate(['admin/dashboard']);
     }
 
