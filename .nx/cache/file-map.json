@@ -242,7 +242,7 @@
         },
         {
           "file": "src/app/admin/layout/dashboard-layout/dashboard-layout.component.html",
-          "hash": "9889749375232676099"
+          "hash": "9668557142410181020"
         },
         {
           "file": "src/app/admin/layout/dashboard-layout/dashboard-layout.component.spec.ts",
@@ -288,7 +288,7 @@
         },
         {
           "file": "src/app/admin/pages/dashboard/dashboard.component.html",
-          "hash": "9697831687522698070"
+          "hash": "4420363870851109252"
         },
         {
           "file": "src/app/admin/pages/dashboard/dashboard.component.spec.ts",
@@ -299,11 +299,10 @@
         },
         {
           "file": "src/app/admin/pages/dashboard/dashboard.component.ts",
-          "hash": "460843154409718572",
+          "hash": "503554169334560538",
           "deps": [
             "npm:@angular/core",
-            "npm:echarts",
-            "npm:ngx-echarts"
+            "npm:@angular/material"
           ]
         },
         {
@@ -999,6 +998,10 @@
         {
           "file": "tsconfig.spec.json",
           "hash": "16287279946930924495"
+        },
+        {
+          "file": "src/assets/images/budget.svg",
+          "hash": "14371167210176649462"
         }
       ]
     }

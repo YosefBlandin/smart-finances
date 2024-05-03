@@ -1,13 +1,37 @@
 <section>
-	<section>
-		<h5 class="text-lg font-bold">Servicios Frecuentes</h5>
-		<p class="text-md mb-4"></p>
-		<article class="bg-[#fafafa] rounded-lg max-w-lg shadow-md">
-			<div [theme]="theme" echarts (chartInit)="onChartInit($event)" [options]="options"
-				[loadingOpts]="loadingOptions" [loading]="false"></div>
-		</article>
+    <section class="flex justify-between items-center mb-20">
+        <h5 class="text-xl font-bold">Budgets</h5>
+        <button
+            mat-flat-button
+            class="h-[52px] w-full max-w-[170px]"
+            color="primary"
+        >
+            New Budget
+        </button>
+    </section>
+    <section class="flex">
+        <article class="bg-white rounded-lg w-full md:max-w-xs p-8">
+            <picture class="mb-8 flex justify-center">
+                <img
+                    class="w-20 rounded-xl"
+                    src="../../../../assets/images/budget.svg"
+                />
+            </picture>
+            <section class="mb-4 text-center">
+                <p class="mb-2 font-medium text-md text-gray-500">2024/05/03</p>
+                <h6 class="mb-2 font-bold text-lg">Emigration Plan</h6>
+                <p class="mb-2 font-medium text-lg">1500$ / 5000$ (USD)</p>
+            </section>
 
-
-
-	</section>
+            <section class="flex justify-center items-center">
+                <button
+                    mat-flat-button
+                    class="h-[52px] w-full max-w-[170px]"
+                    color="primary"
+                >
+                    See Details
+                </button>
+            </section>
+        </article>
+    </section>
 </section>

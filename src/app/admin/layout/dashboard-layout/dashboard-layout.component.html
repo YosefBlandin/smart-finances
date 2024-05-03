@@ -45,7 +45,7 @@
     </mat-sidenav>
 
     <header
-        class="px-8 h-32 flex justify-between items-center"
+        class="px-8 h-32 xl:max-w-[80vw] mx-auto flex justify-between items-center"
         (click)="toggleSidenav($event, false)"
     >
         @if(!isDesktop) {
@@ -69,7 +69,10 @@
         />
     </header>
 
-    <div class="p-8 min-h-[90vh]" (click)="toggleSidenav($event, false)">
+    <div
+        class="p-8 min-h-[90vh] xl:max-w-[80vw] mx-auto"
+        (click)="toggleSidenav($event, false)"
+    >
         <router-outlet></router-outlet>
     </div>
 </mat-sidenav-container>
