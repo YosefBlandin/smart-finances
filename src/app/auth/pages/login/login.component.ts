@@ -93,8 +93,26 @@ export class LoginComponent implements OnInit, OnDestroy {
     }
 
     private handleLoginError(error: HttpErrorResponse): void {
-        this.errorMessage = error.message[0];
+        console.log(error.message);
+        this.errorMessage = this.handleErrorMessage(error.message);
         this.isLoading.set(false);
+    }
+
+    private handleErrorMessage(errorMessage: string): string {
+        const isString =
+            typeof errorMessage === 'string' && errorMessage.length > 0;
+        const isInvalidEmail =
+            isString && errorMessage.includes('invalid-email');
+        const isInvalidCredential =
+            isString && errorMessage.includes('invalid-credential');
+
+        if (isInvalidEmail) {
+            return 'Invalid email';
+        } else if (isInvalidCredential) {
+            return 'Invalid email or password';
+        }
+
+        return 'Something went wrong!';
     }
 
     public handleGoRegister(): void {
