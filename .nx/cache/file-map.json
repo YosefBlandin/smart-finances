@@ -242,7 +242,7 @@
         },
         {
           "file": "src/app/admin/layout/dashboard-layout/dashboard-layout.component.html",
-          "hash": "13475461269898590172"
+          "hash": "9889749375232676099"
         },
         {
           "file": "src/app/admin/layout/dashboard-layout/dashboard-layout.component.spec.ts",
@@ -567,7 +567,7 @@
         },
         {
           "file": "src/app/auth/services/login/login.service.ts",
-          "hash": "11728265852274004313",
+          "hash": "9953415695944068653",
           "deps": [
             "npm:@angular/common",
             "npm:@angular/core",

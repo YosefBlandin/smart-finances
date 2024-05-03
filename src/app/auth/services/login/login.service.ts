@@ -9,6 +9,7 @@ import {
     Auth,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
+    signOut,
 } from '@angular/fire/auth';
 
 @Injectable({
@@ -85,7 +86,9 @@ export class LoginService {
     }
 
     public logout(): void {
-        this.tokenManagement.clearAccessToken();
-        this.router.navigateByUrl('auth/login');
+        signOut(this.auth).then(() => {
+            this.tokenManagement.clearAccessToken();
+            this.router.navigateByUrl('auth/login');
+        });
     }
 }
