@@ -299,7 +299,7 @@
         },
         {
           "file": "src/app/admin/pages/dashboard/dashboard.component.ts",
-          "hash": "503554169334560538",
+          "hash": "16258405075243406499",
           "deps": [
             "npm:@angular/core",
             "npm:@angular/material"
@@ -926,6 +926,10 @@
           "hash": "3244421341483603138"
         },
         {
+          "file": "src/assets/images/budget.svg",
+          "hash": "14371167210176649462"
+        },
+        {
           "file": "src/assets/images/logo.jpg",
           "hash": "3644576348644573819"
         },
@@ -998,10 +1002,6 @@
         {
           "file": "tsconfig.spec.json",
           "hash": "16287279946930924495"
-        },
-        {
-          "file": "src/assets/images/budget.svg",
-          "hash": "14371167210176649462"
         }
       ]
     }
