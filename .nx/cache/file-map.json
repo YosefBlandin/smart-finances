@@ -453,7 +453,7 @@
         },
         {
           "file": "src/app/app.routes.ts",
-          "hash": "3174178203085621833",
+          "hash": "16807311808600561339",
           "deps": [
             "npm:@angular/router"
           ]
@@ -611,7 +611,23 @@
         },
         {
           "file": "src/app/core/interceptors/index.ts",
-          "hash": "7972037722109123873"
+          "hash": "13382759234353401715"
+        },
+        {
+          "file": "src/app/core/interceptors/retry/retry.interceptor.spec.ts",
+          "hash": "7173812766715419097",
+          "deps": [
+            "npm:@angular/core",
+            "npm:@angular/common"
+          ]
+        },
+        {
+          "file": "src/app/core/interceptors/retry/retry.interceptor.ts",
+          "hash": "8364186896812326109",
+          "deps": [
+            "npm:@angular/common",
+            "npm:rxjs"
+          ]
         },
         {
           "file": "src/app/core/interceptors/session/session.interceptor.spec.ts",
