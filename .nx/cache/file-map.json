@@ -611,7 +611,7 @@
         },
         {
           "file": "src/app/core/interceptors/index.ts",
-          "hash": "13382759234353401715"
+          "hash": "2929442974142777664"
         },
         {
           "file": "src/app/core/interceptors/retry/retry.interceptor.spec.ts",
@@ -924,7 +924,7 @@
         },
         {
           "file": "src/app/shared/components/user-form-modal/user-form-modal.component.ts",
-          "hash": "17262369175143939957",
+          "hash": "11206749729987089235",
           "deps": [
             "npm:@angular/core",
             "npm:@angular/material",
@@ -1018,6 +1018,10 @@
         {
           "file": "tsconfig.spec.json",
           "hash": "16287279946930924495"
+        },
+        {
+          "file": "src/app/core/types/budget/index.ts",
+          "hash": "7532911346690773275"
         }
       ]
     }
