@@ -1,0 +1,158 @@
+.header-container {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+  background-color: #fecf41;
+}
+
+.header-container p {
+  font-weight: bolder;
+  font-size: 1.2rem;
+}
+
+.title-h2 {
+  font-size: 1.5rem;
+}
+
+.paragraph {
+  font-size: 1.2rem;
+}
+
+.home-container {
+  margin: 0;
+}
+
+.hero-bg {
+  background-color: #fecf41;
+}
+
+.image-container {
+  &__img {
+    max-width: 300px;
+  }
+}
+
+.hero-container {
+  margin: 0 auto;
+  padding: 0 20px 40px 20px;
+  &__cta-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    h1 {
+      font-size: 2.5rem;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    p {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+  }
+}
+
+.beta-container {
+  margin: 0 auto;
+  padding: 40px 20px;
+  &__title-h2 {
+    text-align: center;
+    margin-bottom: 5px;
+  }
+
+  &__paragraph {
+    text-align: center;
+  }
+}
+
+.footer-bg {
+  background-color: #fafafa;
+}
+
+.footer-container {
+  margin: 0 auto;
+  padding: 40px 20px;
+
+  &__social-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    p {
+      text-align: center;
+    }
+  }
+}
+
+.social-container {
+  &__links-container {
+    display: flex;
+    column-gap: 20px;
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .hero-container {
+    max-width: 800px;
+  }
+
+  .beta-container {
+    max-width: 800px;
+  }
+
+  .footer-container {
+    max-width: 800px;
+  }
+}
+
+@media screen and (min-width: 1400px) {
+  .hero-container {
+    max-width: 1000px;
+  }
+
+  .beta-container {
+    max-width: 1000px;
+  }
+
+  .footer-container {
+    max-width: 1000px;
+  }
+}
+
+@media screen and (min-width: 1600px) {
+  .hero-container {
+    max-width: 1400px;
+  }
+
+  .beta-container {
+    max-width: 1400px;
+  }
+
+  .footer-container {
+    max-width: 1400px;
+  }
+}
+
+.prototype-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  &__description-container {
+    h2 {
+      font-size: 1.8rem;
+    }
+
+    p {
+      font-size: 1.2rem;
+    }
+  }
+}
+
+@media screen and (min-width: 768px) {
+  .prototype-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+}
