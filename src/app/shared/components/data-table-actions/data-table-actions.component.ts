@@ -6,7 +6,7 @@ import { MatIcon } from '@angular/material/icon';
   standalone: true,
   imports: [MatIcon],
   templateUrl: './data-table-actions.component.html',
-  styleUrl: './data-table-actions.component.css',
+  styleUrl: './data-table-actions.component.scss',
 })
 export class DataTableActionsComponent {
   @Input() public actions: {

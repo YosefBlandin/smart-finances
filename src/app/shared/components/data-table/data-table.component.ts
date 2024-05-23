@@ -20,6 +20,7 @@ import { MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { DataSourceType, DataTableActionType } from './data-table.types';
 import { InputComponent } from '../input/input.component';
+import { SnakeCaseToNormalPipe } from '../../pipes/snakeCaseToNormal/snake-case-to-normal.pipe';
 @Component({
   selector: 'app-data-table',
   standalone: true,
@@ -35,10 +36,16 @@ import { InputComponent } from '../input/input.component';
     DataTableActionsComponent,
     MatFormField,
     MatLabel,
+    SnakeCaseToNormalPipe,
     MatInputModule,
   ],
+  providers: [
+    {
+      provide: SnakeCaseToNormalPipe,
+    },
+  ],
   templateUrl: './data-table.component.html',
-  styleUrl: './data-table.component.css',
+  styleUrl: './data-table.component.scss',
 })
 export class DataTableComponent implements OnInit, OnChanges, AfterViewInit {
   @ViewChild(MatPaginator, { static: false })
@@ -65,6 +72,8 @@ export class DataTableComponent implements OnInit, OnChanges, AfterViewInit {
   public matData = new MatTableDataSource(this.dataSource);
   private actionClicked = signal<string>('');
   public rowIdClicked = signal<number | undefined>(undefined);
+
+  constructor() {}
 
   ngOnInit(): void {
     this.dataSource = this.dataSource.map((data: DataSourceType<unknown>) => ({

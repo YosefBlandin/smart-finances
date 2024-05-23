@@ -186,7 +186,7 @@
     @for (column of matData.data[0] | keyvalue ; track $index) {
     <ng-container [matColumnDef]="returnAsString(column.key)">
       <th mat-header-cell *matHeaderCellDef mat-sort-header class="capitalize">
-        {{ column.key }}
+        {{ column.key | snakeCaseToNormal }}
       </th>
 
       @if (column.key === "actions" && column.value) {
@@ -218,9 +218,7 @@
     ></tr>
 
     <tr class="mat-row h-32" *matNoDataRow>
-      <td class="mat-cell text-center" colspan="12">
-        There's no results found
-      </td>
+      <td class="mat-cell text-center" colspan="12">No results found</td>
     </tr>
   </table>
   }
