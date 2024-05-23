@@ -1,19 +1,37 @@
+import { AsyncPipe, CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
+import {
+  FormBuilder,
+  FormControl,
+  FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
+} from '@angular/forms';
+import { BrowserModule } from '@angular/platform-browser';
+import { InputComponent } from '../../../shared';
+import { MatButton } from '@angular/material/button';
+import { BehaviorSubject } from 'rxjs';
 
 @Component({
   selector: 'app-budgets',
   standalone: true,
-  imports: [],
+  imports: [ReactiveFormsModule, InputComponent, MatButton, AsyncPipe],
   templateUrl: './budgets.component.html',
   styleUrl: './budgets.component.scss',
 })
 export class BudgetsComponent {
   constructor(private formBuilder: FormBuilder) {}
-  public BudgetForm = this.formBuilder.group({
-    name: this.formBuilder.control('', []),
-    amount: this.formBuilder.control('', []),
+  public expenseForm = this.formBuilder.group({
+    expense_name: this.formBuilder.control('', []),
+    expense_amount: this.formBuilder.control('', []),
   });
 
-  public addNewBudget() {}
+  public expenses = new BehaviorSubject<any[]>([]);
+
+  public addNewExpense() {
+    this.expenses.next([
+      ...this.expenses.getValue(),
+      this.expenseForm.getRawValue(),
+    ]);
+  }
 }

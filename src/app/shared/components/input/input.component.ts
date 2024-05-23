@@ -60,7 +60,7 @@ export class MyErrorStateMatcher implements ErrorStateMatcher {
     provideNativeDateAdapter(),
   ],
   templateUrl: './input.component.html',
-  styleUrl: './input.component.css',
+  styleUrl: './input.component.scss',
 })
 export class InputComponent implements OnInit, ControlValueAccessor, Validator {
   @Input() public label = '';

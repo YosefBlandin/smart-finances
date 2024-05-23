@@ -1,1 +1,30 @@
 <p>budgets works!</p>
+<section>
+  <form [formGroup]="expenseForm">
+    <app-input
+      label="Expense Name*"
+      containerClasses="mb-4"
+      formControlName="expense_name"
+      type="text"
+      tabIndex="1"
+      placeholder="What did you spend in?"
+    />
+    <app-input
+      label="Amount (USD)*"
+      containerClasses="mb-4"
+      formControlName="expense_amount"
+      type="number"
+      tabIndex="2"
+      placeholder="How much did you spend?"
+    />
+    <button mat-flat-button (click)="addNewExpense()" color="primary">
+      Create Expense
+    </button>
+  </form>
+
+  <section>
+    @for (expense of expenses | async; track expense.name) {
+    <p>{{ expense.expense_name }} | {{ expense.expense_amount }}</p>
+    }
+  </section>
+</section>
