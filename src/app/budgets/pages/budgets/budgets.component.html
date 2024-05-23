@@ -23,8 +23,6 @@
   </form>
 
   <section>
-    @for (expense of expenses | async; track expense.name) {
-    <p>{{ expense.expense_name }} | {{ expense.expense_amount }}</p>
-    }
+    <app-data-table [dataSource]="expenses()" />
   </section>
 </section>

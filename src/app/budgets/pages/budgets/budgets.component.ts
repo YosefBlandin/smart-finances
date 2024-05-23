@@ -1,21 +1,24 @@
-import { AsyncPipe, CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { AsyncPipe } from '@angular/common';
+import { Component, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import {
-  FormBuilder,
-  FormControl,
-  FormGroup,
-  FormsModule,
-  ReactiveFormsModule,
-} from '@angular/forms';
-import { BrowserModule } from '@angular/platform-browser';
-import { InputComponent } from '../../../shared';
+  DataTableActionsComponent,
+  DataTableComponent,
+  InputComponent,
+} from '../../../shared';
 import { MatButton } from '@angular/material/button';
-import { BehaviorSubject } from 'rxjs';
 
 @Component({
   selector: 'app-budgets',
   standalone: true,
-  imports: [ReactiveFormsModule, InputComponent, MatButton, AsyncPipe],
+  imports: [
+    ReactiveFormsModule,
+    InputComponent,
+    MatButton,
+    AsyncPipe,
+    DataTableComponent,
+    DataTableActionsComponent,
+  ],
   templateUrl: './budgets.component.html',
   styleUrl: './budgets.component.scss',
 })
@@ -26,12 +29,9 @@ export class BudgetsComponent {
     expense_amount: this.formBuilder.control('', []),
   });
 
-  public expenses = new BehaviorSubject<any[]>([]);
+  public expenses = signal<any>([]);
 
   public addNewExpense() {
-    this.expenses.next([
-      ...this.expenses.getValue(),
-      this.expenseForm.getRawValue(),
-    ]);
+    this.expenses.set([...this.expenses(), this.expenseForm.getRawValue()]);
   }
 }
