@@ -1,0 +1,42 @@
+.footer-bg {
+  background-color: #fafafa;
+}
+
+.footer-container {
+  margin: 0 auto;
+  padding: 40px 20px;
+
+  &__social-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    p {
+      text-align: center;
+    }
+  }
+}
+
+.social-container {
+  &__links-container {
+    display: flex;
+    column-gap: 20px;
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .footer-container {
+    max-width: 800px;
+  }
+}
+
+@media screen and (min-width: 1400px) {
+  .footer-container {
+    max-width: 1000px;
+  }
+}
+
+@media screen and (min-width: 1600px) {
+  .footer-container {
+    max-width: 1400px;
+  }
+}
