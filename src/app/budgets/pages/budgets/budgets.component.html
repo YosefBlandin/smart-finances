@@ -1,28 +1,50 @@
-<p>budgets works!</p>
-<section>
-  <form [formGroup]="expenseForm">
-    <app-input
-      label="Expense Name*"
-      containerClasses="mb-4"
-      formControlName="expense_name"
-      type="text"
-      tabIndex="1"
-      placeholder="What did you spend in?"
-    />
-    <app-input
-      label="Amount (USD)*"
-      containerClasses="mb-4"
-      formControlName="expense_amount"
-      type="number"
-      tabIndex="2"
-      placeholder="How much did you spend?"
-    />
-    <button mat-flat-button (click)="addNewExpense()" color="primary">
-      Create Expense
-    </button>
-  </form>
+<section class="layout-container">
+  <mat-drawer-container class="example-container">
+    <mat-drawer #drawer class="example-sidenav" mode="side">
+      <mat-action-list>
+        @for (option of options; track option.label) {
+
+        <button mat-list-item>
+          <mat-icon>{{ option.icon }}</mat-icon> {{ option.label }}
+        </button>
+        }
+      </mat-action-list>
+    </mat-drawer>
+
+    <div class="example-sidenav-content">
+      <button
+        type="button"
+        mat-button
+        (click)="drawer.toggle()"
+        style="height: 60px; width: 50px"
+      >
+        <mat-icon class="sidenav-icon">menu</mat-icon>
+      </button>
+    </div>
+  </mat-drawer-container>
 
   <section>
+    <form [formGroup]="expenseForm">
+      <app-input
+        label="Expense Name*"
+        containerClasses="mb-4"
+        formControlName="expense_name"
+        type="text"
+        tabIndex="1"
+        placeholder="What did you spend in?"
+      />
+      <app-input
+        label="Amount (USD)*"
+        containerClasses="mb-4"
+        formControlName="expense_amount"
+        type="number"
+        tabIndex="2"
+        placeholder="How much did you spend?"
+      />
+      <button mat-flat-button (click)="addNewExpense()" color="primary">
+        Create Expense
+      </button>
+    </form>
     <app-data-table [dataSource]="expenses()" />
   </section>
 </section>

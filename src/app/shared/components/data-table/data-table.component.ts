@@ -86,7 +86,7 @@ export class DataTableComponent implements OnInit, OnChanges, AfterViewInit {
     console.log(changes);
     if (changes['dataSource'] && changes['dataSource'].currentValue) {
       this.dataSource = changes['dataSource'].currentValue.map(
-        (data: DataSourceType<unknown>) => ({ ...data, acciones: this.actions })
+        (data: DataSourceType<unknown>) => ({ ...data, actions: this.actions })
       );
       this.matData = new MatTableDataSource(this.dataSource);
     }
