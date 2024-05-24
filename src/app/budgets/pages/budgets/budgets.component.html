@@ -1,7 +1,7 @@
 <section class="layout-container">
-  <mat-drawer-container class="example-container">
-    <mat-drawer #drawer class="example-sidenav" mode="side">
-      <mat-action-list>
+  <mat-drawer-container>
+    <mat-drawer #drawer class="sidenav-container mat-elevation-z2" mode="side">
+      <mat-action-list class="sidenav-menu-container">
         @for (option of options; track option.label) {
 
         <button mat-list-item>
@@ -10,41 +10,50 @@
         }
       </mat-action-list>
     </mat-drawer>
+    <section style="width: 100%">
+      <div class="header-container">
+        @if(showDrawerButton()) {
+        <button
+          type="button"
+          mat-button
+          (click)="drawer.toggle()"
+          style="height: 60px; width: 50px"
+        >
+          <mat-icon class="sidenav-icon">menu</mat-icon>
+        </button>
+        } @else {
+        <h4>Budgets</h4>
+        }
 
-    <div class="example-sidenav-content">
-      <button
-        type="button"
-        mat-button
-        (click)="drawer.toggle()"
-        style="height: 60px; width: 50px"
-      >
-        <mat-icon class="sidenav-icon">menu</mat-icon>
-      </button>
-    </div>
+        <button type="button" mat-button class="avatar-button">
+          <mat-icon class="sidenav-icon">account_circle</mat-icon>
+          Yosef Blandin
+        </button>
+      </div>
+      <section class="header-padding">
+        <form [formGroup]="expenseForm">
+          <app-input
+            label="Expense Name*"
+            containerClasses="mb-4"
+            formControlName="expense_name"
+            type="text"
+            tabIndex="1"
+            placeholder="What did you spend in?"
+          />
+          <app-input
+            label="Amount (USD)*"
+            containerClasses="mb-4"
+            formControlName="expense_amount"
+            type="number"
+            tabIndex="2"
+            placeholder="How much did you spend?"
+          />
+          <button mat-flat-button (click)="addNewExpense()" color="primary">
+            Create Expense
+          </button>
+        </form>
+        <app-data-table [dataSource]="expenses()" />
+      </section>
+    </section>
   </mat-drawer-container>
-
-  <section>
-    <form [formGroup]="expenseForm">
-      <app-input
-        label="Expense Name*"
-        containerClasses="mb-4"
-        formControlName="expense_name"
-        type="text"
-        tabIndex="1"
-        placeholder="What did you spend in?"
-      />
-      <app-input
-        label="Amount (USD)*"
-        containerClasses="mb-4"
-        formControlName="expense_amount"
-        type="number"
-        tabIndex="2"
-        placeholder="How much did you spend?"
-      />
-      <button mat-flat-button (click)="addNewExpense()" color="primary">
-        Create Expense
-      </button>
-    </form>
-    <app-data-table [dataSource]="expenses()" />
-  </section>
 </section>
