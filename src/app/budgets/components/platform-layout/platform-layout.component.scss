@@ -1,0 +1,45 @@
+.layout-container {
+  min-height: 100vh;
+}
+
+.sidenav-icon {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 30px !important;
+  width: 30px !important;
+  margin: 0 !important;
+  font-size: 2rem !important;
+}
+
+.sidenav-menu-container {
+  padding: 40px 20px;
+}
+
+.sidenav-container {
+  height: 100vh;
+  max-width: 250px;
+  background-color: #fff;
+  box-shadow: 0 0 10px 0 rgb(230, 230, 230);
+}
+::ng-deep .mat-mdc-list-item-unscoped-content {
+  display: flex;
+  align-items: center;
+  column-gap: 10px;
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+}
+
+.header-padding {
+  padding: 20px 40px;
+}
+
+.avatar-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  column-gap: 5px;
+}
