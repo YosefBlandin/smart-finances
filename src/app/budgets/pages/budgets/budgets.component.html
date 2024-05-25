@@ -1,5 +1,5 @@
 <section>
-  <form [formGroup]="expenseForm">
+  <!-- <form [formGroup]="expenseForm">
     <app-input
       label="Expense Name*"
       containerClasses="mb-4"
@@ -19,6 +19,12 @@
     <button mat-flat-button (click)="addNewExpense()" color="primary">
       Create Expense
     </button>
-  </form>
-  <app-data-table [dataSource]="expenses()" />
+  </form> -->
+  <app-data-table [dataSource]="expenses()">
+    <section tableHeaderButtons>
+      <button mat-flat-button (click)="addNewExpense()" color="primary">
+        Create Expense
+      </button>
+    </section>
+  </app-data-table>
 </section>

@@ -1,5 +1,5 @@
 <div
-  class="mat-elevation-z2 w-100 overflow-x-scroll"
+  class="table-container w-100 overflow-x-scroll"
   [class.overflow-hidden-custom]="isLoadingDeleteRow"
 >
   @if (isLoadingData) {
@@ -157,12 +157,10 @@
     </table>
   </div>
   } @else {
-  <section
-    class="flex flex-col md:flex-row md:justify-between items-center gap-x-8 px-4 py-2 pt-6 w-full"
-  >
+  <section class="table-header-container">
     <mat-form-field
       style="width: 100%"
-      class="max-w-lg w-full"
+      class="table-search-container"
       appearance="outline"
     >
       <mat-label>Search</mat-label>
@@ -174,13 +172,14 @@
       />
     </mat-form-field>
 
-    <ng-content select="[tableHeaderButtons]"> </ng-content>
+    <ng-content select="[tableHeaderButtons]" class="table-buttons-container">
+    </ng-content>
   </section>
   <table
     mat-table
     matSort
     [dataSource]="matData"
-    class="mat-elevation-z8 table"
+    class="table"
     (matSortChange)="handleSortData($event)"
   >
     @for (column of matData.data[0] | keyvalue ; track $index) {

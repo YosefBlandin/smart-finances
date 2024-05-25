@@ -1,5 +1,39 @@
+@use "@angular/material" as mat;
+
+.table-container {
+  @include mat.elevation(2);
+  padding: 0 20px;
+}
+
 .overflow-hidden-custom {
   overflow-x: hidden !important;
+}
+
+.table-header-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  column-gap: 10px;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.table-buttons-container {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.table-search-container {
+  max-width: 600px;
+  padding: 20px 0;
+}
+
+@media screen and (min-width: 768px) {
+  .table-header-container {
+    flex-direction: row;
+    justify-content: space-between;
+  }
 }
 
 td {
