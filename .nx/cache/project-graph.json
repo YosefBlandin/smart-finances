@@ -20,22 +20,19 @@
           },
           "e2e": {
             "cache": true,
-            "inputs": [
-              "default",
-              "^production"
-            ],
+            "inputs": ["default", "^production"],
             "executor": "@nx/cypress:cypress",
             "options": {
               "cypressConfig": "e2e/cypress.config.ts",
               "testingType": "e2e",
-              "devServerTarget": "smart-finances:serve:development"
+              "devServerTarget": "smart:serve:development"
             },
             "configurations": {
               "production": {
-                "devServerTarget": "smart-finances:serve:production"
+                "devServerTarget": "smart:serve:production"
               },
               "ci": {
-                "devServerTarget": "smart-finances:serve-static"
+                "devServerTarget": "smart:serve-static"
               }
             }
           }
@@ -45,49 +42,32 @@
         "projectType": "application",
         "sourceRoot": "e2e/src",
         "tags": [],
-        "implicitDependencies": [
-          "smart-finances"
-        ]
+        "implicitDependencies": ["smart"]
       }
     },
-    "smart-finances": {
-      "name": "smart-finances",
+    "smart": {
+      "name": "smart",
       "type": "app",
       "data": {
         "root": ".",
         "includedScripts": [],
-        "name": "smart-finances",
+        "name": "smart",
         "targets": {
           "build": {
             "cache": true,
-            "dependsOn": [
-              "^build"
-            ],
-            "inputs": [
-              "production",
-              "^production"
-            ],
+            "dependsOn": ["^build"],
+            "inputs": ["production", "^production"],
             "executor": "@angular-devkit/build-angular:application",
-            "outputs": [
-              "{options.outputPath}"
-            ],
+            "outputs": ["{options.outputPath}"],
             "options": {
-              "outputPath": "dist/smart-finances",
+              "outputPath": "dist/smart",
               "index": "./src/index.html",
               "browser": "./src/main.ts",
-              "polyfills": [
-                "zone.js"
-              ],
+              "polyfills": ["zone.js"],
               "tsConfig": "./tsconfig.app.json",
               "inlineStyleLanguage": "scss",
-              "assets": [
-                "./src/favicon.ico",
-                "./src/assets"
-              ],
-              "styles": [
-                "./src/assets/theme.scss",
-                "./src/styles.scss"
-              ],
+              "assets": ["./src/favicon.ico", "./src/assets"],
+              "styles": ["./src/assets/theme.scss", "./src/styles.scss"],
               "scripts": []
             },
             "configurations": {
@@ -130,22 +110,15 @@
             ],
             "executor": "@nx/eslint:lint",
             "options": {
-              "lintFilePatterns": [
-                "./src"
-              ]
+              "lintFilePatterns": ["./src"]
             },
             "configurations": {}
           },
           "test": {
             "cache": true,
-            "inputs": [
-              "default",
-              "^production"
-            ],
+            "inputs": ["default", "^production"],
             "executor": "@nx/jest:jest",
-            "outputs": [
-              "{workspaceRoot}/coverage/{projectName}"
-            ],
+            "outputs": ["{workspaceRoot}/coverage/{projectName}"],
             "options": {
               "jestConfig": "jest.config.ts"
             },
@@ -155,10 +128,10 @@
             "executor": "@angular-devkit/build-angular:dev-server",
             "configurations": {
               "production": {
-                "buildTarget": "smart-finances:build:production"
+                "buildTarget": "smart:build:production"
               },
               "development": {
-                "buildTarget": "smart-finances:build:development",
+                "buildTarget": "smart:build:development",
                 "proxyConfig": "proxy.conf.json"
               }
             },
@@ -168,15 +141,15 @@
           "extract-i18n": {
             "executor": "@angular-devkit/build-angular:extract-i18n",
             "options": {
-              "buildTarget": "smart-finances:build"
+              "buildTarget": "smart:build"
             },
             "configurations": {}
           },
           "serve-static": {
             "executor": "@nx/web:file-server",
             "options": {
-              "buildTarget": "smart-finances:build",
-              "staticFilePath": "dist/smart-finances/browser"
+              "buildTarget": "smart:build",
+              "staticFilePath": "dist/smart/browser"
             },
             "configurations": {}
           }
@@ -184,7 +157,7 @@
         "sourceRoot": "./src",
         "projectType": "application",
         "$schema": "node_modules/nx/schemas/project-schema.json",
-        "prefix": "smart-finances",
+        "prefix": "smart",
         "tags": [],
         "implicitDependencies": []
       }
@@ -12373,7 +12346,7 @@
     "e2e": [
       {
         "source": "e2e",
-        "target": "smart-finances",
+        "target": "smart",
         "type": "implicit"
       },
       {
@@ -12387,309 +12360,309 @@
         "type": "static"
       }
     ],
-    "smart-finances": [
+    "smart": [
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@nx/jest",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular/animations",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular/cdk",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular/common",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular/compiler",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular/core",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular/forms",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular/material",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular/platform-browser",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular/platform-browser-dynamic",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular/router",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@nx/angular",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@types/node-forge",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:echarts",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:fast-deep-equal",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:jwt-decode",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:ngx-echarts",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:node-forge",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:rxjs",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:tslib",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:zone.js",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular-devkit/build-angular",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular-devkit/core",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular-devkit/schematics",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular-eslint/eslint-plugin",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular-eslint/eslint-plugin-template",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular-eslint/template-parser",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular/cli",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular/compiler-cli",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@angular/language-service",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@nx/cypress",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@nx/eslint",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@nx/eslint-plugin",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@nx/js",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@nx/web",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@nx/workspace",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@schematics/angular",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@swc-node/register",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@swc/core",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@swc/helpers",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@types/crypto-js",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@types/jest",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@types/node",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@typescript-eslint/eslint-plugin",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:@typescript-eslint/parser",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:autoprefixer",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:cypress",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:eslint",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:eslint-config-prettier",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:eslint-plugin-cypress",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:jest",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:jest-environment-jsdom",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:jest-preset-angular",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:jsonc-eslint-parser",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:nx",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:postcss",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:prettier",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:tailwindcss",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:ts-jest",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:ts-node",
         "type": "static"
       },
       {
-        "source": "smart-finances",
+        "source": "smart",
         "target": "npm:typescript",
         "type": "static"
       }

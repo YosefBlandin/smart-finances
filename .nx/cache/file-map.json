@@ -65,18 +65,10 @@
     "typescript": "~5.3.2"
   },
   "pathMappings": {
-    "@auth/*": [
-      "src/app/auth/*"
-    ],
-    "@admin/*": [
-      "src/app/admin/*"
-    ],
-    "@core/*": [
-      "src/app/core/*"
-    ],
-    "@shared/*": [
-      "src/app/shared/*"
-    ]
+    "@auth/*": ["src/app/auth/*"],
+    "@admin/*": ["src/app/admin/*"],
+    "@core/*": ["src/app/core/*"],
+    "@shared/*": ["src/app/shared/*"]
   },
   "nxJsonPlugins": [],
   "fileMap": {
@@ -90,10 +82,7 @@
         {
           "file": "e2e/cypress.config.ts",
           "hash": "12586416982398116375",
-          "deps": [
-            "npm:@nx/cypress",
-            "npm:cypress"
-          ]
+          "deps": ["npm:@nx/cypress", "npm:cypress"]
         },
         {
           "file": "e2e/project.json",
@@ -124,7 +113,7 @@
           "hash": "14696052795473435316"
         }
       ],
-      "smart-finances": [
+      "smart": [
         {
           "file": ".gitignore",
           "hash": "3067887321736876610"
@@ -140,9 +129,7 @@
         {
           "file": "jest.preset.js",
           "hash": "9430166341120122740",
-          "deps": [
-            "npm:@nx/jest"
-          ]
+          "deps": ["npm:@nx/jest"]
         },
         {
           "file": "nx.json",
@@ -230,9 +217,7 @@
         {
           "file": "src/app/admin/admin.routes.ts",
           "hash": "12405592798784451432",
-          "deps": [
-            "npm:@angular/router"
-          ]
+          "deps": ["npm:@angular/router"]
         },
         {
           "file": "src/app/admin/layout/dashboard-layout/dashboard-layout.component.css",
@@ -245,9 +230,7 @@
         {
           "file": "src/app/admin/layout/dashboard-layout/dashboard-layout.component.spec.ts",
           "hash": "7229351926241329629",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/admin/layout/dashboard-layout/dashboard-layout.component.ts",
@@ -269,16 +252,12 @@
         {
           "file": "src/app/admin/pages/change-password/change-password.component.spec.ts",
           "hash": "3129764865355629756",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/admin/pages/change-password/change-password.component.ts",
           "hash": "12848811267576420587",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/admin/pages/dashboard/dashboard.component.css",
@@ -291,18 +270,12 @@
         {
           "file": "src/app/admin/pages/dashboard/dashboard.component.spec.ts",
           "hash": "12752897174014726670",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/admin/pages/dashboard/dashboard.component.ts",
           "hash": "460843154409718572",
-          "deps": [
-            "npm:@angular/core",
-            "npm:echarts",
-            "npm:ngx-echarts"
-          ]
+          "deps": ["npm:@angular/core", "npm:echarts", "npm:ngx-echarts"]
         },
         {
           "file": "src/app/admin/pages/security/security.component.css",
@@ -315,16 +288,12 @@
         {
           "file": "src/app/admin/pages/security/security.component.spec.ts",
           "hash": "1335241682332935101",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/admin/pages/security/security.component.ts",
           "hash": "3490529353567188271",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/admin/pages/services/services.component.css",
@@ -337,16 +306,12 @@
         {
           "file": "src/app/admin/pages/services/services.component.spec.ts",
           "hash": "2624529309794679098",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/admin/pages/services/services.component.ts",
           "hash": "17005811681548805712",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/admin/pages/user-details/user-details.component.css",
@@ -359,9 +324,7 @@
         {
           "file": "src/app/admin/pages/user-details/user-details.component.spec.ts",
           "hash": "9298713626837653810",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/admin/pages/user-details/user-details.component.ts",
@@ -387,9 +350,7 @@
         {
           "file": "src/app/admin/pages/users/users.component.spec.ts",
           "hash": "4779276166417826391",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/admin/pages/users/users.component.ts",
@@ -404,16 +365,12 @@
         {
           "file": "src/app/admin/services/menu-options/menu-options.service.spec.ts",
           "hash": "855445655597500771",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/admin/services/menu-options/menu-options.service.ts",
           "hash": "1328667067868668709",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/app.component.html",
@@ -426,18 +383,12 @@
         {
           "file": "src/app/app.component.spec.ts",
           "hash": "7555089012768850320",
-          "deps": [
-            "npm:@angular/core",
-            "npm:@angular/router"
-          ]
+          "deps": ["npm:@angular/core", "npm:@angular/router"]
         },
         {
           "file": "src/app/app.component.ts",
           "hash": "5189919517839963342",
-          "deps": [
-            "npm:@angular/core",
-            "npm:@angular/router"
-          ]
+          "deps": ["npm:@angular/core", "npm:@angular/router"]
         },
         {
           "file": "src/app/app.config.ts",
@@ -452,31 +403,22 @@
         {
           "file": "src/app/app.routes.ts",
           "hash": "3174178203085621833",
-          "deps": [
-            "npm:@angular/router"
-          ]
+          "deps": ["npm:@angular/router"]
         },
         {
           "file": "src/app/auth/auth.routes.ts",
           "hash": "18381398287904167057",
-          "deps": [
-            "npm:@angular/router"
-          ]
+          "deps": ["npm:@angular/router"]
         },
         {
           "file": "src/app/auth/guards/session/session.guard.spec.ts",
           "hash": "7861157921961076066",
-          "deps": [
-            "npm:@angular/core",
-            "npm:@angular/router"
-          ]
+          "deps": ["npm:@angular/core", "npm:@angular/router"]
         },
         {
           "file": "src/app/auth/guards/session/session.guard.ts",
           "hash": "12755868749986442868",
-          "deps": [
-            "npm:@angular/router"
-          ]
+          "deps": ["npm:@angular/router"]
         },
         {
           "file": "src/app/auth/layout/auth-layout/auth-layout.component.html",
@@ -489,17 +431,12 @@
         {
           "file": "src/app/auth/layout/auth-layout/auth-layout.component.spec.ts",
           "hash": "8199293848522813246",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/auth/layout/auth-layout/auth-layout.component.ts",
           "hash": "13238987201520963656",
-          "deps": [
-            "npm:@angular/core",
-            "npm:@angular/router"
-          ]
+          "deps": ["npm:@angular/core", "npm:@angular/router"]
         },
         {
           "file": "src/app/auth/pages/login/login.component.html",
@@ -512,9 +449,7 @@
         {
           "file": "src/app/auth/pages/login/login.component.spec.ts",
           "hash": "9368543306383575563",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/auth/pages/login/login.component.ts",
@@ -530,9 +465,7 @@
         {
           "file": "src/app/auth/services/login/login.service.spec.ts",
           "hash": "7784164807493314935",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/auth/services/login/login.service.ts",
@@ -547,26 +480,17 @@
         {
           "file": "src/app/core/facades/user/user.facade.ts",
           "hash": "11183412609055979827",
-          "deps": [
-            "npm:@angular/core",
-            "npm:rxjs",
-            "npm:@angular/common"
-          ]
+          "deps": ["npm:@angular/core", "npm:rxjs", "npm:@angular/common"]
         },
         {
           "file": "src/app/core/formValidators/index.ts",
           "hash": "4287973703301600860",
-          "deps": [
-            "npm:@angular/forms"
-          ]
+          "deps": ["npm:@angular/forms"]
         },
         {
           "file": "src/app/core/interceptors/errors/errors.interceptor.spec.ts",
           "hash": "17132534815755475617",
-          "deps": [
-            "npm:@angular/core",
-            "npm:@angular/common"
-          ]
+          "deps": ["npm:@angular/core", "npm:@angular/common"]
         },
         {
           "file": "src/app/core/interceptors/errors/errors.interceptor.ts",
@@ -585,18 +509,12 @@
         {
           "file": "src/app/core/interceptors/session/session.interceptor.spec.ts",
           "hash": "17993991249244844346",
-          "deps": [
-            "npm:@angular/core",
-            "npm:@angular/common"
-          ]
+          "deps": ["npm:@angular/core", "npm:@angular/common"]
         },
         {
           "file": "src/app/core/interceptors/session/session.interceptor.ts",
           "hash": "6379176465305097629",
-          "deps": [
-            "npm:@angular/common",
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/common", "npm:@angular/core"]
         },
         {
           "file": "src/app/core/interfaces/menu-options/index.ts",
@@ -617,48 +535,32 @@
         {
           "file": "src/app/core/services/session-storage/session-storage.service.spec.ts",
           "hash": "4871297450863606786",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/core/services/session-storage/session-storage.service.ts",
           "hash": "14239170553555425745",
-          "deps": [
-            "npm:@angular/core",
-            "npm:node-forge"
-          ]
+          "deps": ["npm:@angular/core", "npm:node-forge"]
         },
         {
           "file": "src/app/core/services/token/token-management.service.spec.ts",
           "hash": "18005873645888335598",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/core/services/token/token-management.service.ts",
           "hash": "14749516985308377922",
-          "deps": [
-            "npm:@angular/core",
-            "npm:jwt-decode",
-            "npm:@angular/common"
-          ]
+          "deps": ["npm:@angular/core", "npm:jwt-decode", "npm:@angular/common"]
         },
         {
           "file": "src/app/core/services/user/user.service.spec.ts",
           "hash": "1076130839908117399",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/core/services/user/user.service.ts",
           "hash": "3517109344209738666",
-          "deps": [
-            "npm:@angular/common",
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/common", "npm:@angular/core"]
         },
         {
           "file": "src/app/core/types/data-table/index.ts",
@@ -679,9 +581,7 @@
         {
           "file": "src/app/landing/pages/home/home.component.spec.ts",
           "hash": "5533293743300657749",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/landing/pages/home/home.component.ts",
@@ -704,16 +604,12 @@
         {
           "file": "src/app/shared/components/button/button.component.spec.ts",
           "hash": "14554172534536360015",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/shared/components/button/button.component.ts",
           "hash": "7700301753406025728",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/shared/components/confirm-dialog/confirm-dialog.component.css",
@@ -726,17 +622,12 @@
         {
           "file": "src/app/shared/components/confirm-dialog/confirm-dialog.component.spec.ts",
           "hash": "6711177609075090792",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/shared/components/confirm-dialog/confirm-dialog.component.ts",
           "hash": "6713594791123282263",
-          "deps": [
-            "npm:@angular/core",
-            "npm:@angular/material"
-          ]
+          "deps": ["npm:@angular/core", "npm:@angular/material"]
         },
         {
           "file": "src/app/shared/components/data-table-actions/data-table-actions.component.css",
@@ -749,17 +640,12 @@
         {
           "file": "src/app/shared/components/data-table-actions/data-table-actions.component.spec.ts",
           "hash": "4020047395213368199",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/shared/components/data-table-actions/data-table-actions.component.ts",
           "hash": "13526980941765499419",
-          "deps": [
-            "npm:@angular/core",
-            "npm:@angular/material"
-          ]
+          "deps": ["npm:@angular/core", "npm:@angular/material"]
         },
         {
           "file": "src/app/shared/components/data-table/data-table.component.css",
@@ -772,9 +658,7 @@
         {
           "file": "src/app/shared/components/data-table/data-table.component.spec.ts",
           "hash": "3783565365969495224",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/shared/components/data-table/data-table.component.ts",
@@ -800,9 +684,7 @@
         {
           "file": "src/app/shared/components/input-select/input-select.component.spec.ts",
           "hash": "15948742768305691198",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/shared/components/input-select/input-select.component.ts",
@@ -824,9 +706,7 @@
         {
           "file": "src/app/shared/components/input/input.component.spec.ts",
           "hash": "2468398805800413825",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/shared/components/input/input.component.ts",
@@ -848,17 +728,12 @@
         {
           "file": "src/app/shared/components/user-avatar/user-avatar.component.spec.ts",
           "hash": "487201864728251290",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/shared/components/user-avatar/user-avatar.component.ts",
           "hash": "13717562515885725445",
-          "deps": [
-            "npm:@angular/core",
-            "npm:@angular/material"
-          ]
+          "deps": ["npm:@angular/core", "npm:@angular/material"]
         },
         {
           "file": "src/app/shared/components/user-form-modal/user-form-modal.component.css",
@@ -871,9 +746,7 @@
         {
           "file": "src/app/shared/components/user-form-modal/user-form-modal.component.spec.ts",
           "hash": "584203171225189806",
-          "deps": [
-            "npm:@angular/core"
-          ]
+          "deps": ["npm:@angular/core"]
         },
         {
           "file": "src/app/shared/components/user-form-modal/user-form-modal.component.ts",
@@ -895,7 +768,7 @@
           "hash": "3244421341483603138"
         },
         {
-          "file": "src/assets/images/smart-finances.png",
+          "file": "src/assets/images/smart.png",
           "hash": "3620002845171675080"
         },
         {
@@ -925,9 +798,7 @@
         {
           "file": "src/main.ts",
           "hash": "16635586463787978962",
-          "deps": [
-            "npm:@angular/platform-browser"
-          ]
+          "deps": ["npm:@angular/platform-browser"]
         },
         {
           "file": "src/styles.scss",
@@ -936,9 +807,7 @@
         {
           "file": "src/test-setup.ts",
           "hash": "12935735732682149507",
-          "deps": [
-            "npm:jest-preset-angular"
-          ]
+          "deps": ["npm:jest-preset-angular"]
         },
         {
           "file": "tailwind.config.js",

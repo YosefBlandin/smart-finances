@@ -1,6 +1,10 @@
-<section class="bg-white rounded-lg py-0 h-full mt-0 pt-20 pb-12 lg:pt-14 2xl:pt-20 flex justify-center">
-  <form [formGroup]="loginForm"
-    class="container max-w-sm px-6 md:px-0 flex flex-col w-full h-full pb-6 text-center bg-white rounded-3xl">
+<section
+  class="bg-white rounded-lg py-0 h-full mt-0 pt-20 pb-12 lg:pt-14 2xl:pt-20 flex justify-center"
+>
+  <form
+    [formGroup]="loginForm"
+    class="container max-w-sm px-6 md:px-0 flex flex-col w-full h-full pb-6 text-center bg-white rounded-3xl"
+  >
     <picture class="flex justify-center mb-6">
       <img class="w-28" src="../../../../assets/images/microservice_icon.png" />
     </picture>
@@ -10,23 +14,43 @@
     <div class="flex items-center mb-8 mt-4">
       <hr class="h-0 border-b border-solid border-gray-400 grow" />
     </div>
-    <smart-finances-input-component [containerClasses]="'mb-4'" [label]="'Usuario*'" formControlName="username"
-      [type]="'text'" [autoComplete]="'username'" [tabIndex]="'1'" [placeholder]="'Ingresar usuario'" />
+    <app-input
+      [containerClasses]="'mb-4'"
+      [label]="'Usuario*'"
+      formControlName="username"
+      [type]="'text'"
+      [autoComplete]="'username'"
+      [tabIndex]="'1'"
+      [placeholder]="'Ingresar usuario'"
+    />
     <div [class.mb-4]="!errorMessage">
-      <smart-finances-input-component [includeVisibilityEye]="true" [label]="'Contraseña*'" formControlName="password"
-        [type]="'password'" [tabIndex]="'2'" [placeholder]="'Ingresar contraseña'" />
+      <app-input
+        [includeVisibilityEye]="true"
+        [label]="'Contraseña*'"
+        formControlName="password"
+        [type]="'password'"
+        [tabIndex]="'2'"
+        [placeholder]="'Ingresar contraseña'"
+      />
     </div>
     @if (errorMessage) {
-    <p class="text-red-600 mb-4 mt-2 text-sm text-left">{{errorMessage}}</p>
+    <p class="text-red-600 mb-4 mt-2 text-sm text-left">{{ errorMessage }}</p>
     }
 
-    <button mat-raised-button (click)="handleLogin()" [disabled]="!isFormValid" color="primary"
-      class="h-11 min-h-11 2xl:h-12 2xl:min-h-12 w-full">
+    <button
+      mat-raised-button
+      (click)="handleLogin()"
+      [disabled]="!isFormValid"
+      color="primary"
+      class="h-11 min-h-11 2xl:h-12 2xl:min-h-12 w-full"
+    >
       @if (isLoading()) {
-      <mat-progress-spinner mode="indeterminate" class="w-7 h-7" color="accent"></mat-progress-spinner>
-      } @else {
-      Iniciar Sesión
-      }
+      <mat-progress-spinner
+        mode="indeterminate"
+        class="w-7 h-7"
+        color="accent"
+      ></mat-progress-spinner>
+      } @else { Iniciar Sesión }
     </button>
   </form>
 </section>

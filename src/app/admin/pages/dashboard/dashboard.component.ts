@@ -1,17 +1,17 @@
 import { Component } from '@angular/core';
 import type { ECharts, EChartsOption } from 'echarts';
-import { NgxEchartsDirective, provideEcharts, NgxEchartsModule, ThemeOption } from 'ngx-echarts';
+import {
+  NgxEchartsDirective,
+  provideEcharts,
+  NgxEchartsModule,
+  ThemeOption,
+} from 'ngx-echarts';
 
 @Component({
-  selector: 'smart-finances-dashboard',
+  selector: 'smart-dashboard',
   standalone: true,
-  imports: [
-    NgxEchartsDirective,
-    NgxEchartsModule
-  ],
-  providers: [
-    provideEcharts()
-  ],
+  imports: [NgxEchartsDirective, NgxEchartsModule],
+  providers: [provideEcharts()],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })
@@ -37,7 +37,15 @@ export class DashboardComponent {
     },
 
     visualMap: {
-      color: ["#008891", "#009689", "#1ba274", "#57ab56", "#8cb031", "#c4af00", "#ffa600"],
+      color: [
+        '#008891',
+        '#009689',
+        '#1ba274',
+        '#57ab56',
+        '#8cb031',
+        '#c4af00',
+        '#ffa600',
+      ],
     },
 
     toolbox: {
@@ -47,7 +55,7 @@ export class DashboardComponent {
     tooltip: {
       backgroundColor: 'rgba(0,0,0,0.8)',
       textStyle: {
-        color: "#fff"
+        color: '#fff',
       },
       axisPointer: {
         // Axis indicator, coordinate trigger effective
@@ -150,25 +158,25 @@ export class DashboardComponent {
     },
   };
   public loadingOptions: {
-    text: string
-    color: string
-    textColor: string
-    maskColor: string
-    zlevel: number
+    text: string;
+    color: string;
+    textColor: string;
+    maskColor: string;
+    zlevel: number;
   } = {
-      text: 'Cargando...',
-      color: '#c23531',
-      textColor: '#000',
-      maskColor: 'rgba(255, 255, 255, 0.8)',
-      zlevel: 0
-    };
+    text: 'Cargando...',
+    color: '#c23531',
+    textColor: '#000',
+    maskColor: 'rgba(255, 255, 255, 0.8)',
+    zlevel: 0,
+  };
   public options: EChartsOption = {
     title: {
       left: 'center',
       top: 20,
       textStyle: {
         color: '#000',
-        fontWeight: "bold"
+        fontWeight: 'bold',
       },
     },
     tooltip: {
@@ -197,13 +205,12 @@ export class DashboardComponent {
           { value: 274, name: 'Registro' },
           { value: 735, name: 'Recarga' },
           { value: 900, name: 'Transferencia' },
-
         ].sort((a, b) => a.value - b.value),
         roseType: 'radius',
         label: {
           color: 'rgba(50, 50, 50, 1)',
-          fontWeight: "lighter",
-          fontSize: "0.6rem"
+          fontWeight: 'lighter',
+          fontSize: '0.6rem',
         },
         labelLine: {
           lineStyle: {

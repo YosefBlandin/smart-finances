@@ -9,34 +9,41 @@ import { MenuOptionsService } from '../../services/menu-options/menu-options.ser
 import { LoginService } from '@auth/services/login/login.service';
 
 @Component({
-  selector: 'smart-finances-dashboard-layout',
+  selector: 'smart-dashboard-layout',
   standalone: true,
-  imports: [RouterOutlet, MatSidenavModule, MatButtonModule, MatIconModule, RouterLink, UserAvatarComponent, MatSidenav],
+  imports: [
+    RouterOutlet,
+    MatSidenavModule,
+    MatButtonModule,
+    MatIconModule,
+    RouterLink,
+    UserAvatarComponent,
+    MatSidenav,
+  ],
   templateUrl: './dashboard-layout.component.html',
-  styleUrl: './dashboard-layout.component.css'
+  styleUrl: './dashboard-layout.component.css',
 })
 export class DashboardLayoutComponent implements OnInit, AfterContentInit {
   @ViewChild('sidenav', { static: true }) public sidenav!: MatSidenav;
   public isDesktop = false;
-  public activeOptionTitle = "";
+  public activeOptionTitle = '';
   public menuOptions: IMenuOption[] = [];
 
   constructor(
     private routerService: Router,
     private menuOptionsServices: MenuOptionsService,
     private loginService: LoginService
-  ) {
-  }
+  ) {}
 
   ngOnInit(): void {
     if (this.menuOptions.length === 0) {
       this.menuOptions = this.menuOptionsServices.getAll();
       this.menuOptions.forEach((menuOption: IMenuOption) => {
         if (this.routerService.url.includes(menuOption.url)) {
-          menuOption.active = true
+          menuOption.active = true;
           this.activeOptionTitle = menuOption.name;
         }
-      })
+      });
     }
   }
 
@@ -52,10 +59,10 @@ export class DashboardLayoutComponent implements OnInit, AfterContentInit {
   }
 
   public handleOptionClick(option: {
-    active: boolean
-    name: string
-    url: string
-    icon: string
+    active: boolean;
+    name: string;
+    url: string;
+    icon: string;
   }): void {
     this.activeOptionTitle = option.name;
     this.handleNavigate(option.url);
@@ -65,7 +72,7 @@ export class DashboardLayoutComponent implements OnInit, AfterContentInit {
     if (!this.isDesktop) {
       this.sidenav.toggle(false);
     }
-    this.routerService.navigateByUrl(`admin/${route}`)
+    this.routerService.navigateByUrl(`admin/${route}`);
   }
 
   public toggleSidenav(event: MouseEvent, value?: boolean): void {
@@ -80,7 +87,7 @@ export class DashboardLayoutComponent implements OnInit, AfterContentInit {
   }
 
   public handleLogout(): void {
-    this.loginService.logout()
-    console.log("logo")
+    this.loginService.logout();
+    console.log('logo');
   }
 }

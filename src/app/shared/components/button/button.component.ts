@@ -1,11 +1,11 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 @Component({
-  selector: 'smart-finances-button',
+  selector: 'smart-button',
   standalone: true,
   imports: [],
   templateUrl: './button.component.html',
-  styleUrl: './button.component.css'
+  styleUrl: './button.component.css',
 })
 export class ButtonComponent {
   @Input() isLoading = false;

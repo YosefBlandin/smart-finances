@@ -1,9 +1,9 @@
 /* eslint-disable */
 export default {
-  displayName: 'smart-finances',
+  displayName: 'smart',
   preset: './jest.preset.js',
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
-  coverageDirectory: './coverage/smart-finances',
+  coverageDirectory: './coverage/smart',
   transform: {
     '^.+\\.(ts|mjs|js|html)$': [
       'jest-preset-angular',

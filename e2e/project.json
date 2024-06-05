@@ -9,14 +9,14 @@
       "options": {
         "cypressConfig": "e2e/cypress.config.ts",
         "testingType": "e2e",
-        "devServerTarget": "smart-finances:serve:development"
+        "devServerTarget": "smart:serve:development"
       },
       "configurations": {
         "production": {
-          "devServerTarget": "smart-finances:serve:production"
+          "devServerTarget": "smart:serve:production"
         },
         "ci": {
-          "devServerTarget": "smart-finances:serve-static"
+          "devServerTarget": "smart:serve-static"
         }
       }
     },
@@ -25,5 +25,5 @@
     }
   },
   "tags": [],
-  "implicitDependencies": ["smart-finances"]
+  "implicitDependencies": ["smart"]
 }

@@ -13,11 +13,11 @@ import {
 } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LoginService } from '../../services/login/login.service';
-import { ButtonComponent, InputComponent } from '@shared/components';
+import { ButtonComponent, InputComponent } from '../../../shared';
 import { MatButton } from '@angular/material/button';
 
 @Component({
-  selector: 'smart-finances-login',
+  selector: 'app-login',
   standalone: true,
   imports: [
     RouterLink,
@@ -28,17 +28,14 @@ import { MatButton } from '@angular/material/button';
     MatInputModule,
     MatDatepickerModule,
     MatButton,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
 export class LoginComponent implements OnInit {
-  constructor(
-    private LoginService: LoginService,
-    private router: Router
-  ) { }
+  constructor(private LoginService: LoginService, private router: Router) {}
 
   public isLoading: WritableSignal<boolean> = signal(false);
   public loginForm: FormGroup<{
@@ -51,10 +48,7 @@ export class LoginComponent implements OnInit {
     }),
     password: new FormControl('', {
       nonNullable: true,
-      validators: [
-        Validators.required,
-        Validators.maxLength(15)
-      ],
+      validators: [Validators.required, Validators.maxLength(15)],
     }),
   });
   public isFormValid = false;
@@ -75,10 +69,9 @@ export class LoginComponent implements OnInit {
   }
 
   private handleLoginResponse(response: string | number): void {
-    console.log(response)
+    console.log(response);
 
     this.router.navigate(['admin/dashboard']);
-
   }
 
   private handleLoginError(error: HttpErrorResponse): void {

@@ -1,9 +1,19 @@
-<smart-finances-data-table (_handleAction)="handleTableAction($event)" [dataSource]="allUsersData$()"
-  [actions]="tableActions" [pageSizeOptions]="tablePageSizeOptions" [isLoadingData]="isLoadingGetAll$()"
-  [isLoadingDeleteRow]="isLoadingDelete$()">
-
+<smart-data-table
+  (_handleAction)="handleTableAction($event)"
+  [dataSource]="allUsersData$()"
+  [actions]="tableActions"
+  [pageSizeOptions]="tablePageSizeOptions"
+  [isLoadingData]="isLoadingGetAll$()"
+  [isLoadingDeleteRow]="isLoadingDelete$()"
+>
   <section tableHeaderButtons class="flex justify-end w-full">
-    <button mat-raised-button (click)="handleCreate()" class="h-[52px] w-full mb-5 max-w-[170px]"
-      color="primary">Crear</button>
+    <button
+      mat-raised-button
+      (click)="handleCreate()"
+      class="h-[52px] w-full mb-5 max-w-[170px]"
+      color="primary"
+    >
+      Crear
+    </button>
   </section>
-</smart-finances-data-table>
+</smart-data-table>

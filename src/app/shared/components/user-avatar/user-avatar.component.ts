@@ -1,11 +1,11 @@
 import { Component, EventEmitter, Output } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 @Component({
-  selector: 'smart-finances-user-avatar-component',
+  selector: 'smart-user-avatar-component',
   standalone: true,
   imports: [MatIcon],
   templateUrl: './user-avatar.component.html',
-  styleUrl: './user-avatar.component.css'
+  styleUrl: './user-avatar.component.css',
 })
 export class UserAvatarComponent {
   public showMenu = false;
@@ -18,8 +18,8 @@ export class UserAvatarComponent {
 
   public hiddeMenu(): void {
     setTimeout(() => {
-      this.showMenu = false
-    }, 100)
+      this.showMenu = false;
+    }, 100);
   }
 
   public _handleLogout(): void {
@@ -27,6 +27,6 @@ export class UserAvatarComponent {
   }
 
   public _handleNavigate(route: string): void {
-    this.handleNavigate.emit(route)
+    this.handleNavigate.emit(route);
   }
 }
