@@ -21,6 +21,7 @@ import { MatIcon } from '@angular/material/icon';
 import { Observable, combineLatest, startWith } from 'rxjs';
 import { InputSelectComponent } from '../input-select/input-select.component';
 import { MatSnackBar, MatSnackBarConfig } from '@angular/material/snack-bar';
+import { ExpenseFacadeService } from '../../../core/facades/expense/expense.facade';
 
 @Component({
   selector: 'smart-user-form-modal',
@@ -41,10 +42,10 @@ import { MatSnackBar, MatSnackBarConfig } from '@angular/material/snack-bar';
       useValue: { showError: true },
     },
   ],
-  templateUrl: './user-form-modal.component.html',
-  styleUrl: './user-form-modal.component.css',
+  templateUrl: './expense-form-modal.component.html',
+  styleUrl: './expense-form-modal.component.css',
 })
-export class UserFormModalComponent
+export class ExpenseFormModalComponent
   implements AfterViewInit, AfterContentChecked
 {
   @ViewChild(MatStepper) matStepper!: MatStepper;
@@ -62,10 +63,10 @@ export class UserFormModalComponent
   });
 
   constructor(
-    // private userFacadeService: UserFacadeService,
+    private expenseFacadeService: ExpenseFacadeService,
     public formBuilder: FormBuilder,
     private snackbar: MatSnackBar,
-    @SkipSelf() private dialogRef: MatDialogRef<UserFormModalComponent>
+    @SkipSelf() private dialogRef: MatDialogRef<ExpenseFormModalComponent>
   ) {}
 
   public ngAfterViewInit(): void {
@@ -74,7 +75,7 @@ export class UserFormModalComponent
     }
     this.allFormsStatusChanges.subscribe(this.handleAllFormsStatus.bind(this));
 
-    // this.userFacadeService.isLoadingCreate.subscribe((isLoading) => {
+    // this.expenseFacadeService.isLoadingCreate.subscribe((isLoading) => {
     //   this.isLoading$.set(isLoading);
     //   if (isLoading) {
     //     this.dialogRef.disableClose = true;
@@ -102,8 +103,7 @@ export class UserFormModalComponent
 
   public handleAllFormsStatus(statuses: string[]): void {
     const formsValid = statuses.filter((status) => status === 'VALID');
-
-    if (formsValid.length !== 3) {
+    if (formsValid.length !== statuses.length) {
       this.areFormsInvalid$.set(true);
     } else {
       this.areFormsInvalid$.set(false);
@@ -174,20 +174,18 @@ export class UserFormModalComponent
   }
 
   public handleSubmit() {
-    // const allFormsData: IUserForm = {
-    //   ...this.personalInfoForm.getRawValue(),
-    //   ...this.userInfoForm.getRawValue(),
-    //   ...this.permissionsForm.getRawValue(),
-    // };
-    // this.userFacadeService.create(allFormsData).subscribe({
-    //   next: this.handleCreateResponse.bind(this),
-    //   error: this.handleCreateError.bind(this),
-    // });
+    const allFormsData: any = {
+      ...this.expenseForm.getRawValue(),
+    };
+    this.expenseFacadeService.create(allFormsData).subscribe({
+      next: this.handleCreateResponse.bind(this),
+      error: this.handleCreateError.bind(this),
+    });
   }
 
   public handleCreateResponse() {
     this.handleCloseModal();
-    // this.userFacadeService.getAllUsers(true, () =>
+    // this.expenseFacadeService.getAllUsers(true, () =>
     //   this.openSnackBar('Usuario creado con exito', 3000, 'fill', 'success')
     // );
   }

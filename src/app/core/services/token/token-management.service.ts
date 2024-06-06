@@ -3,14 +3,17 @@ import { jwtDecode } from 'jwt-decode';
 import { SessionStorageService } from '../session-storage/session-storage.service';
 import { TokenKeyType, TokenType } from '../../types/token';
 import { HttpClient } from '@angular/common/http';
-import { environment } from 'src/environments/environment.development';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class TokenManagementService {
   private readonly API_URL = environment.apiUrl;
-  constructor(private sessionStorage: SessionStorageService, private httpClient: HttpClient) { }
+  constructor(
+    private sessionStorage: SessionStorageService,
+    private httpClient: HttpClient
+  ) {}
 
   public getAccessToken(): string {
     return this.sessionStorage.getItem('accessToken') as string;
@@ -20,7 +23,7 @@ export class TokenManagementService {
     return this.sessionStorage.getItem('refreshToken') as string;
   }
 
-  private getAccessTokenData(token: string): (TokenType<TokenKeyType> | null) {
+  private getAccessTokenData(token: string): TokenType<TokenKeyType> | null {
     if (token) {
       return jwtDecode(token);
     }
@@ -33,7 +36,6 @@ export class TokenManagementService {
       this.sessionStorage.setItem('refreshToken', refreshToken);
     }
   }
-
 
   public clearAccessToken(): void {
     this.sessionStorage.removeItem('accessToken');
@@ -54,8 +56,11 @@ export class TokenManagementService {
   public getNewToken() {
     const tokens = {
       accessToken: this.getAccessToken(),
-      refreshToken: this.getRefreshToken()
-    }
-    return this.httpClient.post<{ accessToken: string }>(this.API_URL + 'auth/refresh', tokens);
+      refreshToken: this.getRefreshToken(),
+    };
+    return this.httpClient.post<{ accessToken: string }>(
+      this.API_URL + 'auth/refresh',
+      tokens
+    );
   }
 }

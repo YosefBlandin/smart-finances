@@ -1,7 +1,6 @@
 import { Routes } from '@angular/router';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { DashboardLayoutComponent } from './layout/dashboard-layout/dashboard-layout.component';
-import { UsersComponent } from './pages/users/users.component';
 import { ServicesComponent } from './pages/services/services.component';
 import { SecurityComponent } from './pages/security/security.component';
 import { LogsComponent } from './pages/logs/logs.component';
@@ -10,16 +9,12 @@ import { UserDetailsComponent } from './pages/user-details/user-details.componen
 
 export const ADMIN_ROUTES: Routes = [
   {
-    path: "",
+    path: '',
     component: DashboardLayoutComponent,
     children: [
       {
         path: 'dashboard',
         component: DashboardComponent,
-      },
-      {
-        path: 'users',
-        component: UsersComponent,
       },
       {
         path: 'users/:id',
@@ -40,8 +35,8 @@ export const ADMIN_ROUTES: Routes = [
       {
         path: 'change-password',
         component: ChangePasswordComponent,
-      }
-    ]
+      },
+    ],
   },
   {
     path: '',

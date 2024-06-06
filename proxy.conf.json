@@ -1,10 +1,10 @@
 {
-	"/api": {
-	  "target": "https://commonly-teaching-oryx.ngrok-free.app",
-	  "pathRewrite": {
-		"/api": ""
-	  },
-	  "secure": true, 
-	  "changeOrigin": true
-	}
+  "/api": {
+    "target": "http://localhost:3200/",
+    "pathRewrite": {
+      "/api": ""
+    },
+    "secure": true,
+    "changeOrigin": true
   }
+}

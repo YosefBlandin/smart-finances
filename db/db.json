@@ -1,0 +1,19 @@
+{
+  "expenses": [
+    {
+      "name": "Food",
+      "amount": 1200,
+      "id": "27e1"
+    },
+    {
+      "name": "Clothes",
+      "amount": 5200,
+      "id": "e208"
+    },
+    {
+      "id": "6498",
+      "expense_name": "Food 2",
+      "expense_amount": "1200"
+    }
+  ]
+}
