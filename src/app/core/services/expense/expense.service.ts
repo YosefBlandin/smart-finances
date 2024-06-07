@@ -7,14 +7,14 @@ import { environment } from '../../../../environments/environment';
   providedIn: 'root',
 })
 export class ExpenseService {
-  private readonly API_URL = 'http://localhost:3200/';
-  private readonly MODEL = 'expenses';
+  private readonly API_URL = environment.apiUrl;
+  private readonly MODEL = 'expense';
 
   constructor(private httpClient: HttpClient) {}
 
   public create(data: any) {
     return this.httpClient.post<any>(
-      getUrl(this.API_URL, `${this.MODEL}`),
+      getUrl(this.API_URL, `${this.MODEL}/create`),
       data
     );
   }
