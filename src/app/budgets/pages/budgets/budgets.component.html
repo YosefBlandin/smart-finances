@@ -20,7 +20,11 @@
       Create Expense
     </button>
   </form> -->
-  <app-data-table [dataSource]="expenses()">
+  <app-data-table
+    (_handleAction)="handleExpenseAction($event)"
+    [dataSource]="expenses()"
+    [actions]="expensesActions"
+  >
     <section tableHeaderButtons>
       <button mat-flat-button (click)="onAddExpense()" color="primary">
         Create Expense

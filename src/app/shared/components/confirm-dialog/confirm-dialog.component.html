@@ -7,15 +7,22 @@
 
 <mat-dialog-actions>
   <section class="w-full flex justify-end px-5 pb-2">
-    <button type="button" mat-stroked-button (click)="handleDismiss()"
-      class="h-11 min-h-11 2xl:h-12 2xl:min-h-12 w-48">{{
-      secondaryButtonText
-      }}</button>
-    <button type="button" mat-raised-button (click)="handleConfirm()" color="warn"
-      class="h-11 min-h-11 2xl:h-12 2xl:min-h-12 w-48">
-
+    <button
+      type="button"
+      mat-stroked-button
+      (click)="handleDismiss()"
+      class="h-11 min-h-11 2xl:h-12 2xl:min-h-12 w-48"
+    >
+      {{ secondaryButtonText }}
+    </button>
+    <button
+      type="button"
+      mat-flat-button
+      (click)="handleConfirm()"
+      color="warn"
+      class="h-11 min-h-11 2xl:h-12 2xl:min-h-12 w-48"
+    >
       {{ buttonText }}
-
     </button>
   </section>
 </mat-dialog-actions>
