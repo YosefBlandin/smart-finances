@@ -185,9 +185,9 @@ export class ExpenseFormModalComponent
 
   public handleCreateResponse() {
     this.handleCloseModal();
-    // this.expenseFacadeService.getAllUsers(true, () =>
-    //   this.openSnackBar('Usuario creado con exito', 3000, 'fill', 'success')
-    // );
+    this.expenseFacadeService.getAllExpenses(true, () =>
+      this.openSnackBar('Expense added successfully', 3000, 'fill', 'success')
+    );
   }
 
   public handleCreateError(err: { message: string; statusCode: number }) {
