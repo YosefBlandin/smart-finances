@@ -44,12 +44,12 @@ export class ExpenseService {
     );
   }
 
-  public delete(userId: number) {
+  public delete(id: number) {
     return this.httpClient.delete<any>(
       getUrlWithId({
         url: this.API_URL,
         model: `${this.MODEL}`,
-        id: userId,
+        id: id,
       })
     );
   }
