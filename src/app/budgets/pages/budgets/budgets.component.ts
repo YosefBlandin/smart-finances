@@ -1,9 +1,7 @@
 import {
   AfterViewInit,
   Component,
-  Inject,
   OnInit,
-  PLATFORM_ID,
   ViewChild,
   signal,
 } from '@angular/core';
@@ -14,7 +12,6 @@ import { MatDrawer } from '@angular/material/sidenav';
 import { ExpenseFormModalComponent } from '../../../shared/components/expense-form-modal/expense-form-modal.component';
 import { MatDialog } from '@angular/material/dialog';
 import { ExpenseFacadeService } from '../../../core/facades/expense/expense.facade';
-import { isPlatformBrowser } from '@angular/common';
 import { DataTableActionType } from '../../../core/types/data-table';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { MatSnackBar, MatSnackBarConfig } from '@angular/material/snack-bar';
@@ -76,7 +73,7 @@ export class BudgetsComponent implements OnInit, AfterViewInit {
         this.expenseFacadeService.delete(id, true).subscribe({
           next: () => {
             this.openSnackBar(
-              'Usuario eliminado con exito',
+              'Expense deleted successfully',
               3000,
               'fill',
               'success'
@@ -84,7 +81,7 @@ export class BudgetsComponent implements OnInit, AfterViewInit {
           },
           error: (err: Error) => {
             this.openSnackBar(
-              err.message ?? 'El usuario no se pudo eliminar',
+              err.message ?? 'The expense was not deleted',
               3000,
               'fill',
               'error'
