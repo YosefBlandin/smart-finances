@@ -1,25 +1,32 @@
 export const getUrl = (url: string, model: string): string => {
   return `${url}${model}`;
-}
+};
 
-export const getUrlWithId = ({ url, model, id }: { url: string, model: string, id: number }): string => {
+export const getUrlWithId = ({
+  url,
+  model,
+  id,
+}: {
+  url: string;
+  model: string;
+  id: number;
+}): string => {
   return `${getUrl(url, model)}/${id}`;
-}
+};
 
-export const errorMessagesEs: {
-  [statusCode: number]: string
-
+export const errorMessagesEn: {
+  [statusCode: number]: string;
 } = {
-  400: "Datos incorrectos. Verifique los datos ingresados.",
-  401: "No autorizado. Verifique sus credenciales.",
-  403: "Prohibido. No tiene permiso para acceder a este recurso.",
-  404: "Recurso no encontrado. La página o recurso solicitado no existe.",
-  405: "Método no permitido. El método utilizado para acceder al recurso no está permitido.",
-  406: "No aceptable. El servidor no puede aceptar la solicitud con las características presentadas.",
-  408: "Tiempo de espera agotado. La solicitud tardó demasiado en procesarse.",
-  413: "Entidad demasiado grande. El tamaño de la solicitud sobrepasa el límite permitido.",
-  429: "Demasiadas solicitudes. Ha realizado demasiadas solicitudes en un periodo corto de tiempo. Intente nuevamente más tarde.",
-  500: "Error interno del servidor. Algo salió mal en el servidor. Intente nuevamente más tarde.",
-  502: "Error de puerta de enlace incorrecta. El servidor no pudo comunicarse con otro servidor.",
-  503: "Servicio no disponible. El servidor está sobrecargado o en mantenimiento.",
+  400: 'Invalid Data. Please review the information you entered.',
+  401: 'Unauthorized Access. Please check your credentials.',
+  403: 'Forbidden Access. You do not have permission to access this resource.',
+  404: 'Resource Not Found. The requested page or resource does not exist.',
+  405: 'Method Not Allowed. The method used to access the resource is not permitted.',
+  406: 'Not Acceptable. The server cannot accept the request with the provided specifications.',
+  408: 'Request Timeout. The request took too long to process.',
+  413: 'Payload Too Large. The request size exceeds the allowed limit.',
+  429: 'Too Many Requests. You have made too many requests in a short period of time. Please try again later.',
+  500: 'Internal Server Error. Something went wrong on the server. Please try again later.',
+  502: 'Bad Gateway Error. The server was unable to communicate with another server.',
+  503: 'Service Unavailable. The server is overloaded or under maintenance.',
 };
