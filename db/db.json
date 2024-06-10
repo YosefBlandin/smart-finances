@@ -1,19 +1,159 @@
 {
-  "expenses": [
+  "users": [
     {
-      "name": "Food",
-      "amount": 1200,
-      "id": "27e1"
+      "id": 1,
+      "username": "john_doe",
+      "email": "john.doe@example.com",
+      "password": "password123",
+      "created_at": "2023-01-01T10:00:00Z",
+      "updated_at": "2023-06-01T10:00:00Z",
+      "budgets": [
+        {
+          "id": 1,
+          "name": "Spring Budget",
+          "user_id": 1,
+          "created_at": "2023-02-01T10:00:00Z",
+          "start_date": "2023-02-01",
+          "end_date": "2023-06-01",
+          "total_savings_goal": 5000.0,
+          "total_income": 10000.0,
+          "total_expenses": 6000.0,
+          "net_income": 4000.0,
+          "amount_needed_to_save": 1000.0,
+          "savings_rate": 0.1,
+          "updated_at": "2023-06-01T10:00:00Z",
+          "transactions": [
+            {
+              "id": 1,
+              "budget_id": 1,
+              "user_id": 1,
+              "name": "Groceries",
+              "amount": 150.0,
+              "type": "expense",
+              "frequency": "weekly",
+              "start_date": "2023-02-01",
+              "end_date": "2023-06-01",
+              "date_occurred": "2023-02-01",
+              "created_at": "2023-02-01T12:00:00Z",
+              "updated_at": "2023-02-01T12:00:00Z"
+            },
+            {
+              "id": 2,
+              "budget_id": 1,
+              "user_id": 1,
+              "name": "Salary",
+              "amount": 2500.0,
+              "type": "income",
+              "frequency": "monthly",
+              "start_date": "2023-02-01",
+              "end_date": "2023-06-01",
+              "date_occurred": "2023-02-01",
+              "created_at": "2023-02-01T12:00:00Z",
+              "updated_at": "2023-02-01T12:00:00Z"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "name": "Summer Budget",
+          "user_id": 1,
+          "created_at": "2023-06-01T10:00:00Z",
+          "start_date": "2023-06-01",
+          "end_date": "2023-12-01",
+          "total_savings_goal": 3000.0,
+          "total_income": 12000.0,
+          "total_expenses": 8000.0,
+          "net_income": 4000.0,
+          "amount_needed_to_save": 3000.0,
+          "savings_rate": 0.25,
+          "updated_at": "2023-12-01T10:00:00Z",
+          "transactions": [
+            {
+              "id": 3,
+              "budget_id": 2,
+              "user_id": 1,
+              "name": "Rent",
+              "amount": 1000.0,
+              "type": "expense",
+              "frequency": "monthly",
+              "start_date": "2023-06-01",
+              "end_date": "2023-12-01",
+              "date_occurred": "2023-06-01",
+              "created_at": "2023-06-01T12:00:00Z",
+              "updated_at": "2023-06-01T12:00:00Z"
+            },
+            {
+              "id": 4,
+              "budget_id": 2,
+              "user_id": 1,
+              "name": "Freelance",
+              "amount": 2000.0,
+              "type": "income",
+              "frequency": "monthly",
+              "start_date": "2023-06-01",
+              "end_date": "2023-12-01",
+              "date_occurred": "2023-06-01",
+              "created_at": "2023-06-01T12:00:00Z",
+              "updated_at": "2023-06-01T12:00:00Z"
+            }
+          ]
+        }
+      ]
     },
     {
-      "name": "Clothes",
-      "amount": 5200,
-      "id": "e208"
-    },
-    {
-      "id": "6498",
-      "expense_name": "Food 2",
-      "expense_amount": "1200"
+      "id": 2,
+      "username": "jane_smith",
+      "email": "jane.smith@example.com",
+      "password": "securepassword",
+      "created_at": "2023-03-01T10:00:00Z",
+      "updated_at": "2023-06-01T10:00:00Z",
+      "budgets": [
+        {
+          "id": 3,
+          "name": "Fall Budget",
+          "user_id": 2,
+          "created_at": "2023-04-01T10:00:00Z",
+          "start_date": "2023-04-01",
+          "end_date": "2023-10-01",
+          "total_savings_goal": 4000.0,
+          "total_income": 15000.0,
+          "total_expenses": 11000.0,
+          "net_income": 4000.0,
+          "amount_needed_to_save": 4000.0,
+          "savings_rate": 0.267,
+          "updated_at": "2023-10-01T10:00:00Z",
+          "transactions": [
+            {
+              "id": 5,
+              "budget_id": 3,
+              "user_id": 2,
+              "name": "Utilities",
+              "amount": 200.0,
+              "type": "expense",
+              "frequency": "monthly",
+              "start_date": "2023-04-01",
+              "end_date": "2023-10-01",
+              "date_occurred": "2023-04-01",
+              "created_at": "2023-04-01T12:00:00Z",
+              "updated_at": "2023-04-01T12:00:00Z"
+            },
+            {
+              "id": 6,
+              "budget_id": 3,
+              "user_id": 2,
+              "name": "Bonus",
+              "amount": 5000.0,
+              "type": "income",
+              "frequency": "one-time",
+              "start_date": "2023-04-01",
+              "end_date": "2023-10-01",
+              "date_occurred": "2023-04-01",
+              "created_at": "2023-04-01T12:00:00Z",
+              "updated_at": "2023-04-01T12:00:00Z"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

@@ -14,7 +14,11 @@ export const routes: Routes = [
     ],
   },
   {
-    path: 'budgets',
-    loadChildren: () => import('./budgets').then((m) => m.budgetsRoutes),
+    path: 'budget',
+    loadChildren: () => import('./budget').then((m) => m.BUDGET_ROUTES),
+  },
+  {
+    path: 'auth',
+    loadChildren: () => import('./auth').then((m) => m.AUTH_ROUTES),
   },
 ];

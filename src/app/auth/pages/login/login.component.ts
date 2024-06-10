@@ -39,10 +39,10 @@ export class LoginComponent implements OnInit {
 
   public isLoading: WritableSignal<boolean> = signal(false);
   public loginForm: FormGroup<{
-    username: FormControl<string>;
+    email: FormControl<string>;
     password: FormControl<string>;
   }> = new FormGroup({
-    username: new FormControl('', {
+    email: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required, Validators.maxLength(40)],
     }),
@@ -71,11 +71,11 @@ export class LoginComponent implements OnInit {
   private handleLoginResponse(response: string | number): void {
     console.log(response);
 
-    this.router.navigate(['admin/dashboard']);
+    this.router.navigate(['budget']);
   }
 
   private handleLoginError(error: HttpErrorResponse): void {
-    this.errorMessage = error.message[0];
+    this.errorMessage = error.message;
     this.isLoading.set(false);
   }
 

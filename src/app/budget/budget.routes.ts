@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { BudgetsComponent } from './pages/budgets/budgets.component';
 import { PlatformLayoutComponent } from './components/platform-layout/platform-layout.component';
 
-export const budgetsRoutes: Routes = [
+export const BUDGET_ROUTES: Routes = [
   {
     path: '',
     component: PlatformLayoutComponent,

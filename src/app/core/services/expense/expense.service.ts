@@ -8,7 +8,7 @@ import { environment } from '../../../../environments/environment';
 })
 export class ExpenseService {
   private readonly API_URL = environment.apiUrl;
-  private readonly MODEL = 'expense';
+  private readonly MODEL = 'budgets';
 
   constructor(private httpClient: HttpClient) {}
 
