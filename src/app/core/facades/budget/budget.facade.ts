@@ -1,8 +1,20 @@
 import { Injectable } from '@angular/core';
-import { ExpenseService } from '../../services';
+import { BudgetService } from '../../services';
 import { BehaviorSubject, catchError, map, throwError } from 'rxjs';
 import { DatePipe } from '@angular/common';
+enum TransactionType {
+  Income = 1,
+  Expense = 2,
+}
 
+enum TransactionFrequency {
+  OneTime = 0,
+  Daily = 1,
+  Weekly = 2,
+  Biweekly = 3,
+  Monthly = 4,
+  Annually = 5,
+}
 @Injectable({
   providedIn: 'root',
 })
@@ -16,7 +28,7 @@ export class ExpenseFacadeService {
   private isLoadingFind$ = new BehaviorSubject<boolean>(false);
 
   constructor(
-    private expenseService: ExpenseService,
+    private BudgetService: BudgetService,
     private datePipe: DatePipe
   ) {}
 
@@ -50,41 +62,37 @@ export class ExpenseFacadeService {
 
   public create(data: any) {
     this.isLoadingCreate$.next(true);
-    return this.expenseService
-      .create({
-        ...data,
+    return this.BudgetService.create({
+      ...data,
+    }).pipe(
+      catchError((err) => {
+        this.isLoadingCreate$.next(false);
+        return throwError(() => ({ ...err }));
+      }),
+      map((value) => {
+        this.isLoadingCreate$.next(false);
+        return { ...value.data };
       })
-      .pipe(
-        catchError((err) => {
-          this.isLoadingCreate$.next(false);
-          return throwError(() => ({ ...err }));
-        }),
-        map((value) => {
-          this.isLoadingCreate$.next(false);
-          return { ...value.data };
-        })
-      );
+    );
   }
 
   public update(data: any) {
     this.isLoadingUpdate$.next(true);
-    return this.expenseService
-      .patch({
-        ...data,
-        channelId: parseInt(data.channelId.toString()),
-        statusId: parseInt(data.statusId.toString()),
+    return this.BudgetService.patch({
+      ...data,
+      channelId: parseInt(data.channelId.toString()),
+      statusId: parseInt(data.statusId.toString()),
+    }).pipe(
+      catchError((err) => {
+        this.isLoadingUpdate$.next(false);
+        return throwError(() => ({ ...err }));
+      }),
+      map((value) => {
+        this.isLoadingUpdate$.next(false);
+        this.expenseFound$.next(value.data);
+        return { ...value.data };
       })
-      .pipe(
-        catchError((err) => {
-          this.isLoadingUpdate$.next(false);
-          return throwError(() => ({ ...err }));
-        }),
-        map((value) => {
-          this.isLoadingUpdate$.next(false);
-          this.expenseFound$.next(value.data);
-          return { ...value.data };
-        })
-      );
+    );
   }
 
   public getAllExpenses(disableLoading?: boolean, callback?: () => void) {
@@ -92,8 +100,7 @@ export class ExpenseFacadeService {
       this.isLoadingGetAll$.next(true);
     }
 
-    this.expenseService
-      .all()
+    this.BudgetService.all()
       .pipe(
         catchError((err) => {
           if (!disableLoading) {
@@ -107,6 +114,7 @@ export class ExpenseFacadeService {
         })
       )
       .subscribe((data: any) => {
+        console.log(data);
         this.allExpenses$.next(data);
         if (!disableLoading) {
           this.isLoadingGetAll$.next(false);
@@ -119,8 +127,7 @@ export class ExpenseFacadeService {
 
   public find(userId: number) {
     this.isLoadingFind$.next(true);
-    return this.expenseService
-      .find(userId)
+    return this.BudgetService.find(userId)
       .pipe(
         catchError((err) => {
           this.isLoadingFind$.next(false);
@@ -148,7 +155,7 @@ export class ExpenseFacadeService {
 
   public delete(userId: number, getAll?: boolean) {
     this.isLoadingDelete$.next(true);
-    return this.expenseService.delete(userId).pipe(
+    return this.BudgetService.delete(userId).pipe(
       catchError((err) => {
         this.isLoadingDelete$.next(false);
         return throwError(() => ({ ...err }));

@@ -15,13 +15,13 @@ import { MatButton, MatFabButton } from '@angular/material/button';
 import { MatDrawer } from '@angular/material/sidenav';
 import { ExpenseFormModalComponent } from '../../../shared/components/expense-form-modal/expense-form-modal.component';
 import { MatDialog } from '@angular/material/dialog';
-import { ExpenseFacadeService } from '../../../core/facades/expense/expense.facade';
+import { ExpenseFacadeService } from '../../../core/facades/budget/budget.facade';
 import { DataTableActionType } from '../../../core/types/data-table';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { MatSnackBar, MatSnackBarConfig } from '@angular/material/snack-bar';
 import { MatIcon } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-
+import { DatePipe } from '@angular/common';
+import { Timestamp } from '@angular/fire/firestore';
 @Component({
   selector: 'app-budgets',
   standalone: true,
@@ -33,6 +33,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
     MatIcon,
     DataTableComponent,
     CardItemComponent,
+    DatePipe,
     ExpenseFormModalComponent,
   ],
   templateUrl: './budgets.component.html',
@@ -47,7 +48,17 @@ export class BudgetsComponent implements OnInit, AfterViewInit {
   ) {}
 
   showFiller = false;
-  public expenses = signal<any>([]);
+  public budgets = signal<
+    {
+      name: string;
+      savings_rate: string;
+      amount_saved: number;
+      currency: string;
+      total_savings_goal: number;
+      start_date: Timestamp;
+      end_date: Timestamp;
+    }[]
+  >([]);
   public expensesActions: DataTableActionType[] = [
     {
       icon: 'delete',
@@ -57,9 +68,9 @@ export class BudgetsComponent implements OnInit, AfterViewInit {
   ];
 
   ngOnInit(): void {
-    this.expenseFacadeService.allExpenses.subscribe(this.expenses.set);
+    this.expenseFacadeService.allExpenses.subscribe(this.budgets.set);
 
-    // this.expenseFacadeService.getAllExpenses();
+    this.expenseFacadeService.getAllExpenses();
   }
 
   ngAfterViewInit(): void {}

@@ -2,15 +2,27 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { getUrl, getUrlWithId } from '../../../shared/utils';
 import { environment } from '../../../../environments/environment';
+import {
+  Firestore,
+  addDoc,
+  collection,
+  getDocs,
+  query,
+} from '@angular/fire/firestore';
+import { Observable, from, map, of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
 })
-export class ExpenseService {
+export class BudgetService {
   private readonly API_URL = environment.apiUrl;
   private readonly MODEL = 'budgets';
+  private readonly COLLECTION_PATH = '';
 
-  constructor(private httpClient: HttpClient) {}
+  constructor(
+    private httpClient: HttpClient,
+    private angularFirestore: Firestore
+  ) {}
 
   public create(data: any) {
     return this.httpClient.post<any>(
@@ -31,7 +43,9 @@ export class ExpenseService {
   }
 
   public all() {
-    return this.httpClient.get<any[]>(getUrl(this.API_URL, `${this.MODEL}`));
+    return from(
+      getDocs(query(collection(this.angularFirestore, 'budgets')))
+    ).pipe(map((response) => response.docs.map((doc) => doc.data())));
   }
 
   public find(userId: number) {

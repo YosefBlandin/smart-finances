@@ -21,7 +21,7 @@ import { MatIcon } from '@angular/material/icon';
 import { Observable, combineLatest, startWith } from 'rxjs';
 import { InputSelectComponent } from '../input-select/input-select.component';
 import { MatSnackBar, MatSnackBarConfig } from '@angular/material/snack-bar';
-import { ExpenseFacadeService } from '../../../core/facades/expense/expense.facade';
+import { ExpenseFacadeService } from '../../../core/facades/budget/budget.facade';
 
 @Component({
   selector: 'smart-user-form-modal',

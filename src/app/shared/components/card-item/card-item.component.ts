@@ -10,4 +10,13 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
   templateUrl: './card-item.component.html',
   styleUrl: './card-item.component.scss',
 })
-export class CardItemComponent {}
+export class CardItemComponent {
+  @Input({ alias: 'title', required: true }) title: string = '';
+  @Input({ alias: 'date', required: false }) date: string | null = '';
+  @Input({ alias: 'from_progress_text', required: true })
+  from_progress_text: string = '';
+  @Input({ alias: 'to_progress_text', required: true })
+  to_progress_text: string = '';
+  @Input({ alias: 'rate', required: false })
+  rate: string = '';
+}
