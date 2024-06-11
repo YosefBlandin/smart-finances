@@ -29,6 +29,7 @@
     class="w-full"
     [appearance]="inputAppareance"
     [tabIndex]="tabIndex"
+    (click)="openCalendar()"
   >
     <mat-label>{{ label }}</mat-label>
     <input
@@ -47,6 +48,7 @@
       [class.opacity-60]="disabled"
     />
     <mat-datepicker-toggle
+      #pickerToggle
       matIconSuffix
       [for]="picker"
       a

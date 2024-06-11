@@ -1,4 +1,12 @@
-import { Component, Injector, Input, OnInit, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  Injector,
+  Input,
+  OnInit,
+  ViewChild,
+  signal,
+} from '@angular/core';
 import {
   ControlValueAccessor,
   FormControl,
@@ -12,9 +20,13 @@ import {
   ValidationErrors,
   Validator,
 } from '@angular/forms';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatInputModule } from '@angular/material/input';
 import {
+  MatDatepicker,
+  MatDatepickerModule,
+} from '@angular/material/datepicker';
+import { MatInput, MatInputModule } from '@angular/material/input';
+import {
+  MatFormField,
   MatFormFieldAppearance,
   MatFormFieldModule,
 } from '@angular/material/form-field';
@@ -62,7 +74,11 @@ export class MyErrorStateMatcher implements ErrorStateMatcher {
   templateUrl: './input.component.html',
   styleUrl: './input.component.scss',
 })
-export class InputComponent implements OnInit, ControlValueAccessor, Validator {
+export class InputComponent
+  implements OnInit, AfterViewInit, ControlValueAccessor, Validator
+{
+  @ViewChild(MatDatepicker) matDatePicker!: MatDatepicker<any>;
+  @ViewChild(MatInput) matInput!: MatInput;
   @Input() public label = '';
   @Input() public containerClasses?: string;
   @Input() public autoComplete?: AutoFill;
@@ -102,6 +118,18 @@ export class InputComponent implements OnInit, ControlValueAccessor, Validator {
     }
 
     this.errorStateMatcher = new MyErrorStateMatcher(this.formControl);
+  }
+
+  ngAfterViewInit(): void {
+    if (this.type === 'date') {
+      this.matInput.focus = () => {
+        return false;
+      };
+    }
+  }
+
+  public openCalendar() {
+    this.matDatePicker.open();
   }
 
   public writeValue(value: string): void {

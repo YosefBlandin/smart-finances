@@ -18,7 +18,7 @@ enum TransactionFrequency {
 @Injectable({
   providedIn: 'root',
 })
-export class ExpenseFacadeService {
+export class BudgetFacadeService {
   private allExpenses$ = new BehaviorSubject<any[]>([]);
   private expenseFound$ = new BehaviorSubject<any | undefined>(undefined);
   private isLoadingCreate$ = new BehaviorSubject<boolean>(false);

@@ -1,54 +1,51 @@
+import { Component, SkipSelf, ViewChild, signal } from '@angular/core';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { MatButton } from '@angular/material/button';
 import {
-  AfterContentChecked,
-  AfterViewInit,
-  Component,
-  SkipSelf,
-  ViewChild,
-  signal,
-} from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { STEPPER_GLOBAL_OPTIONS } from '@angular/cdk/stepper';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { InputComponent } from '../input/input.component';
-import {
-  FormBuilder,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
-import { MatStepper, MatStepperModule } from '@angular/material/stepper';
-import { MatIcon } from '@angular/material/icon';
-import { Observable, combineLatest, startWith } from 'rxjs';
-import { InputSelectComponent } from '../input-select/input-select.component';
+  MatDialog,
+  MatDialogActions,
+  MatDialogContent,
+  MatDialogRef,
+  MatDialogTitle,
+} from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarConfig } from '@angular/material/snack-bar';
-import { BudgetFacadeService } from '../../../core/facades/budget/budget.facade';
+import {
+  MatStep,
+  MatStepContent,
+  MatStepLabel,
+  MatStepper,
+} from '@angular/material/stepper';
+import { BudgetFacadeService } from '@core/facades/budget/budget.facade';
+import { InputComponent } from '@shared/components';
+import { Observable, combineLatest, startWith } from 'rxjs';
 
 @Component({
-  selector: 'smart-user-form-modal',
+  selector: 'app-budget-form',
   standalone: true,
   imports: [
-    MatDialogModule,
-    MatButtonModule,
-    InputComponent,
-    InputSelectComponent,
+    MatStepper,
+    MatStepLabel,
+    MatStepContent,
+    MatStep,
+    MatButton,
+    MatDialogActions,
+    MatDialogContent,
+    MatDialogTitle,
     ReactiveFormsModule,
-    MatStepperModule,
-    MatButtonModule,
-    MatIcon,
+    InputComponent,
   ],
-  providers: [
-    {
-      provide: STEPPER_GLOBAL_OPTIONS,
-      useValue: { showError: true },
-    },
-  ],
-  templateUrl: './expense-form-modal.component.html',
-  styleUrl: './expense-form-modal.component.css',
+  templateUrl: './budget-form.component.html',
+  styleUrl: './budget-form.component.scss',
 })
-export class ExpenseFormModalComponent
-  implements AfterViewInit, AfterContentChecked
-{
+export class BudgetFormComponent {
   @ViewChild(MatStepper) matStepper!: MatStepper;
+  public mainBudgetInfoForm = this.formBuilder.group({
+    name: this.formBuilder.control('', { validators: [] }),
+    start_date: this.formBuilder.control('', { validators: [] }),
+    end_date: this.formBuilder.control('', { validators: [] }),
+    total_savings_goal: this.formBuilder.control('', { validators: [] }),
+  });
+
   public currentStepIndex$ = signal<number>(0);
   public areFormsInvalid$ = signal<boolean>(false);
   public isLoading$ = signal<boolean>(false);
@@ -57,39 +54,12 @@ export class ExpenseFormModalComponent
   >(undefined);
   public stepsArrLength = 0;
 
-  public expenseForm: FormGroup = this.formBuilder.group({
-    expense_name: this.formBuilder.control('', [Validators.required]),
-    expense_amount: this.formBuilder.control('', [Validators.required]),
-  });
-
   constructor(
-    private budgetFacadeService: BudgetFacadeService,
     public formBuilder: FormBuilder,
+    private budgetFacadeService: BudgetFacadeService,
     private snackbar: MatSnackBar,
-    @SkipSelf() private dialogRef: MatDialogRef<ExpenseFormModalComponent>
+    @SkipSelf() private dialogRef: MatDialogRef<BudgetFormComponent>
   ) {}
-
-  public ngAfterViewInit(): void {
-    if (this.matStepper instanceof MatStepper) {
-      this.matStepper.selectedIndexChange.subscribe(this.currentStepIndex$.set);
-    }
-    this.allFormsStatusChanges.subscribe(this.handleAllFormsStatus.bind(this));
-
-    // this.budgetFacadeService.isLoadingCreate.subscribe((isLoading) => {
-    //   this.isLoading$.set(isLoading);
-    //   if (isLoading) {
-    //     this.dialogRef.disableClose = true;
-    //   } else {
-    //     this.dialogRef.disableClose = false;
-    //   }
-    // });
-  }
-
-  public ngAfterContentChecked(): void {
-    if (this.matStepper instanceof MatStepper) {
-      this.stepsArrLength = Array.from(this.matStepper.steps).length - 1;
-    }
-  }
 
   get currentStepIndex(): number {
     return this.currentStepIndex$();
@@ -97,8 +67,15 @@ export class ExpenseFormModalComponent
 
   get allFormsStatusChanges(): Observable<string[]> {
     return combineLatest([
-      this.expenseForm.statusChanges.pipe(startWith('INVALID')),
+      this.mainBudgetInfoForm.statusChanges.pipe(startWith('INVALID')),
     ]);
+  }
+
+  public isDesktop(): boolean {
+    if (window.innerWidth > 768) {
+      return true;
+    }
+    return false;
   }
 
   public handleAllFormsStatus(statuses: string[]): void {
@@ -116,7 +93,7 @@ export class ExpenseFormModalComponent
     };
 
     const stepsStatus: StepsStatusType = {
-      0: this.expenseForm.status,
+      0: this.mainBudgetInfoForm.status,
     };
 
     return stepsStatus[stepIndex ?? this.currentStepIndex] === 'INVALID';
@@ -135,7 +112,7 @@ export class ExpenseFormModalComponent
   }
 
   public handleInputErrorStep(errorMsg: string): void {
-    const allFormGroups = [this.expenseForm];
+    const allFormGroups = [this.mainBudgetInfoForm];
 
     allFormGroups.forEach(async (formGroup: FormGroup, index: number) => {
       const keysOfControls: string[] = Object.keys(formGroup.controls);
@@ -173,16 +150,6 @@ export class ExpenseFormModalComponent
     });
   }
 
-  public handleSubmit() {
-    const allFormsData: any = {
-      ...this.expenseForm.getRawValue(),
-    };
-    this.budgetFacadeService.create(allFormsData).subscribe({
-      next: this.handleCreateResponse.bind(this),
-      error: this.handleCreateError.bind(this),
-    });
-  }
-
   public handleCreateResponse() {
     this.handleCloseModal();
     this.budgetFacadeService.getAllExpenses(true, () =>
@@ -197,11 +164,14 @@ export class ExpenseFormModalComponent
     }
   }
 
-  public isDesktop(): boolean {
-    if (window.innerWidth > 768) {
-      return true;
-    }
-    return false;
+  public handleSubmit() {
+    const allFormsData: any = {
+      ...this.mainBudgetInfoForm.getRawValue(),
+    };
+    this.budgetFacadeService.create(allFormsData).subscribe({
+      next: this.handleCreateResponse.bind(this),
+      error: this.handleCreateError.bind(this),
+    });
   }
 
   private openSnackBar(

@@ -15,13 +15,14 @@ import { MatButton, MatFabButton } from '@angular/material/button';
 import { MatDrawer } from '@angular/material/sidenav';
 import { ExpenseFormModalComponent } from '../../../shared/components/expense-form-modal/expense-form-modal.component';
 import { MatDialog } from '@angular/material/dialog';
-import { ExpenseFacadeService } from '../../../core/facades/budget/budget.facade';
+import { BudgetFacadeService } from '../../../core/facades/budget/budget.facade';
 import { DataTableActionType } from '../../../core/types/data-table';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { MatSnackBar, MatSnackBarConfig } from '@angular/material/snack-bar';
 import { MatIcon } from '@angular/material/icon';
 import { DatePipe } from '@angular/common';
 import { Timestamp } from '@angular/fire/firestore';
+import { BudgetFormComponent } from '../../components';
 @Component({
   selector: 'app-budgets',
   standalone: true,
@@ -44,7 +45,7 @@ export class BudgetsComponent implements OnInit, AfterViewInit {
   constructor(
     private matDialog: MatDialog,
     private snackbar: MatSnackBar,
-    private expenseFacadeService: ExpenseFacadeService
+    private BudgetFacadeService: BudgetFacadeService
   ) {}
 
   showFiller = false;
@@ -69,15 +70,22 @@ export class BudgetsComponent implements OnInit, AfterViewInit {
   ];
 
   ngOnInit(): void {
-    this.expenseFacadeService.allExpenses.subscribe(this.budgets.set);
+    this.BudgetFacadeService.allExpenses.subscribe(this.budgets.set);
 
-    this.expenseFacadeService.getAllExpenses();
+    this.BudgetFacadeService.getAllExpenses();
   }
 
   ngAfterViewInit(): void {}
 
   public onAddExpense() {
     this.matDialog.open(ExpenseFormModalComponent);
+  }
+
+  public onNewBudget() {
+    this.matDialog.open(BudgetFormComponent, {
+      width: '100%',
+      maxWidth: 600,
+    });
   }
 
   public onDeleteExpense(id: number) {
@@ -92,7 +100,7 @@ export class BudgetsComponent implements OnInit, AfterViewInit {
 
     dialogRef.afterClosed().subscribe((value) => {
       if (value) {
-        this.expenseFacadeService.delete(id, true).subscribe({
+        this.BudgetFacadeService.delete(id, true).subscribe({
           next: () => {
             this.openSnackBar(
               'Expense deleted successfully',
