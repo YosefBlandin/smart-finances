@@ -1,34 +1,10 @@
-<section>
-  <!-- <form [formGroup]="expenseForm">
-    <app-input
-      label="Expense Name*"
-      containerClasses="mb-4"
-      formControlName="expense_name"
-      type="text"
-      tabIndex="1"
-      placeholder="What did you spend in?"
-    />
-    <app-input
-      label="Amount (USD)*"
-      containerClasses="mb-4"
-      formControlName="expense_amount"
-      type="number"
-      tabIndex="2"
-      placeholder="How much did you spend?"
-    />
-    <button mat-flat-button (click)="addNewExpense()" color="primary">
-      Create Expense
-    </button>
-  </form> -->
-  <app-data-table
-    (_handleAction)="handleExpenseAction($event)"
-    [dataSource]="expenses()"
-    [actions]="expensesActions"
+<section class="flex gap-2">
+  <article
+    class="budget-card rounded-lg w-full md:max-w-xs py-8 px-4 flex flex-col items-center justify-center"
   >
-    <section tableHeaderButtons>
-      <button mat-flat-button (click)="onAddExpense()" color="primary">
-        Create Expense
-      </button>
-    </section>
-  </app-data-table>
+    <mat-icon class="font-bold text-xl mb-4">add</mat-icon>
+    <h6 class="font-bold text-lg text-center">Create New Budget</h6>
+  </article>
+
+  <app-card-item />
 </section>

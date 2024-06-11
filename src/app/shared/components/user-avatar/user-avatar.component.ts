@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Output } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 @Component({
-  selector: 'smart-user-avatar-component',
+  selector: 'app-user-avatar',
   standalone: true,
   imports: [MatIcon],
   templateUrl: './user-avatar.component.html',

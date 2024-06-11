@@ -16,6 +16,8 @@ import {
   MatDrawerContent,
 } from '@angular/material/sidenav';
 import { RouterOutlet } from '@angular/router';
+import { LoginService } from '@auth/services/login/login.service';
+import { UserAvatarComponent } from '@shared/components/user-avatar/user-avatar.component';
 
 @Component({
   selector: 'app-platform-layout',
@@ -28,6 +30,7 @@ import { RouterOutlet } from '@angular/router';
     MatDrawer,
     MatButton,
     MatListItem,
+    UserAvatarComponent,
     MatActionList,
   ],
   templateUrl: './platform-layout.component.html',
@@ -55,7 +58,10 @@ export class PlatformLayoutComponent implements AfterViewInit {
 
   public showDrawerButton = signal(true);
 
-  constructor(@Inject(PLATFORM_ID) private platformId: string) {}
+  constructor(
+    @Inject(PLATFORM_ID) private platformId: string,
+    private loginService: LoginService
+  ) {}
 
   ngAfterViewInit(): void {
     if (isPlatformBrowser(this.platformId)) {
@@ -64,5 +70,10 @@ export class PlatformLayoutComponent implements AfterViewInit {
         this.showDrawerButton.set(false);
       }
     }
+  }
+
+  public handleLogout(): void {
+    this.loginService.logout();
+    console.log('logo');
   }
 }

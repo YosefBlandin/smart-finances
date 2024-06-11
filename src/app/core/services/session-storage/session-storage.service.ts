@@ -1,18 +1,21 @@
-import { Injectable, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
 import * as forge from 'node-forge';
 
 @Injectable({
   providedIn: 'root',
 })
 export class SessionStorageService {
-  private readonly storage: Storage | null;
+  private readonly storage!: Storage | null;
   private readonly sessionKey$ = signal<string>('');
   private readonly iv$ = signal<string>('');
 
-  constructor() {
-    this.storage = sessionStorage;
-    this.iv$.set("3e57953b570738bd44ef42db9a2f05c5");
-    this.sessionKey$.set("faf368ffd79c5a6707945c56f5397ff4");
+  constructor(@Inject(PLATFORM_ID) public readonly platformId: string) {
+    if (isPlatformBrowser(platformId)) {
+      this.storage = sessionStorage;
+    }
+    this.iv$.set('3e57953b570738bd44ef42db9a2f05c5');
+    this.sessionKey$.set('faf368ffd79c5a6707945c56f5397ff4');
   }
 
   get sessionKey(): string {
@@ -26,7 +29,7 @@ export class SessionStorageService {
   private encrypt(data: string): string {
     if (data) {
       const cipher = forge.cipher.createCipher(
-        "AES-CBC",
+        'AES-CBC',
         forge.util.hexToBytes(this.sessionKey)
       );
       cipher.start({ iv: forge.util.hexToBytes(this.iv) });
@@ -39,7 +42,10 @@ export class SessionStorageService {
   }
 
   private decrypt(data: string): string {
-    const decipher = forge.cipher.createDecipher('AES-CBC', forge.util.hexToBytes(this.sessionKey));
+    const decipher = forge.cipher.createDecipher(
+      'AES-CBC',
+      forge.util.hexToBytes(this.sessionKey)
+    );
     decipher.start({ iv: forge.util.hexToBytes(this.iv) });
     decipher.update(forge.util.createBuffer(forge.util.hexToBytes(data)));
     decipher.finish();
@@ -47,16 +53,30 @@ export class SessionStorageService {
     return JSON.parse(decrypted);
   }
 
-  public getItem(key: string): { [key: string]: unknown } | { [key: string]: unknown }[] | string | number | null {
+  public getItem(
+    key: string
+  ):
+    | { [key: string]: unknown }
+    | { [key: string]: unknown }[]
+    | string
+    | number
+    | null {
     const value: string | null = sessionStorage.getItem(this.encrypt(key));
     if (value) {
       return this.decrypt(value);
     }
 
-    return null
+    return null;
   }
 
-  public setItem(key: string, data: { [key: string]: unknown } | { [key: string]: unknown }[] | string | number): void {
+  public setItem(
+    key: string,
+    data:
+      | { [key: string]: unknown }
+      | { [key: string]: unknown }[]
+      | string
+      | number
+  ): void {
     this.storage?.setItem(
       this.encrypt(key),
       this.encrypt(JSON.stringify(data))

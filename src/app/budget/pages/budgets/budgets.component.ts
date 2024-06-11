@@ -6,8 +6,12 @@ import {
   signal,
 } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
-import { DataTableComponent, InputComponent } from '../../../shared';
-import { MatButton } from '@angular/material/button';
+import {
+  CardItemComponent,
+  DataTableComponent,
+  InputComponent,
+} from '../../../shared';
+import { MatButton, MatFabButton } from '@angular/material/button';
 import { MatDrawer } from '@angular/material/sidenav';
 import { ExpenseFormModalComponent } from '../../../shared/components/expense-form-modal/expense-form-modal.component';
 import { MatDialog } from '@angular/material/dialog';
@@ -15,6 +19,9 @@ import { ExpenseFacadeService } from '../../../core/facades/expense/expense.faca
 import { DataTableActionType } from '../../../core/types/data-table';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { MatSnackBar, MatSnackBarConfig } from '@angular/material/snack-bar';
+import { MatIcon } from '@angular/material/icon';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+
 @Component({
   selector: 'app-budgets',
   standalone: true,
@@ -22,7 +29,10 @@ import { MatSnackBar, MatSnackBarConfig } from '@angular/material/snack-bar';
     ReactiveFormsModule,
     InputComponent,
     MatButton,
+    MatFabButton,
+    MatIcon,
     DataTableComponent,
+    CardItemComponent,
     ExpenseFormModalComponent,
   ],
   templateUrl: './budgets.component.html',
@@ -49,7 +59,7 @@ export class BudgetsComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     this.expenseFacadeService.allExpenses.subscribe(this.expenses.set);
 
-    this.expenseFacadeService.getAllExpenses();
+    // this.expenseFacadeService.getAllExpenses();
   }
 
   ngAfterViewInit(): void {}
