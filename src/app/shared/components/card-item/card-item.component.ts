@@ -19,4 +19,6 @@ export class CardItemComponent {
   to_progress_text: string = '';
   @Input({ alias: 'rate', required: false })
   rate: string = '';
+  @Input({ alias: 'progress_percentage', required: false })
+  progress_percentage: string = '';
 }

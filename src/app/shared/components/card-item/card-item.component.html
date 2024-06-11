@@ -4,13 +4,18 @@
       <h6 class="font-bold text-lg text-start break-words">{{ title }}</h6>
       <p class="font-medium text-sm text-gray-500">{{ date }}</p>
     </div>
+    @if (progress_percentage) {
     <div>
-      <mat-progress-bar mode="determinate" value="40"></mat-progress-bar>
+      <mat-progress-bar
+        mode="determinate"
+        [value]="progress_percentage"
+      ></mat-progress-bar>
       <div class="flex justify-between mt-2">
         <p class="text-sm font-bold mb-0">{{ from_progress_text }}</p>
         <p class="text-sm font-bold mb-0">{{ to_progress_text }}</p>
       </div>
     </div>
+    }
   </section>
   <div class="flex items-center justify-between">
     <div

@@ -115,7 +115,13 @@ export class ExpenseFacadeService {
       )
       .subscribe((data: any) => {
         console.log(data);
-        this.allExpenses$.next(data);
+        this.allExpenses$.next(
+          data.map((record: any) => ({
+            ...record,
+            progress_percentage:
+              (record.amount_saved / record.total_savings_goal) * 100,
+          }))
+        );
         if (!disableLoading) {
           this.isLoadingGetAll$.next(false);
         }

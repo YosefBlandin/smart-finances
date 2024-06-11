@@ -57,6 +57,7 @@ export class BudgetsComponent implements OnInit, AfterViewInit {
       total_savings_goal: number;
       start_date: Timestamp;
       end_date: Timestamp;
+      progress_percentage: string;
     }[]
   >([]);
   public expensesActions: DataTableActionType[] = [
