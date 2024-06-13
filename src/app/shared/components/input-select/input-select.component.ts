@@ -60,11 +60,10 @@ export class InputSelectComponent
   @Input() public placeholder = '';
   @Input() public options: { label: string; value: string | number }[] = [];
   @Input() public inputAppareance: MatFormFieldAppearance = 'outline';
+  @Input() public disabledCustom = false;
   private onTouched!: (arg: unknown) => void;
   private onChange!: (arg: unknown) => void;
   public value = '';
-  @Input() disabledCustom = false;
-  public disabled = false;
   public errorStateMatcher!: ErrorStateMatcher;
   public formControl: FormControl = new FormControl();
   constructor(private injector: Injector) {}
@@ -94,10 +93,6 @@ export class InputSelectComponent
 
   public registerOnTouched(fn: () => unknown): void {
     this.onTouched = fn;
-  }
-
-  public setDisabledState(isDisabled: boolean): void {
-    this.disabled = isDisabled;
   }
 
   public validate(): ValidationErrors | null {

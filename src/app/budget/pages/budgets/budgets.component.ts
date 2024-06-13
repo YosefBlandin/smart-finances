@@ -72,7 +72,7 @@ export class BudgetsComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     this.BudgetFacadeService.allExpenses.subscribe(this.budgets.set);
 
-    this.BudgetFacadeService.getAllExpenses();
+    this.BudgetFacadeService.getAllBudgets();
   }
 
   ngAfterViewInit(): void {}

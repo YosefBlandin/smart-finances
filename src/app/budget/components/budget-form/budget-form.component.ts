@@ -1,5 +1,19 @@
-import { Component, SkipSelf, ViewChild, signal } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import {
+  AfterContentChecked,
+  AfterViewInit,
+  Component,
+  SkipSelf,
+  ViewChild,
+  signal,
+} from '@angular/core';
+import {
+  AbstractControl,
+  FormArray,
+  FormBuilder,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import { MatButton } from '@angular/material/button';
 import {
   MatDialog,
@@ -17,7 +31,41 @@ import {
 } from '@angular/material/stepper';
 import { BudgetFacadeService } from '@core/facades/budget/budget.facade';
 import { InputComponent } from '@shared/components';
+import { InputSelectComponent } from '@shared/components/input-select/input-select.component';
 import { Observable, combineLatest, startWith } from 'rxjs';
+
+type IncomeStreamType = FormGroup<{
+  name: FormControl<string>;
+  amount: FormControl<string>;
+  type: FormControl<number>;
+  frequency: FormControl<number>;
+  date_occurred: FormControl<string>;
+  start_date: FormControl<string>;
+  end_date: FormControl<string>;
+}>;
+
+const expenses = [
+  { label: 'Rent', value: 'rent' },
+  { label: 'Grocery', value: 'grocery' },
+  { label: 'Utility', value: 'utility' },
+  { label: 'Transportation', value: 'transportation' },
+  { label: 'Internet', value: 'internet' },
+  { label: 'Cell Phone', value: 'cell phone' },
+  { label: 'Insurance', value: 'insurance' },
+  { label: 'Entertainment', value: 'entertainment' },
+  { label: 'Dining Out', value: 'dining out' },
+  { label: 'Medical Expense', value: 'medical expense' },
+  { label: 'Clothing', value: 'clothing' },
+  { label: 'Education', value: 'education' },
+  { label: 'Gym Membership', value: 'gym membership' },
+  { label: 'Subscription', value: 'subscription' },
+  { label: 'Household Supply', value: 'household supply' },
+  { label: 'Personal Care', value: 'personal care' },
+  { label: 'Pet Care', value: 'pet care' },
+  { label: 'Travel', value: 'travel' },
+  { label: 'Child Care', value: 'child care' },
+  { label: 'Loan Payment', value: 'loan payment' },
+];
 
 @Component({
   selector: 'app-budget-form',
@@ -33,11 +81,12 @@ import { Observable, combineLatest, startWith } from 'rxjs';
     MatDialogTitle,
     ReactiveFormsModule,
     InputComponent,
+    InputSelectComponent,
   ],
   templateUrl: './budget-form.component.html',
   styleUrl: './budget-form.component.scss',
 })
-export class BudgetFormComponent {
+export class BudgetFormComponent implements AfterViewInit {
   @ViewChild(MatStepper) matStepper!: MatStepper;
   public mainBudgetInfoForm = this.formBuilder.group({
     name: this.formBuilder.control('', { validators: [] }),
@@ -45,6 +94,72 @@ export class BudgetFormComponent {
     end_date: this.formBuilder.control('', { validators: [] }),
     total_savings_goal: this.formBuilder.control('', { validators: [] }),
   });
+
+  public budgetIncomeForm = this.formBuilder.group({
+    amount_saved: this.formBuilder.control('', { validators: [] }),
+    income_streams: this.formBuilder.array<IncomeStreamType>([]),
+  });
+
+  public frequencyOptions = [
+    {
+      label: 'One Time',
+      value: 0,
+    },
+    {
+      label: 'Daily',
+      value: 1,
+    },
+    {
+      label: 'Weekly',
+      value: 2,
+    },
+    {
+      label: 'Biweekly',
+      value: 3,
+    },
+    {
+      label: 'Monthly',
+      value: 4,
+    },
+    {
+      label: 'Annually',
+      value: 5,
+    },
+  ];
+
+  public transactionOptions = [
+    {
+      label: 'Income',
+      value: 1,
+    },
+    {
+      label: 'Expenses',
+      value: 2,
+    },
+  ];
+
+  public earningsOptions = [
+    { label: 'Salary', value: 'salary' },
+    { label: 'Freelance Work', value: 'freelance work' },
+    { label: 'Business Income', value: 'business income' },
+    { label: 'Investment', value: 'investment' },
+    { label: 'Rental Income', value: 'rental income' },
+    { label: 'Dividend', value: 'dividend' },
+    { label: 'Interest', value: 'interest' },
+    { label: 'Bonus', value: 'bonus' },
+    { label: 'Commission', value: 'commission' },
+    { label: 'Social Security', value: 'social security' },
+    { label: 'Pension', value: 'pension' },
+    { label: 'Child Support', value: 'child support' },
+    { label: 'Alimony', value: 'alimony' },
+    { label: 'Gift', value: 'gift' },
+    { label: 'Scholarship', value: 'scholarship' },
+    { label: 'Grant', value: 'grant' },
+    { label: 'Lottery Winning', value: 'lottery winning' },
+    { label: 'Trust Fund', value: 'trust fund' },
+    { label: 'Tax Refund', value: 'tax refund' },
+    { label: 'Side Hustle', value: 'side hustle' },
+  ];
 
   public currentStepIndex$ = signal<number>(0);
   public areFormsInvalid$ = signal<boolean>(false);
@@ -61,6 +176,16 @@ export class BudgetFormComponent {
     @SkipSelf() private dialogRef: MatDialogRef<BudgetFormComponent>
   ) {}
 
+  public ngAfterViewInit(): void {
+    if (this.matStepper instanceof MatStepper) {
+      this.matStepper.selectedIndexChange.subscribe(this.currentStepIndex$.set);
+      this.stepsArrLength = Array.from(this.matStepper.steps).length - 1;
+    }
+    this.allFormsStatusChanges.subscribe(this.handleAllFormsStatus.bind(this));
+
+    this.addNewIncomeStream();
+  }
+
   get currentStepIndex(): number {
     return this.currentStepIndex$();
   }
@@ -68,7 +193,41 @@ export class BudgetFormComponent {
   get allFormsStatusChanges(): Observable<string[]> {
     return combineLatest([
       this.mainBudgetInfoForm.statusChanges.pipe(startWith('INVALID')),
+      this.budgetIncomeForm.statusChanges.pipe(startWith('INVALID')),
     ]);
+  }
+
+  get allIncomeStreamsForms() {
+    return this.budgetIncomeForm.controls['income_streams'].controls as any;
+  }
+
+  public addNewIncomeStream() {
+    const incomeStreamForm: IncomeStreamType = this.formBuilder.group({
+      name: this.formBuilder.control('', { nonNullable: true, validators: [] }),
+      amount: this.formBuilder.control('', {
+        nonNullable: true,
+        validators: [],
+      }),
+      type: this.formBuilder.control(1, { nonNullable: true, validators: [] }),
+      frequency: this.formBuilder.control(0, {
+        nonNullable: true,
+        validators: [],
+      }),
+      date_occurred: this.formBuilder.control('', {
+        nonNullable: true,
+        validators: [],
+      }),
+      start_date: this.formBuilder.control('', {
+        nonNullable: true,
+        validators: [],
+      }),
+      end_date: this.formBuilder.control('', {
+        nonNullable: true,
+        validators: [],
+      }),
+    });
+
+    this.budgetIncomeForm.controls['income_streams'].push(incomeStreamForm);
   }
 
   public isDesktop(): boolean {
@@ -94,6 +253,7 @@ export class BudgetFormComponent {
 
     const stepsStatus: StepsStatusType = {
       0: this.mainBudgetInfoForm.status,
+      1: this.budgetIncomeForm.status,
     };
 
     return stepsStatus[stepIndex ?? this.currentStepIndex] === 'INVALID';
@@ -112,7 +272,7 @@ export class BudgetFormComponent {
   }
 
   public handleInputErrorStep(errorMsg: string): void {
-    const allFormGroups = [this.mainBudgetInfoForm];
+    const allFormGroups = [this.mainBudgetInfoForm, this.budgetIncomeForm];
 
     allFormGroups.forEach(async (formGroup: FormGroup, index: number) => {
       const keysOfControls: string[] = Object.keys(formGroup.controls);
@@ -152,8 +312,8 @@ export class BudgetFormComponent {
 
   public handleCreateResponse() {
     this.handleCloseModal();
-    this.budgetFacadeService.getAllExpenses(true, () =>
-      this.openSnackBar('Expense added successfully', 3000, 'fill', 'success')
+    this.budgetFacadeService.getAllBudgets(true, () =>
+      this.openSnackBar('Budget added successfully', 3000, 'fill', 'success')
     );
   }
 
@@ -167,6 +327,7 @@ export class BudgetFormComponent {
   public handleSubmit() {
     const allFormsData: any = {
       ...this.mainBudgetInfoForm.getRawValue(),
+      ...this.budgetIncomeForm.getRawValue(),
     };
     this.budgetFacadeService.create(allFormsData).subscribe({
       next: this.handleCreateResponse.bind(this),

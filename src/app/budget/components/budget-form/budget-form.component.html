@@ -19,7 +19,7 @@
 
           <section class="flex flex-col lg:grid lg:gap-x-4 lg:grid-cols-2">
             <app-input
-              label="Start Date?*"
+              label="Start Date*"
               containerClasses="mb-4"
               formControlName="start_date"
               type="date"
@@ -28,7 +28,7 @@
             />
 
             <app-input
-              label="End Date?*"
+              label="End Date*"
               containerClasses="mb-4"
               formControlName="end_date"
               type="date"
@@ -38,13 +38,98 @@
           </section>
 
           <app-input
-            label="Total Savings Amount?*"
+            label="Total Savings Amount*"
             containerClasses="mb-4"
             formControlName="total_savings_goal"
             type="number"
             tabIndex="4"
             placeholder="Amount"
           />
+        </form>
+      </mat-step>
+
+      <mat-step label="Budget Income" [stepControl]="budgetIncomeForm">
+        <form [formGroup]="budgetIncomeForm" class="mt-2">
+          <app-input
+            label="Amount Saved*"
+            containerClasses="mb-4"
+            formControlName="amount_saved"
+            type="number"
+            tabIndex="1"
+            placeholder="Amount"
+          />
+
+          <section class="mb-4">
+            <h5 class="text-lg">Add Your Earnings</h5>
+            <p class="text-md">
+              Specify the amount and frequency of your income streams
+            </p>
+          </section>
+
+          <section>
+            @for (incomeStreamFormGroup of allIncomeStreamsForms; track
+            incomeStreamFormGroup.name) {
+            <form [formGroup]="incomeStreamFormGroup">
+              <app-input
+                label="Name*"
+                containerClasses="mb-4"
+                formControlName="name"
+                type="text"
+                tabIndex="1"
+                placeholder="Name"
+                [autoCompleteOptions]="earningsOptions"
+              ></app-input>
+
+              <app-input
+                label="Amount*"
+                containerClasses="mb-4"
+                formControlName="amount"
+                type="number"
+                tabIndex="2"
+                placeholder="Amount"
+              ></app-input>
+
+              <app-input-select
+                label="Frequency"
+                containerClasses="mb-4"
+                formControlName="frequency"
+                tabIndex="4"
+                placeholder="Ex: One Time, Daily, Biweekly."
+                [options]="frequencyOptions"
+              />
+
+              @if (incomeStreamFormGroup.get("frequency").value === 0) {
+              <app-input
+                label="Date Occurred*"
+                containerClasses="mb-4"
+                formControlName="date_occurred"
+                type="date"
+                tabIndex="5"
+                placeholder="Date Occurred"
+              ></app-input>
+              } @if (incomeStreamFormGroup.get("frequency").value !== 0) {
+              <app-input
+                label="Start Date*"
+                containerClasses="mb-4"
+                formControlName="start_date"
+                type="date"
+                tabIndex="6"
+                placeholder="Start Date"
+              ></app-input>
+
+              <app-input
+                label="End Date*"
+                containerClasses="mb-4"
+                formControlName="end_date"
+                type="date"
+                tabIndex="7"
+                placeholder="End Date"
+              ></app-input>
+              }
+            </form>
+
+            }
+          </section>
         </form>
       </mat-step>
     </mat-stepper>

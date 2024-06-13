@@ -185,7 +185,7 @@ export class ExpenseFormModalComponent
 
   public handleCreateResponse() {
     this.handleCloseModal();
-    this.budgetFacadeService.getAllExpenses(true, () =>
+    this.budgetFacadeService.getAllBudgets(true, () =>
       this.openSnackBar('Expense added successfully', 3000, 'fill', 'success')
     );
   }

@@ -14,7 +14,6 @@
     <textarea
       matInput
       [placeholder]="placeholder"
-      [(ngModel)]="value"
       [disabled]="disabled"
       [autocomplete]="autoComplete"
       (input)="onInput($event)"
@@ -37,7 +36,6 @@
       [matDatepicker]="picker"
       class="text-sm"
       [placeholder]="placeholder"
-      [(ngModel)]="value"
       [disabled]="disabled"
       [autocomplete]="autoComplete"
       (input)="onInput($event)"
@@ -63,18 +61,35 @@
     [tabIndex]="tabIndex"
   >
     <mat-label>{{ label }}</mat-label>
+    @if(autoCompleteOptions) {
     <input
       matInput
+      [matAutocomplete]="auto"
       [type]="includeVisibilityEye && isVisible() ? 'text' : type"
       [placeholder]="placeholder"
-      [(ngModel)]="value"
       [disabled]="disabled"
-      [autocomplete]="autoComplete"
       (input)="onInput($event)"
       [class.opacity-60]="disabled"
       [errorStateMatcher]="errorStateMatcher"
     />
-    @if (includeVisibilityEye && type === "password") {
+    } @else {
+    <input
+      matInput
+      [type]="includeVisibilityEye && isVisible() ? 'text' : type"
+      [placeholder]="placeholder"
+      [disabled]="disabled"
+      (input)="onInput($event)"
+      [class.opacity-60]="disabled"
+      [errorStateMatcher]="errorStateMatcher"
+    />
+    } @if(autoCompleteOptions) {
+    <mat-autocomplete #auto="matAutocomplete">
+      @for (option of autoCompleteOptions; track option) {
+      <mat-option [value]="option.value">{{ option.label }}</mat-option>
+      }
+    </mat-autocomplete>
+
+    } @if (includeVisibilityEye && type === "password") {
     <mat-icon
       class="cursor-pointer"
       matSuffix

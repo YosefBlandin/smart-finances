@@ -32,9 +32,14 @@ import {
 } from '@angular/material/form-field';
 import {
   ErrorStateMatcher,
+  MatOptionModule,
   provideNativeDateAdapter,
 } from '@angular/material/core';
 import { MatIcon } from '@angular/material/icon';
+import {
+  MatAutocomplete,
+  MatAutocompleteModule,
+} from '@angular/material/autocomplete';
 
 export class MyErrorStateMatcher implements ErrorStateMatcher {
   control: FormControl;
@@ -57,6 +62,8 @@ export class MyErrorStateMatcher implements ErrorStateMatcher {
     MatInputModule,
     MatDatepickerModule,
     MatIcon,
+    MatOptionModule,
+    MatAutocompleteModule,
   ],
   providers: [
     {
@@ -79,9 +86,14 @@ export class InputComponent
 {
   @ViewChild(MatDatepicker) matDatePicker!: MatDatepicker<any>;
   @ViewChild(MatInput) matInput!: MatInput;
+  @ViewChild('auto') auto!: MatAutocomplete;
   @Input() public label = '';
   @Input() public containerClasses?: string;
   @Input() public autoComplete?: AutoFill;
+  @Input() public autoCompleteOptions!: {
+    label: string;
+    value: string | number;
+  }[];
   @Input() public type:
     | 'password'
     | 'email'

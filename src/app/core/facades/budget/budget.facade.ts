@@ -95,7 +95,7 @@ export class BudgetFacadeService {
     );
   }
 
-  public getAllExpenses(disableLoading?: boolean, callback?: () => void) {
+  public getAllBudgets(disableLoading?: boolean, callback?: () => void) {
     if (!disableLoading) {
       this.isLoadingGetAll$.next(true);
     }
@@ -168,7 +168,7 @@ export class BudgetFacadeService {
       }),
       map(({ data }) => {
         if (getAll) {
-          this.getAllExpenses(true, () => this.isLoadingDelete$.next(false));
+          this.getAllBudgets(true, () => this.isLoadingDelete$.next(false));
 
           return { ...data };
         } else {
