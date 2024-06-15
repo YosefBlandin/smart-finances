@@ -13,8 +13,9 @@
     <mat-label>{{ label }}</mat-label>
     <textarea
       matInput
+      [value]="value"
+      [formControl]="formControl"
       [placeholder]="placeholder"
-      [disabled]="disabled"
       [autocomplete]="autoComplete"
       (input)="onInput($event)"
       [class.border]="formControl.errors && formControl.touched"
@@ -35,8 +36,9 @@
       matInput
       [matDatepicker]="picker"
       class="text-sm"
+      [value]="value"
       [placeholder]="placeholder"
-      [disabled]="disabled"
+      [formControl]="formControl"
       [autocomplete]="autoComplete"
       (input)="onInput($event)"
       [class.border]="formControl.errors && formControl.touched"
@@ -49,7 +51,6 @@
       #pickerToggle
       matIconSuffix
       [for]="picker"
-      a
     ></mat-datepicker-toggle>
     <mat-datepicker #picker></mat-datepicker>
   </mat-form-field>
@@ -65,9 +66,10 @@
     <input
       matInput
       [matAutocomplete]="auto"
+      [formControl]="formControl"
       [type]="includeVisibilityEye && isVisible() ? 'text' : type"
       [placeholder]="placeholder"
-      [disabled]="disabled"
+      [value]="value"
       (input)="onInput($event)"
       [class.opacity-60]="disabled"
       [errorStateMatcher]="errorStateMatcher"
@@ -75,10 +77,11 @@
     } @else {
     <input
       matInput
+      [formControl]="formControl"
       [type]="includeVisibilityEye && isVisible() ? 'text' : type"
       [placeholder]="placeholder"
-      [disabled]="disabled"
       (input)="onInput($event)"
+      [value]="value"
       [class.opacity-60]="disabled"
       [errorStateMatcher]="errorStateMatcher"
     />

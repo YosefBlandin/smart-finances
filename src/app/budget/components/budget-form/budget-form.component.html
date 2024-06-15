@@ -67,9 +67,7 @@
           </section>
 
           <section>
-            @for (incomeStreamFormGroup of allIncomeStreamsForms; track
-            incomeStreamFormGroup.name) {
-            <form [formGroup]="incomeStreamFormGroup">
+            <form [formGroup]="incomeStreamForm">
               <app-input
                 label="Name*"
                 containerClasses="mb-4"
@@ -98,7 +96,7 @@
                 [options]="frequencyOptions"
               />
 
-              @if (incomeStreamFormGroup.get("frequency").value === 0) {
+              @if (incomeStreamForm.get("frequency")?.value === 0) {
               <app-input
                 label="Date Occurred*"
                 containerClasses="mb-4"
@@ -107,7 +105,7 @@
                 tabIndex="5"
                 placeholder="Date Occurred"
               ></app-input>
-              } @if (incomeStreamFormGroup.get("frequency").value !== 0) {
+              } @if (incomeStreamForm.get("frequency")?.value !== 0) {
               <app-input
                 label="Start Date*"
                 containerClasses="mb-4"
@@ -127,8 +125,24 @@
               ></app-input>
               }
             </form>
+            <section class="flex justify-end items-center my-2">
+              <button
+                mat-button
+                (click)="onSaveIncome()"
+                [disabled]="incomeStreamForm.status === 'INVALID'"
+              >
+                Save Income
+              </button>
+            </section>
 
-            }
+            <section>
+              <ul>
+                @for (income of allIncomeStreamsForms.getRawValue(); track
+                income.amount) {
+                <li>Income: {{ income.name }}| {{ income.amount }}</li>
+                }
+              </ul>
+            </section>
           </section>
         </form>
       </mat-step>

@@ -100,6 +100,31 @@ export class BudgetFormComponent implements AfterViewInit {
     income_streams: this.formBuilder.array<IncomeStreamType>([]),
   });
 
+  public incomeStreamForm = this.formBuilder.group({
+    name: this.formBuilder.control('', { nonNullable: true, validators: [] }),
+    amount: this.formBuilder.control('', {
+      nonNullable: true,
+      validators: [],
+    }),
+    type: this.formBuilder.control(1, { nonNullable: true, validators: [] }),
+    frequency: this.formBuilder.control(0, {
+      nonNullable: true,
+      validators: [],
+    }),
+    date_occurred: this.formBuilder.control('', {
+      nonNullable: true,
+      validators: [],
+    }),
+    start_date: this.formBuilder.control('', {
+      nonNullable: true,
+      validators: [],
+    }),
+    end_date: this.formBuilder.control('', {
+      nonNullable: true,
+      validators: [],
+    }),
+  });
+
   public frequencyOptions = [
     {
       label: 'One Time',
@@ -182,8 +207,6 @@ export class BudgetFormComponent implements AfterViewInit {
       this.stepsArrLength = Array.from(this.matStepper.steps).length - 1;
     }
     this.allFormsStatusChanges.subscribe(this.handleAllFormsStatus.bind(this));
-
-    this.addNewIncomeStream();
   }
 
   get currentStepIndex(): number {
@@ -198,36 +221,16 @@ export class BudgetFormComponent implements AfterViewInit {
   }
 
   get allIncomeStreamsForms() {
-    return this.budgetIncomeForm.controls['income_streams'].controls as any;
+    return this.budgetIncomeForm.controls[
+      'income_streams'
+    ] as FormArray<IncomeStreamType>;
   }
 
   public addNewIncomeStream() {
-    const incomeStreamForm: IncomeStreamType = this.formBuilder.group({
-      name: this.formBuilder.control('', { nonNullable: true, validators: [] }),
-      amount: this.formBuilder.control('', {
-        nonNullable: true,
-        validators: [],
-      }),
-      type: this.formBuilder.control(1, { nonNullable: true, validators: [] }),
-      frequency: this.formBuilder.control(0, {
-        nonNullable: true,
-        validators: [],
-      }),
-      date_occurred: this.formBuilder.control('', {
-        nonNullable: true,
-        validators: [],
-      }),
-      start_date: this.formBuilder.control('', {
-        nonNullable: true,
-        validators: [],
-      }),
-      end_date: this.formBuilder.control('', {
-        nonNullable: true,
-        validators: [],
-      }),
-    });
-
-    this.budgetIncomeForm.controls['income_streams'].push(incomeStreamForm);
+    this.budgetIncomeForm.controls['income_streams'].push(
+      this.incomeStreamForm
+    );
+    // this.incomeStreamForm.reset();
   }
 
   public isDesktop(): boolean {
@@ -332,6 +335,46 @@ export class BudgetFormComponent implements AfterViewInit {
     this.budgetFacadeService.create(allFormsData).subscribe({
       next: this.handleCreateResponse.bind(this),
       error: this.handleCreateError.bind(this),
+    });
+  }
+
+  public onSaveIncome() {
+    const newIncomeForm = this.formBuilder.group({
+      name: this.formBuilder.control('', { nonNullable: true, validators: [] }),
+      amount: this.formBuilder.control('', {
+        nonNullable: true,
+        validators: [],
+      }),
+      type: this.formBuilder.control(1, { nonNullable: true, validators: [] }),
+      frequency: this.formBuilder.control(0, {
+        nonNullable: true,
+        validators: [],
+      }),
+      date_occurred: this.formBuilder.control('', {
+        nonNullable: true,
+        validators: [],
+      }),
+      start_date: this.formBuilder.control('', {
+        nonNullable: true,
+        validators: [],
+      }),
+      end_date: this.formBuilder.control('', {
+        nonNullable: true,
+        validators: [],
+      }),
+    });
+    newIncomeForm.patchValue(this.incomeStreamForm.getRawValue());
+    this.allIncomeStreamsForms.push(newIncomeForm);
+    console.log(this.budgetIncomeForm.getRawValue());
+
+    this.incomeStreamForm.reset({
+      name: '',
+      amount: '',
+      type: 1,
+      frequency: 0,
+      date_occurred: '',
+      start_date: '',
+      end_date: '',
     });
   }
 

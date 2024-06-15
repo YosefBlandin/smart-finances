@@ -17,6 +17,7 @@ import {
   NG_VALIDATORS,
   NG_VALUE_ACCESSOR,
   NgControl,
+  ReactiveFormsModule,
   ValidationErrors,
   Validator,
 } from '@angular/forms';
@@ -32,6 +33,7 @@ import {
 } from '@angular/material/form-field';
 import {
   ErrorStateMatcher,
+  MatOption,
   MatOptionModule,
   provideNativeDateAdapter,
 } from '@angular/material/core';
@@ -39,6 +41,7 @@ import { MatIcon } from '@angular/material/icon';
 import {
   MatAutocomplete,
   MatAutocompleteModule,
+  MatAutocompleteSelectedEvent,
 } from '@angular/material/autocomplete';
 
 export class MyErrorStateMatcher implements ErrorStateMatcher {
@@ -64,6 +67,7 @@ export class MyErrorStateMatcher implements ErrorStateMatcher {
     MatIcon,
     MatOptionModule,
     MatAutocompleteModule,
+    ReactiveFormsModule,
   ],
   providers: [
     {
@@ -107,11 +111,11 @@ export class InputComponent
   @Input() public maxDate?: string;
   @Input() public includeVisibilityEye?: boolean;
   @Input() public inputAppareance: MatFormFieldAppearance = 'outline';
+  @Input() disabledCustom = false;
   public isVisible = signal(false);
   private onTouched!: (arg: unknown) => void;
-  private onChange!: (arg: unknown) => void;
+  public onChange!: (arg: unknown) => void;
   public value = '';
-  @Input() disabledCustom = false;
   public disabled = false;
   public errorStateMatcher!: ErrorStateMatcher;
   public formControl: FormControl = new FormControl();
@@ -137,6 +141,16 @@ export class InputComponent
       this.matInput.focus = () => {
         return false;
       };
+    }
+
+    if (this.autoCompleteOptions) {
+      this.formControl.valueChanges.subscribe((value) => {
+        if (!value) {
+          this.auto.options
+            .find((matOption: MatOption) => matOption.selected)
+            ?.deselect();
+        }
+      });
     }
   }
 
