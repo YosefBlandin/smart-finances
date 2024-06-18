@@ -1,10 +1,5 @@
 ## Smart Finances
 
-This is the markdown code for the readme.md file you requested:
-
-```markdown
-## Smart Finances
-
 Smart Finances is a project designed to simplify the often-complex task of managing your finances. It provides a user-friendly interface for tracking income and expenses, creating budgets, and gaining valuable insights into your financial health.
 
 ### Getting Started (**Prerequisites:** Node.js and Angular CLI)
@@ -44,4 +39,3 @@ The `scripts` section in the `package.json` file defines various commands for ma
 * **test (ng test):** Runs unit tests for the application. Unit tests are essential for ensuring the functionality of individual components and preventing regressions as the code evolves.
 
 * **serve:ssr:smart (node dist/smart/server/server.mjs):** Starts the server-side rendering (SSR) mode for the application.  SSR improves SEO (Search Engine Optimization) and initial load performance by rendering the application on the server instead of the client's browser. This can be beneficial for complex applications or those targeting search engines.
-```
