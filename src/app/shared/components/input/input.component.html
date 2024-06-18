@@ -103,22 +103,22 @@
     <mat-error>
       @if (formControl.getError('required')) {
 
-      <span>Este campo requerido</span>
+      <span>Field required</span>
 
       } @else if (formControl.getError('maxlength')) {
 
       <span
-        >Ingrese máximo {{ formControl.errors?.['maxlength'].requiredLength }}
+        >Insert no more than {{ formControl.errors?.['maxlength'].requiredLength }}
         {{
-        formControl.errors?.['maxlength'].requiredLength <= 1 ? "carácter" : "caracteres" }}</span
+        formControl.errors?.['maxlength'].requiredLength <= 1 ? "character" : "characters" }}</span
       >
 
       } @else if (formControl.getError('minlength')) {
 
       <span
-        >Ingrese mínimo {{ formControl.errors?.['minlength'].requiredLength }}
+        >Insert {{ formControl.errors?.['minlength'].requiredLength }}
         {{
-            formControl.errors?.['minlength'].requiredLength <= 1 ? "carácter" : "caracteres" }}</span
+            formControl.errors?.['minlength'].requiredLength <= 1 ? "character minimum" : "characters minimum" }}</span
       >
 
       } @else if(formControl.errors) {
