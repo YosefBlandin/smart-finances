@@ -7,18 +7,22 @@
     <h6 class="font-bold text-lg text-center">Create New Budget</h6>
   </article>
 
-  @for (budget of budgets(); track budget.name) {
-  <app-card-item
-    [title]="budget.name"
-    [rate]="budget.savings_rate + '%'"
-    [date]="budget.start_date.toDate() | date : 'dd/MM/yyyy'"
-    [from_progress_text]="
-      budget.amount_saved + ' ' + '(' + budget.currency + ')'
-    "
-    [to_progress_text]="
-      budget.total_savings_goal + ' ' + '(' + budget.currency + ')'
-    "
-    [progress_percentage]="budget.progress_percentage"
-  />
-  }
+  <section cdkDropList (cdkDropListDropped)="drop($event)">
+	@for (budget of budgets(); track budget.name) {
+		<div cdkDrag class="bg-white">
+			<app-card-item
+				[title]="budget.name"
+				[rate]="budget.savings_rate + '%'"
+				[date]="budget.start_date.toDate() | date : 'dd/MM/yyyy'"
+				[from_progress_text]="
+					budget.amount_saved + ' ' + '(' + budget.currency + ')'
+				"
+				[to_progress_text]="
+					budget.total_savings_goal + ' ' + '(' + budget.currency + ')'
+				"
+				[progress_percentage]="budget.progress_percentage"
+			/>
+		</div>
+		}
+  </section>
 </section>
