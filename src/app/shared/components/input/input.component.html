@@ -4,7 +4,6 @@
   class=" {{ containerClasses }}"
 >
   @if(type === 'textarea') {
-
   <mat-form-field
     class="w-full"
     [appearance]="inputAppareance"
@@ -24,7 +23,6 @@
   </mat-form-field>
 
   } @else if(type === 'date') {
-
   <mat-form-field
     class="w-full"
     [appearance]="inputAppareance"
@@ -54,7 +52,6 @@
     ></mat-datepicker-toggle>
     <mat-datepicker #picker></mat-datepicker>
   </mat-form-field>
-
   } @else {
   <mat-form-field
     class="w-full"
@@ -108,7 +105,8 @@
       } @else if (formControl.getError('maxlength')) {
 
       <span
-        >Insert no more than {{ formControl.errors?.['maxlength'].requiredLength }}
+        >Insert no more than
+        {{ formControl.errors?.['maxlength'].requiredLength }}
         {{
         formControl.errors?.['maxlength'].requiredLength <= 1 ? "character" : "characters" }}</span
       >

@@ -16,7 +16,12 @@
       <section class="sidenav-items-container">
         @for (option of options; track option.label) {
 
-        <button class="rounded-md" mat-list-item>
+        <button
+          class="rounded-md"
+          mat-list-item
+          [routerLink]="option.route"
+          routerLinkActive="active-route"
+        >
           <mat-icon class="text-black">{{ option.icon }}</mat-icon>
           {{ option.label }}
         </button>

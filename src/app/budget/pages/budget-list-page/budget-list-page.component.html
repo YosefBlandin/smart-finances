@@ -1,0 +1,26 @@
+<section class="flex flex-wrap gap-2">
+  <article
+    class="budget-card rounded-lg md:max-w-xs py-8 px-4 flex flex-col items-center justify-center"
+    routerLink="/budget/create"
+  >
+    <mat-icon class="font-bold text-xl mb-4">add</mat-icon>
+    <h6 class="font-bold text-lg text-center">Create New Budget</h6>
+  </article>
+  @for (budget of budgets(); track budget.name) {
+  <div class="bg-white">
+    <app-card-item
+      [title]="budget.name"
+      [rate]="(budget.savings_rate ?? 0) + '%'"
+      [date]="budget.start_date.toDate() | date : 'dd/MM/yyyy'"
+      [from_progress_text]="
+        budget.amount_saved + ' ' + '(' + budget.currency + ')'
+      "
+      [to_progress_text]="
+        budget.total_savings_goal + ' ' + '(' + budget.currency + ')'
+      "
+      [progress_percentage]="budget.progress_percentage"
+      (onNavigationClick)="navigateToBudgetDetails(budget.id)"
+    />
+  </div>
+  }
+</section>

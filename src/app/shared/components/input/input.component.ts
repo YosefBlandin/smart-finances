@@ -27,7 +27,6 @@ import {
 } from '@angular/material/datepicker';
 import { MatInput, MatInputModule } from '@angular/material/input';
 import {
-  MatFormField,
   MatFormFieldAppearance,
   MatFormFieldModule,
 } from '@angular/material/form-field';
@@ -41,7 +40,6 @@ import { MatIcon } from '@angular/material/icon';
 import {
   MatAutocomplete,
   MatAutocompleteModule,
-  MatAutocompleteSelectedEvent,
 } from '@angular/material/autocomplete';
 
 export class MyErrorStateMatcher implements ErrorStateMatcher {

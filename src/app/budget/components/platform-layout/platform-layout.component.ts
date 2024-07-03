@@ -15,7 +15,7 @@ import {
   MatDrawerContainer,
   MatDrawerContent,
 } from '@angular/material/sidenav';
-import { RouterOutlet } from '@angular/router';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { LoginService } from '@auth/services/login/login.service';
 import { UserAvatarComponent } from '@shared/components/user-avatar/user-avatar.component';
 
@@ -32,6 +32,8 @@ import { UserAvatarComponent } from '@shared/components/user-avatar/user-avatar.
     MatListItem,
     UserAvatarComponent,
     MatActionList,
+    RouterLink,
+    RouterLinkActive,
   ],
   templateUrl: './platform-layout.component.html',
   styleUrl: './platform-layout.component.scss',
@@ -40,18 +42,18 @@ export class PlatformLayoutComponent implements AfterViewInit {
   @ViewChild('drawer') matDrawer!: MatDrawer;
   public options: any[] = [
     {
-      label: 'Home',
-      route: '',
-      icon: 'home',
+      label: 'Budgets',
+      route: '/budget',
+      icon: 'payments',
     },
     {
       label: 'Notifications',
-      route: '',
+      route: '/notifications',
       icon: 'notifications',
     },
     {
       label: 'Goals',
-      route: '',
+      route: '/goals',
       icon: 'military_tech',
     },
   ];

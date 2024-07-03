@@ -13,7 +13,6 @@ import {
 } from '../../../shared';
 import { MatButton, MatFabButton } from '@angular/material/button';
 import { MatDrawer } from '@angular/material/sidenav';
-import {CdkDragDrop, CdkDropList, CdkDrag, moveItemInArray} from '@angular/cdk/drag-drop';
 import { ExpenseFormModalComponent } from '../../../shared/components/expense-form-modal/expense-form-modal.component';
 import { MatDialog } from '@angular/material/dialog';
 import { BudgetFacadeService } from '../../../core/facades/budget/budget.facade';
@@ -24,6 +23,7 @@ import { MatIcon } from '@angular/material/icon';
 import { DatePipe } from '@angular/common';
 import { Timestamp } from '@angular/fire/firestore';
 import { BudgetFormComponent } from '../../components';
+import { Router, RouterLink } from '@angular/router';
 @Component({
   selector: 'app-budgets',
   standalone: true,
@@ -37,25 +37,26 @@ import { BudgetFormComponent } from '../../components';
     CardItemComponent,
     DatePipe,
     ExpenseFormModalComponent,
-	CdkDrag,
-	CdkDropList
+    RouterLink,
   ],
-  templateUrl: './budgets.component.html',
-  styleUrl: './budgets.component.scss',
+  templateUrl: './budget-list-page.component.html',
+  styleUrl: './budget-list-page.component.scss',
 })
-export class BudgetsComponent implements OnInit, AfterViewInit {
+export class BudgetsPageComponent implements OnInit, AfterViewInit {
   @ViewChild('drawer') matDrawer!: MatDrawer;
   constructor(
     private matDialog: MatDialog,
     private snackbar: MatSnackBar,
-    private BudgetFacadeService: BudgetFacadeService
+    private BudgetFacadeService: BudgetFacadeService,
+    private router: Router
   ) {}
 
   showFiller = false;
   public budgets = signal<
     {
+      id: number;
       name: string;
-      savings_rate: string;
+      savings_rate: string | undefined;
       amount_saved: number;
       currency: string;
       total_savings_goal: number;
@@ -79,10 +80,6 @@ export class BudgetsComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {}
-
-  public onAddExpense() {
-    this.matDialog.open(ExpenseFormModalComponent);
-  }
 
   public onNewBudget() {
     this.matDialog.open(BudgetFormComponent, {
@@ -148,7 +145,7 @@ export class BudgetsComponent implements OnInit, AfterViewInit {
     this.snackbar.open(message, '', config);
   }
 
-  public drop(event: any) {
-
+  public navigateToBudgetDetails(entityId: string | number): void {
+    this.router.navigate([`/budget/details/${entityId}`]);
   }
 }

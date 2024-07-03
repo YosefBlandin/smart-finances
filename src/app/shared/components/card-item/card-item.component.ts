@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { MatFabButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -18,7 +18,12 @@ export class CardItemComponent {
   @Input({ alias: 'to_progress_text', required: true })
   to_progress_text: string = '';
   @Input({ alias: 'rate', required: false })
-  rate: string = '';
+  rate: string | undefined = '';
   @Input({ alias: 'progress_percentage', required: false })
   progress_percentage: string = '';
+  @Output() onNavigationClick = new EventEmitter();
+
+  public _onNavigationClick() {
+    this.onNavigationClick.emit();
+  }
 }

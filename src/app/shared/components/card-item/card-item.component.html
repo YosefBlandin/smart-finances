@@ -1,22 +1,32 @@
 <article class="budget-card rounded-lg w-full md:max-w-xs py-8 px-4">
-  <section class="mb-4 text-center">
-    <div class="flex justify-between mb-2">
-      <h6 class="font-bold text-lg text-start break-words">{{ title }}</h6>
-      <p class="font-medium text-sm text-gray-500">{{ date }}</p>
+  <section class="text-center">
+    <div class="flex items-center justify-between">
+      <h6 class="font-bold text-lg text-start break-words mb-0">{{ title }}</h6>
+      <p class="font-medium text-sm text-gray-500 mb-0">{{ date }}</p>
     </div>
-    @if (progress_percentage) {
-    <div>
-      <mat-progress-bar
-        mode="determinate"
-        [value]="progress_percentage"
-      ></mat-progress-bar>
-      <div class="flex justify-between mt-2">
-        <p class="text-sm font-bold mb-0">{{ from_progress_text }}</p>
-        <p class="text-sm font-bold mb-0">{{ to_progress_text }}</p>
-      </div>
-    </div>
-    }
   </section>
+
+  @if (progress_percentage) {
+  <div>
+    <mat-progress-bar
+      mode="determinate"
+      [value]="progress_percentage"
+    ></mat-progress-bar>
+    <div class="flex justify-between mt-2">
+      <p class="text-sm font-bold mb-0">{{ from_progress_text }}</p>
+      <p class="text-sm font-bold mb-0">{{ to_progress_text }}</p>
+    </div>
+  </div>
+  } @else {
+  <div>
+    <mat-progress-bar mode="determinate" [value]="0"></mat-progress-bar>
+    <div class="flex justify-between mt-2">
+      <p class="text-sm font-bold mb-0">0</p>
+      <p class="text-sm font-bold mb-0">100</p>
+    </div>
+  </div>
+  }
+
   <div class="flex items-center justify-between">
     <div
       class="flex items-center justify-center gap-x-1 rounded-md bg-green-500 opacity-80 w-40 py-2"
@@ -26,7 +36,12 @@
         <span class="font-bold text-white">{{ rate }}</span>
       </div>
     </div>
-    <button mat-fab color="primary" aria-label="Go to budget details">
+    <button
+      mat-fab
+      color="primary"
+      aria-label="Go to budget details"
+      (click)="_onNavigationClick()"
+    >
       <mat-icon>arrow_forward_ios</mat-icon>
     </button>
   </div>
