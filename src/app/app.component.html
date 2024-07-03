@@ -1,1 +1,3 @@
-<router-outlet />
+<div [@fadeAnimation]="o && o.activatedRouteData">
+  <router-outlet #o="outlet" />
+</div>

@@ -17,6 +17,7 @@ import {
 } from '@angular/material/sidenav';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { LoginService } from '@auth/services/login/login.service';
+import { fadeAnimation } from '@shared/animations/fade';
 import { UserAvatarComponent } from '@shared/components/user-avatar/user-avatar.component';
 
 @Component({
@@ -35,10 +36,11 @@ import { UserAvatarComponent } from '@shared/components/user-avatar/user-avatar.
     RouterLink,
     RouterLinkActive,
   ],
+  animations: [fadeAnimation],
   templateUrl: './platform-layout.component.html',
   styleUrl: './platform-layout.component.scss',
 })
-export class PlatformLayoutComponent implements AfterViewInit {
+export class PlatformLayoutComponent {
   @ViewChild('drawer') matDrawer!: MatDrawer;
   public options: any[] = [
     {

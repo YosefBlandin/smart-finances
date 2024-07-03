@@ -49,6 +49,8 @@
         <app-user-avatar (handleLogout)="handleLogout()" />
       </div>
     </section>
-    <router-outlet></router-outlet>
+    <div [@fadeAnimation]="o && o.activatedRouteData">
+      <router-outlet #o="outlet" />
+    </div>
   </mat-drawer-content>
 </mat-drawer-container>
