@@ -1,8 +1,4 @@
 @use "@angular/material" as mat;
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 @include mat.core();
 
 html,
@@ -11,7 +7,7 @@ body {
 }
 body {
   margin: 0;
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: Roboto, sans-serif;
 }
 
 .capitalize {

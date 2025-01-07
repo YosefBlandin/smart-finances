@@ -11,7 +11,7 @@
     <app-card-item
       [title]="budget.name"
       [rate]="(budget.savings_rate ?? 0) + '%'"
-      [date]="budget.start_date.toDate() | date : 'dd/MM/yyyy'"
+      [date]="budget.start_date | date : 'dd/MM/yyyy'"
       [from_progress_text]="
         budget.amount_saved + ' ' + '(' + budget.currency + ')'
       "

@@ -21,7 +21,6 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
 import { MatSnackBar, MatSnackBarConfig } from '@angular/material/snack-bar';
 import { MatIcon } from '@angular/material/icon';
 import { DatePipe } from '@angular/common';
-import { Timestamp } from '@angular/fire/firestore';
 import { BudgetFormComponent } from '../../components';
 import { Router, RouterLink } from '@angular/router';
 @Component({
@@ -29,14 +28,9 @@ import { Router, RouterLink } from '@angular/router';
   standalone: true,
   imports: [
     ReactiveFormsModule,
-    InputComponent,
-    MatButton,
-    MatFabButton,
     MatIcon,
-    DataTableComponent,
     CardItemComponent,
     DatePipe,
-    ExpenseFormModalComponent,
     RouterLink,
   ],
   templateUrl: './budget-list-page.component.html',
@@ -60,8 +54,8 @@ export class BudgetsPageComponent implements OnInit, AfterViewInit {
       amount_saved: number;
       currency: string;
       total_savings_goal: number;
-      start_date: Timestamp;
-      end_date: Timestamp;
+      start_date: Date;
+      end_date: Date;
       progress_percentage: string;
     }[]
   >([]);
