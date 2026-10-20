@@ -64,6 +64,14 @@ switch (cmd) {
           execute_after_withdrawal: false,
           display_timezone: 'GMT-03',
           frequency: { hour: 0, type: 'monthly', value: 1 },
+          // Keys from Mercado Pago's report field list. Card digits, bank account numbers and
+          // authorization codes are left out on purpose.
+          columns: [
+            'DATE', 'SOURCE_ID', 'EXTERNAL_REFERENCE', 'RECORD_TYPE', 'DESCRIPTION',
+            'NET_CREDIT_AMOUNT', 'NET_DEBIT_AMOUNT', 'GROSS_AMOUNT', 'MP_FEE_AMOUNT',
+            'BALANCE_AMOUNT', 'PAYMENT_METHOD', 'PAYMENT_METHOD_TYPE', 'TRANSACTION_DATE',
+            'CURRENCY', 'OPERATION_TAGS',
+          ].map((key) => ({ key })),
         };
     show(await call('POST', `${BASE}/config`, body));
     break;
