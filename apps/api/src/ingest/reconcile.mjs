@@ -18,7 +18,22 @@ export function combine(results) {
   const transactions = [...byId.values()].sort(
     (a, b) => a.date.localeCompare(b.date) || a.source.localeCompare(b.source) || a.source_ref.localeCompare(b.source_ref),
   );
-  return { transactions, duplicates };
+
+  // A row filed in one month but dated in another may also have been entered in the month
+  // it is dated. Flag it when that month has the same description and amount on that exact
+  // day; it stays in, because the month's own Summary counted it.
+  const possibleDuplicates = [];
+  for (const issue of results.flatMap((r) => r.issues ?? []).filter((i) => i.statedDate)) {
+    const twin = transactions.find(
+      (t) => t.date_precision === 'day' && t.date === issue.statedDate && t.amount === issue.amount && t.description_raw.toLowerCase() === issue.description.toLowerCase(),
+    );
+    const row = twin && transactions.find((t) => t.source_ref.startsWith(`${issue.ref} `));
+    if (row) {
+      row.flags.push('possible_duplicate');
+      possibleDuplicates.push({ row, twin });
+    }
+  }
+  return { transactions, duplicates, possibleDuplicates };
 }
 
 function monthlyTable(transactions, source) {
@@ -38,7 +53,42 @@ function monthlyTable(transactions, source) {
   return lines.join('\n');
 }
 
-export function buildReport({ mercadopago = [], notion = [], combined, generatedAt = new Date().toISOString() }) {
+const cellOf = (t) => t.source_ref.replace(/ \([^)]*\)$/, '');
+
+function excelSection(excel, all, possible) {
+  if (excel.length === 0) return ['No budget workbooks found.', ''];
+  const out = [
+    '| Month | Rows | Day known | Day/month swapped (fixed) | No date | Date in another month | Expenses | Summary | Not in Summary | OK | Income | Summary | Not in Summary | OK |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
+  ];
+  for (const { check: c } of [...excel].sort((a, b) => a.check.month.localeCompare(b.check.month))) {
+    const e = c.expense;
+    const i = c.income;
+    out.push(
+      `| ${c.month} | ${c.rows} | ${c.dates.day} | ${c.dates.swapped} | ${c.dates.missing} | ${c.dates.conflict} | ${fromCents(e.total)} | ${fromCents(e.summaryTotal)} | ${fromCents(e.unlisted)} | ${ok(e.matches)} | ${fromCents(i.total)} | ${fromCents(i.summaryTotal)} | ${fromCents(i.unlisted)} | ${ok(i.matches)} |`,
+    );
+  }
+  out.push(
+    '',
+    'OK means the Summary sheet total plus the rows it cannot see (blank or unlisted category) equals every row imported.',
+    'Rows without a usable day keep the file month with date_precision = month.',
+    '',
+    monthlyTable(all, 'excel'),
+    '',
+  );
+  const issues = excel.flatMap((r) => r.issues);
+  const problems = issues.filter((x) => !x.info);
+  out.push(`**Rows skipped:** ${problems.length === 0 ? 'none' : ''}`);
+  for (const x of problems) out.push(`- ${x.ref}: \`${x.line}\` (${x.issue})`);
+  out.push('', `**Possible double entries** (flagged possible_duplicate, still counted): ${possible.length === 0 ? 'none' : ''}`);
+  for (const { row, twin } of possible) out.push(`- ${cellOf(row)} \`${row.description_raw} ${fromCents(row.amount)}\` also at ${cellOf(twin)} on ${twin.date}`);
+  out.push('', `**Dates outside the file month** (${issues.filter((x) => x.info).length}):`);
+  for (const x of issues.filter((y) => y.info)) out.push(`- ${x.ref}: \`${x.line}\` (${x.issue})`);
+  out.push('');
+  return out;
+}
+
+export function buildReport({ mercadopago = [], notion = [], excel = [], combined, generatedAt = new Date().toISOString() }) {
   const out = [`# Import reconciliation`, '', `Generated ${generatedAt}. Local only: this file lives in git-ignored data/real/clean/.`, ''];
   const all = combined.transactions;
 
@@ -84,6 +134,8 @@ export function buildReport({ mercadopago = [], notion = [], combined, generated
     for (const i of issues.filter((x) => x.info)) out.push(`- line ${i.lineNo}: \`${i.line}\` (${i.issue})`);
     out.push('');
   }
+
+  out.push('## Budget workbooks (Excel)', '', ...excelSection(excel, all, combined.possibleDuplicates ?? []));
 
   const review = all.filter((t) => t.flags.includes('needs_review'));
   const byCategory = new Map();

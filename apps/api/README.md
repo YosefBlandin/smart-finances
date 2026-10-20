@@ -10,7 +10,8 @@ Importers that turn each source into one transaction table (`schema.mjs` lists t
 | --- | --- | --- |
 | `mercadopago.mjs` | Release report CSV from `scripts/mercadopago-report.mjs` | Running balance, printed closing balance, and that the kept rows explain the month's change. One row per operation, net of reserve holds |
 | `notion.mjs` | The hand-written monthly log (USD, month-precision) | Every line is either imported or listed as skipped |
-| `reconcile.mjs` | All of the above | Month-to-month balance chain, duplicates across files, totals by kind and category |
+| `excel.mjs` (+ `xlsx.mjs`) | Monthly budget workbooks, month taken from the file name | Each month's Summary totals, allowing for rows it cannot see; dates repaired when the day/month swap is provable, else kept at month precision |
+| `reconcile.mjs` | All of the above | Month-to-month balance chain, duplicates across files, rows entered in two months, totals by kind and category |
 
 Run on your own files (reads and writes only git-ignored `data/real/`):
 
