@@ -6,7 +6,7 @@
 //   read -s MP_ACCESS_TOKEN && export MP_ACCESS_TOKEN     # paste the token, press Enter
 //   node scripts/mercadopago-report.mjs show-config
 //   node scripts/mercadopago-report.mjs config                 # one-time setup
-//   node scripts/mercadopago-report.mjs create 2026-08-01 2026-09-01
+//   node scripts/mercadopago-report.mjs create 2026-08-01 2026-08-31   # end date is inclusive
 //   node scripts/mercadopago-report.mjs list
 //   node scripts/mercadopago-report.mjs download <file_name>   # saved to data/real/mercadopago/
 //
@@ -43,7 +43,8 @@ function show({ status, text }) {
   }
 }
 
-// Argentina is UTC-3 all year, so local midnight is 03:00 UTC. The end date is exclusive.
+// Argentina is UTC-3 all year, so local midnight is 03:00 UTC. The API treats the end date as
+// INCLUSIVE of that whole local day (it stretches it to 23:59:59), so pass the last day of the month.
 const utcMidnightAR = (ymd) => `${ymd}T03:00:00Z`;
 
 const [cmd, a, b] = process.argv.slice(2);
@@ -57,12 +58,18 @@ switch (cmd) {
     // default omits `columns` and lets the API choose; add them in a file once we see an error or the CSV.
     const body = a
       ? JSON.parse(readFileSync(a, 'utf8'))
-      : { display_timezone: 'GMT-03', frequency: { hour: 0, type: 'monthly', value: 1 } };
+      : {
+          file_name_prefix: 'release-report-smart-finances',
+          include_withdrawal_at_end: true,
+          execute_after_withdrawal: false,
+          display_timezone: 'GMT-03',
+          frequency: { hour: 0, type: 'monthly', value: 1 },
+        };
     show(await call('POST', `${BASE}/config`, body));
     break;
   }
   case 'create':
-    if (!a || !b) throw new Error('usage: create YYYY-MM-DD YYYY-MM-DD');
+    if (!a || !b) throw new Error('usage: create <first day> <last day, inclusive> as YYYY-MM-DD');
     show(await call('POST', BASE, { begin_date: utcMidnightAR(a), end_date: utcMidnightAR(b) }));
     break;
   case 'list':
