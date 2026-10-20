@@ -12,6 +12,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "data:generate": "node data/synthetic/generate.mjs"
+    "data:generate": "node data/synthetic/generate.mjs",
+    "ingest:local": "node scripts/ingest-local.mjs",
+    "test": "node --test apps/api/test/*.test.mjs"
   }
 }

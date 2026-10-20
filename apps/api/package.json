@@ -1,5 +1,8 @@
 {
   "name": "@smart-finances/api",
   "private": true,
-  "version": "0.0.0"
+  "version": "0.0.0",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
 }
