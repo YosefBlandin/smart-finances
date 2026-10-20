@@ -1,0 +1,664 @@
+row,iso_date,category,is_duplicate,is_adversarial
+1,2025-10-01,Transport,false,false
+2,2025-10-03,Housing,false,false
+3,2025-10-03,Groceries,false,false
+4,2025-10-03,Shopping,false,false
+5,2025-10-04,Groceries,false,false
+6,2025-10-04,Groceries,true,false
+7,2025-10-04,Transport,false,false
+8,2025-10-04,Eating out,false,false
+9,2025-10-05,Income,false,false
+10,2025-10-05,Groceries,false,false
+11,2025-10-05,Groceries,false,false
+12,2025-10-06,Savings,false,false
+13,2025-10-06,Health,false,false
+14,2025-10-06,Entertainment,false,false
+15,2025-10-07,Subscriptions,false,false
+16,2025-10-07,Groceries,false,false
+17,2025-10-07,Groceries,false,false
+18,2025-10-07,Transport,false,false
+19,2025-10-07,Health,false,false
+20,2025-10-08,Subscriptions,false,false
+21,2025-10-08,Transport,false,false
+22,2025-10-08,Transport,true,false
+23,2025-10-10,Eating out,false,false
+24,2025-10-11,Utilities,false,false
+25,2025-10-11,Groceries,false,false
+26,2025-10-11,Transport,false,false
+27,2025-10-11,Transport,false,false
+28,2025-10-11,Eating out,false,false
+29,2025-10-12,Utilities,false,false
+30,2025-10-13,Utilities,false,false
+31,2025-10-14,Groceries,false,false
+32,2025-10-15,Subscriptions,false,false
+33,2025-10-15,Utilities,false,false
+34,2025-10-15,Groceries,false,false
+35,2025-10-15,Groceries,false,false
+36,2025-10-15,Eating out,false,false
+37,2025-10-15,Eating out,false,false
+38,2025-10-16,Transport,false,false
+39,2025-10-16,Eating out,false,false
+40,2025-10-17,Groceries,false,false
+41,2025-10-18,Transport,false,false
+42,2025-10-20,Groceries,false,false
+43,2025-10-20,Eating out,false,false
+44,2025-10-20,Entertainment,false,false
+45,2025-10-22,Groceries,false,false
+46,2025-10-22,Groceries,true,false
+47,2025-10-22,Groceries,false,false
+48,2025-10-23,Transport,false,false
+49,2025-10-25,Subscriptions,false,false
+50,2025-10-25,Eating out,false,false
+51,2025-10-25,Shopping,false,false
+52,2025-10-26,Eating out,false,false
+53,2025-10-27,Eating out,false,false
+54,2025-10-28,Transport,false,false
+55,2025-10-28,Shopping,false,false
+56,2025-10-28,Entertainment,false,false
+57,2025-11-01,Groceries,false,false
+58,2025-11-03,Housing,false,false
+59,2025-11-03,Transport,false,false
+60,2025-11-04,Groceries,false,false
+61,2025-11-04,Transport,false,false
+62,2025-11-04,Eating out,false,false
+63,2025-11-05,Income,false,false
+64,2025-11-05,Eating out,false,false
+65,2025-11-05,Adversarial,false,true
+66,2025-11-06,Savings,false,false
+67,2025-11-06,Groceries,false,false
+68,2025-11-06,Health,false,false
+69,2025-11-07,Subscriptions,false,false
+70,2025-11-07,Groceries,false,false
+71,2025-11-07,Groceries,false,false
+72,2025-11-07,Groceries,false,false
+73,2025-11-08,Subscriptions,false,false
+74,2025-11-08,Groceries,false,false
+75,2025-11-08,Groceries,false,false
+76,2025-11-08,Transport,false,false
+77,2025-11-08,Shopping,false,false
+78,2025-11-09,Groceries,false,false
+79,2025-11-10,Transport,false,false
+80,2025-11-10,Entertainment,false,false
+81,2025-11-11,Utilities,false,false
+82,2025-11-11,Transport,false,false
+83,2025-11-11,Eating out,false,false
+84,2025-11-11,Shopping,false,false
+85,2025-11-12,Utilities,false,false
+86,2025-11-12,Eating out,false,false
+87,2025-11-13,Utilities,false,false
+88,2025-11-13,Eating out,false,false
+89,2025-11-15,Subscriptions,false,false
+90,2025-11-15,Utilities,false,false
+91,2025-11-15,Groceries,false,false
+92,2025-11-15,Eating out,false,false
+93,2025-11-15,Adversarial,false,true
+94,2025-11-16,Groceries,false,false
+95,2025-11-17,Groceries,false,false
+96,2025-11-17,Transport,false,false
+97,2025-11-17,Transport,false,false
+98,2025-11-18,Groceries,false,false
+99,2025-11-20,Eating out,false,false
+100,2025-11-20,Eating out,false,false
+101,2025-11-21,Transport,false,false
+102,2025-11-22,Entertainment,false,false
+103,2025-11-23,Transport,false,false
+104,2025-11-23,Transport,false,false
+105,2025-11-23,Eating out,false,false
+106,2025-11-24,Shopping,false,false
+107,2025-11-25,Subscriptions,false,false
+108,2025-11-26,Eating out,false,false
+109,2025-11-27,Groceries,false,false
+110,2025-11-28,Entertainment,false,false
+111,2025-12-01,Transport,false,false
+112,2025-12-02,Groceries,false,false
+113,2025-12-02,Groceries,false,false
+114,2025-12-02,Entertainment,false,false
+115,2025-12-03,Housing,false,false
+116,2025-12-03,Eating out,false,false
+117,2025-12-04,Eating out,false,false
+118,2025-12-04,Shopping,false,false
+119,2025-12-05,Income,false,false
+120,2025-12-05,Transport,false,false
+121,2025-12-06,Savings,false,false
+122,2025-12-07,Subscriptions,false,false
+123,2025-12-07,Groceries,false,false
+124,2025-12-07,Groceries,false,false
+125,2025-12-07,Transport,false,false
+126,2025-12-07,Eating out,false,false
+127,2025-12-08,Subscriptions,false,false
+128,2025-12-08,Eating out,false,false
+129,2025-12-09,Groceries,false,false
+130,2025-12-09,Transport,false,false
+131,2025-12-10,Groceries,false,false
+132,2025-12-11,Utilities,false,false
+133,2025-12-11,Transport,false,false
+134,2025-12-12,Utilities,false,false
+135,2025-12-12,Groceries,false,false
+136,2025-12-13,Utilities,false,false
+137,2025-12-13,Groceries,false,false
+138,2025-12-13,Shopping,false,false
+139,2025-12-14,Transport,false,false
+140,2025-12-15,Subscriptions,false,false
+141,2025-12-15,Utilities,false,false
+142,2025-12-15,Groceries,false,false
+143,2025-12-16,Eating out,false,false
+144,2025-12-17,Entertainment,false,false
+145,2025-12-19,Groceries,false,false
+146,2025-12-19,Transport,false,false
+147,2025-12-19,Eating out,false,false
+148,2025-12-20,Eating out,false,false
+149,2025-12-20,Eating out,false,false
+150,2025-12-21,Groceries,false,false
+151,2025-12-21,Shopping,false,false
+152,2025-12-21,Entertainment,false,false
+153,2025-12-22,Eating out,false,false
+154,2025-12-23,Groceries,false,false
+155,2025-12-23,Health,false,false
+156,2025-12-23,Health,false,false
+157,2025-12-24,Transport,false,false
+158,2025-12-24,Transport,false,false
+159,2025-12-24,Transport,false,false
+160,2025-12-25,Subscriptions,false,false
+161,2025-12-25,Eating out,false,false
+162,2025-12-26,Groceries,false,false
+163,2025-12-26,Groceries,true,false
+164,2025-12-27,Groceries,false,false
+165,2026-01-01,Transport,false,false
+166,2026-01-02,Groceries,false,false
+167,2026-01-02,Transport,false,false
+168,2026-01-03,Housing,false,false
+169,2026-01-03,Transport,false,false
+170,2026-01-03,Entertainment,false,false
+171,2026-01-04,Transport,false,false
+172,2026-01-05,Income,false,false
+173,2026-01-05,Transport,false,false
+174,2026-01-05,Eating out,false,false
+175,2026-01-05,Shopping,false,false
+176,2026-01-06,Savings,false,false
+177,2026-01-06,Groceries,false,false
+178,2026-01-06,Transport,false,false
+179,2026-01-06,Eating out,false,false
+180,2026-01-06,Eating out,false,false
+181,2026-01-07,Subscriptions,false,false
+182,2026-01-07,Eating out,false,false
+183,2026-01-07,Entertainment,false,false
+184,2026-01-07,Entertainment,false,false
+185,2026-01-08,Subscriptions,false,false
+186,2026-01-08,Groceries,false,false
+187,2026-01-08,Groceries,false,false
+188,2026-01-09,Transport,false,false
+189,2026-01-09,Eating out,false,false
+190,2026-01-10,Groceries,false,false
+191,2026-01-10,Groceries,false,false
+192,2026-01-11,Utilities,false,false
+193,2026-01-11,Groceries,false,false
+194,2026-01-12,Utilities,false,false
+195,2026-01-12,Groceries,false,false
+196,2026-01-13,Utilities,false,false
+197,2026-01-15,Subscriptions,false,false
+198,2026-01-15,Utilities,false,false
+199,2026-01-17,Groceries,false,false
+200,2026-01-17,Transport,false,false
+201,2026-01-18,Eating out,false,false
+202,2026-01-19,Groceries,false,false
+203,2026-01-19,Transport,false,false
+204,2026-01-19,Health,false,false
+205,2026-01-21,Groceries,false,false
+206,2026-01-21,Transport,false,false
+207,2026-01-21,Shopping,false,false
+208,2026-01-22,Eating out,false,false
+209,2026-01-25,Subscriptions,false,false
+210,2026-01-25,Eating out,false,false
+211,2026-01-26,Groceries,false,false
+212,2026-01-26,Eating out,false,false
+213,2026-01-26,Health,false,false
+214,2026-01-27,Groceries,false,false
+215,2026-01-27,Shopping,false,false
+216,2026-01-28,Groceries,false,false
+217,2026-01-28,Eating out,false,false
+218,2026-02-02,Groceries,false,false
+219,2026-02-02,Groceries,true,false
+220,2026-02-03,Housing,false,false
+221,2026-02-03,Transport,false,false
+222,2026-02-05,Income,false,false
+223,2026-02-05,Transport,false,false
+224,2026-02-05,Transport,false,false
+225,2026-02-05,Health,false,false
+226,2026-02-06,Savings,false,false
+227,2026-02-06,Groceries,false,false
+228,2026-02-07,Subscriptions,false,false
+229,2026-02-08,Subscriptions,false,false
+230,2026-02-08,Transport,false,false
+231,2026-02-08,Entertainment,false,false
+232,2026-02-09,Shopping,false,false
+233,2026-02-10,Groceries,false,false
+234,2026-02-10,Eating out,false,false
+235,2026-02-11,Utilities,false,false
+236,2026-02-11,Groceries,false,false
+237,2026-02-11,Eating out,false,false
+238,2026-02-12,Utilities,false,false
+239,2026-02-12,Groceries,false,false
+240,2026-02-12,Groceries,false,false
+241,2026-02-12,Eating out,false,false
+242,2026-02-12,Entertainment,false,false
+243,2026-02-12,Adversarial,false,true
+244,2026-02-13,Utilities,false,false
+245,2026-02-13,Groceries,false,false
+246,2026-02-14,Transport,false,false
+247,2026-02-14,Shopping,false,false
+248,2026-02-15,Subscriptions,false,false
+249,2026-02-15,Utilities,false,false
+250,2026-02-15,Transport,false,false
+251,2026-02-15,Entertainment,false,false
+252,2026-02-16,Groceries,false,false
+253,2026-02-16,Groceries,true,false
+254,2026-02-16,Groceries,false,false
+255,2026-02-16,Groceries,false,false
+256,2026-02-16,Eating out,false,false
+257,2026-02-17,Groceries,false,false
+258,2026-02-18,Eating out,false,false
+259,2026-02-18,Health,false,false
+260,2026-02-18,Shopping,false,false
+261,2026-02-18,Adversarial,false,true
+262,2026-02-19,Groceries,false,false
+263,2026-02-20,Eating out,false,false
+264,2026-02-21,Transport,false,false
+265,2026-02-21,Transport,true,false
+266,2026-02-21,Transport,false,false
+267,2026-02-22,Eating out,false,false
+268,2026-02-24,Groceries,false,false
+269,2026-02-24,Eating out,false,false
+270,2026-02-24,Eating out,false,false
+271,2026-02-25,Subscriptions,false,false
+272,2026-02-26,Transport,false,false
+273,2026-02-27,Eating out,false,false
+274,2026-02-28,Groceries,false,false
+275,2026-02-28,Transport,false,false
+276,2026-03-01,Shopping,false,false
+277,2026-03-02,Groceries,false,false
+278,2026-03-02,Eating out,false,false
+279,2026-03-02,Eating out,false,false
+280,2026-03-02,Eating out,true,false
+281,2026-03-03,Housing,false,false
+282,2026-03-03,Transport,false,false
+283,2026-03-04,Groceries,false,false
+284,2026-03-04,Groceries,false,false
+285,2026-03-05,Income,false,false
+286,2026-03-06,Savings,false,false
+287,2026-03-06,Groceries,false,false
+288,2026-03-06,Eating out,false,false
+289,2026-03-06,Eating out,true,false
+290,2026-03-06,Eating out,false,false
+291,2026-03-07,Subscriptions,false,false
+292,2026-03-08,Subscriptions,false,false
+293,2026-03-08,Transport,false,false
+294,2026-03-09,Eating out,false,false
+295,2026-03-10,Groceries,false,false
+296,2026-03-10,Entertainment,false,false
+297,2026-03-11,Utilities,false,false
+298,2026-03-12,Utilities,false,false
+299,2026-03-12,Groceries,false,false
+300,2026-03-13,Utilities,false,false
+301,2026-03-13,Groceries,false,false
+302,2026-03-14,Groceries,false,false
+303,2026-03-14,Groceries,true,false
+304,2026-03-14,Eating out,false,false
+305,2026-03-15,Subscriptions,false,false
+306,2026-03-15,Utilities,false,false
+307,2026-03-15,Transport,false,false
+308,2026-03-15,Transport,false,false
+309,2026-03-15,Health,false,false
+310,2026-03-17,Groceries,false,false
+311,2026-03-17,Transport,false,false
+312,2026-03-17,Eating out,false,false
+313,2026-03-19,Transport,false,false
+314,2026-03-19,Eating out,false,false
+315,2026-03-19,Health,false,false
+316,2026-03-20,Groceries,false,false
+317,2026-03-20,Shopping,false,false
+318,2026-03-21,Groceries,false,false
+319,2026-03-22,Transport,false,false
+320,2026-03-22,Eating out,false,false
+321,2026-03-22,Entertainment,false,false
+322,2026-03-23,Groceries,false,false
+323,2026-03-23,Transport,false,false
+324,2026-03-23,Entertainment,false,false
+325,2026-03-25,Subscriptions,false,false
+326,2026-03-25,Transport,false,false
+327,2026-03-26,Transport,false,false
+328,2026-03-27,Groceries,false,false
+329,2026-03-27,Groceries,false,false
+330,2026-03-28,Eating out,false,false
+331,2026-03-28,Shopping,false,false
+332,2026-04-01,Transport,false,false
+333,2026-04-02,Eating out,false,false
+334,2026-04-03,Housing,false,false
+335,2026-04-03,Shopping,false,false
+336,2026-04-04,Groceries,false,false
+337,2026-04-04,Groceries,false,false
+338,2026-04-04,Eating out,false,false
+339,2026-04-05,Income,false,false
+340,2026-04-05,Groceries,false,false
+341,2026-04-05,Transport,false,false
+342,2026-04-05,Entertainment,false,false
+343,2026-04-06,Savings,false,false
+344,2026-04-06,Groceries,false,false
+345,2026-04-06,Entertainment,false,false
+346,2026-04-07,Subscriptions,false,false
+347,2026-04-07,Transport,false,false
+348,2026-04-08,Subscriptions,false,false
+349,2026-04-08,Groceries,false,false
+350,2026-04-08,Transport,false,false
+351,2026-04-10,Transport,false,false
+352,2026-04-10,Transport,false,false
+353,2026-04-10,Health,false,false
+354,2026-04-11,Utilities,false,false
+355,2026-04-11,Eating out,false,false
+356,2026-04-11,Eating out,false,false
+357,2026-04-11,Eating out,false,false
+358,2026-04-12,Utilities,false,false
+359,2026-04-12,Groceries,false,false
+360,2026-04-13,Utilities,false,false
+361,2026-04-13,Groceries,false,false
+362,2026-04-14,Groceries,false,false
+363,2026-04-14,Groceries,false,false
+364,2026-04-14,Groceries,false,false
+365,2026-04-14,Transport,false,false
+366,2026-04-14,Eating out,false,false
+367,2026-04-15,Subscriptions,false,false
+368,2026-04-15,Utilities,false,false
+369,2026-04-15,Transport,false,false
+370,2026-04-15,Eating out,false,false
+371,2026-04-15,Eating out,false,false
+372,2026-04-16,Transport,false,false
+373,2026-04-16,Eating out,false,false
+374,2026-04-16,Shopping,false,false
+375,2026-04-18,Groceries,false,false
+376,2026-04-18,Groceries,false,false
+377,2026-04-18,Groceries,true,false
+378,2026-04-20,Transport,false,false
+379,2026-04-20,Entertainment,false,false
+380,2026-04-23,Groceries,false,false
+381,2026-04-25,Subscriptions,false,false
+382,2026-04-25,Eating out,false,false
+383,2026-04-26,Health,false,false
+384,2026-04-27,Groceries,false,false
+385,2026-04-27,Shopping,false,false
+386,2026-05-01,Groceries,false,false
+387,2026-05-01,Groceries,false,false
+388,2026-05-01,Eating out,false,false
+389,2026-05-01,Eating out,false,false
+390,2026-05-01,Eating out,true,false
+391,2026-05-02,Eating out,false,false
+392,2026-05-03,Housing,false,false
+393,2026-05-03,Transport,false,false
+394,2026-05-03,Transport,false,false
+395,2026-05-04,Entertainment,false,false
+396,2026-05-05,Income,false,false
+397,2026-05-05,Groceries,false,false
+398,2026-05-05,Eating out,false,false
+399,2026-05-06,Savings,false,false
+400,2026-05-06,Groceries,false,false
+401,2026-05-06,Entertainment,false,false
+402,2026-05-07,Subscriptions,false,false
+403,2026-05-07,Transport,false,false
+404,2026-05-08,Subscriptions,false,false
+405,2026-05-08,Eating out,false,false
+406,2026-05-09,Transport,false,false
+407,2026-05-09,Adversarial,false,true
+408,2026-05-10,Groceries,false,false
+409,2026-05-10,Health,false,false
+410,2026-05-11,Utilities,false,false
+411,2026-05-11,Groceries,false,false
+412,2026-05-12,Utilities,false,false
+413,2026-05-13,Utilities,false,false
+414,2026-05-13,Shopping,false,false
+415,2026-05-14,Groceries,false,false
+416,2026-05-15,Subscriptions,false,false
+417,2026-05-15,Utilities,false,false
+418,2026-05-15,Transport,false,false
+419,2026-05-15,Eating out,false,false
+420,2026-05-15,Eating out,false,false
+421,2026-05-15,Shopping,false,false
+422,2026-05-15,Shopping,false,false
+423,2026-05-16,Health,false,false
+424,2026-05-16,Entertainment,false,false
+425,2026-05-17,Groceries,false,false
+426,2026-05-17,Adversarial,false,true
+427,2026-05-19,Groceries,false,false
+428,2026-05-20,Transport,false,false
+429,2026-05-21,Groceries,false,false
+430,2026-05-21,Groceries,false,false
+431,2026-05-22,Transport,false,false
+432,2026-05-22,Transport,false,false
+433,2026-05-23,Transport,false,false
+434,2026-05-23,Transport,true,false
+435,2026-05-25,Subscriptions,false,false
+436,2026-05-25,Eating out,false,false
+437,2026-05-25,Eating out,false,false
+438,2026-05-26,Groceries,false,false
+439,2026-05-27,Groceries,false,false
+440,2026-05-27,Transport,false,false
+441,2026-05-27,Eating out,false,false
+442,2026-05-28,Groceries,false,false
+443,2026-06-01,Groceries,false,false
+444,2026-06-01,Groceries,true,false
+445,2026-06-01,Groceries,false,false
+446,2026-06-02,Eating out,false,false
+447,2026-06-03,Housing,false,false
+448,2026-06-03,Groceries,false,false
+449,2026-06-04,Transport,false,false
+450,2026-06-04,Eating out,false,false
+451,2026-06-04,Shopping,false,false
+452,2026-06-05,Income,false,false
+453,2026-06-05,Groceries,false,false
+454,2026-06-06,Savings,false,false
+455,2026-06-06,Groceries,false,false
+456,2026-06-07,Subscriptions,false,false
+457,2026-06-07,Transport,false,false
+458,2026-06-08,Subscriptions,false,false
+459,2026-06-08,Transport,false,false
+460,2026-06-08,Eating out,false,false
+461,2026-06-09,Groceries,false,false
+462,2026-06-09,Transport,false,false
+463,2026-06-10,Transport,false,false
+464,2026-06-10,Transport,false,false
+465,2026-06-11,Utilities,false,false
+466,2026-06-11,Transport,false,false
+467,2026-06-11,Shopping,false,false
+468,2026-06-12,Utilities,false,false
+469,2026-06-12,Groceries,false,false
+470,2026-06-13,Utilities,false,false
+471,2026-06-13,Eating out,false,false
+472,2026-06-13,Health,false,false
+473,2026-06-14,Eating out,false,false
+474,2026-06-15,Subscriptions,false,false
+475,2026-06-15,Utilities,false,false
+476,2026-06-15,Eating out,false,false
+477,2026-06-16,Groceries,false,false
+478,2026-06-18,Entertainment,false,false
+479,2026-06-19,Groceries,false,false
+480,2026-06-21,Groceries,false,false
+481,2026-06-21,Groceries,false,false
+482,2026-06-21,Transport,false,false
+483,2026-06-22,Groceries,false,false
+484,2026-06-22,Groceries,false,false
+485,2026-06-22,Transport,false,false
+486,2026-06-22,Transport,true,false
+487,2026-06-22,Eating out,false,false
+488,2026-06-23,Transport,false,false
+489,2026-06-23,Eating out,false,false
+490,2026-06-24,Eating out,false,false
+491,2026-06-25,Subscriptions,false,false
+492,2026-06-25,Eating out,false,false
+493,2026-06-26,Shopping,false,false
+494,2026-06-27,Health,false,false
+495,2026-06-27,Entertainment,false,false
+496,2026-06-28,Groceries,false,false
+497,2026-06-28,Entertainment,false,false
+498,2026-07-01,Groceries,false,false
+499,2026-07-01,Eating out,false,false
+500,2026-07-02,Groceries,false,false
+501,2026-07-02,Transport,false,false
+502,2026-07-02,Transport,false,false
+503,2026-07-03,Housing,false,false
+504,2026-07-03,Groceries,false,false
+505,2026-07-03,Entertainment,false,false
+506,2026-07-04,Groceries,false,false
+507,2026-07-05,Income,false,false
+508,2026-07-06,Savings,false,false
+509,2026-07-06,Transport,false,false
+510,2026-07-07,Subscriptions,false,false
+511,2026-07-07,Groceries,false,false
+512,2026-07-07,Transport,false,false
+513,2026-07-08,Subscriptions,false,false
+514,2026-07-08,Groceries,false,false
+515,2026-07-10,Groceries,false,false
+516,2026-07-10,Eating out,false,false
+517,2026-07-10,Eating out,true,false
+518,2026-07-10,Eating out,false,false
+519,2026-07-10,Eating out,false,false
+520,2026-07-11,Utilities,false,false
+521,2026-07-11,Eating out,false,false
+522,2026-07-11,Health,false,false
+523,2026-07-12,Utilities,false,false
+524,2026-07-12,Groceries,false,false
+525,2026-07-12,Shopping,false,false
+526,2026-07-13,Utilities,false,false
+527,2026-07-13,Transport,false,false
+528,2026-07-13,Transport,false,false
+529,2026-07-14,Health,false,false
+530,2026-07-15,Subscriptions,false,false
+531,2026-07-15,Utilities,false,false
+532,2026-07-16,Groceries,false,false
+533,2026-07-17,Transport,false,false
+534,2026-07-17,Transport,false,false
+535,2026-07-18,Groceries,false,false
+536,2026-07-19,Groceries,false,false
+537,2026-07-23,Groceries,false,false
+538,2026-07-23,Eating out,false,false
+539,2026-07-23,Shopping,false,false
+540,2026-07-24,Groceries,false,false
+541,2026-07-24,Transport,false,false
+542,2026-07-24,Eating out,false,false
+543,2026-07-24,Eating out,false,false
+544,2026-07-25,Subscriptions,false,false
+545,2026-07-25,Entertainment,false,false
+546,2026-07-26,Eating out,false,false
+547,2026-07-27,Transport,false,false
+548,2026-07-27,Shopping,false,false
+549,2026-07-28,Groceries,false,false
+550,2026-07-28,Eating out,false,false
+551,2026-07-28,Entertainment,false,false
+552,2026-08-01,Groceries,false,false
+553,2026-08-01,Health,false,false
+554,2026-08-01,Shopping,false,false
+555,2026-08-03,Housing,false,false
+556,2026-08-04,Transport,false,false
+557,2026-08-04,Adversarial,false,true
+558,2026-08-05,Income,false,false
+559,2026-08-05,Transport,false,false
+560,2026-08-06,Savings,false,false
+561,2026-08-06,Groceries,false,false
+562,2026-08-06,Transport,false,false
+563,2026-08-06,Transport,true,false
+564,2026-08-07,Subscriptions,false,false
+565,2026-08-07,Groceries,false,false
+566,2026-08-07,Transport,false,false
+567,2026-08-07,Eating out,false,false
+568,2026-08-08,Subscriptions,false,false
+569,2026-08-08,Groceries,false,false
+570,2026-08-08,Groceries,false,false
+571,2026-08-08,Eating out,false,false
+572,2026-08-09,Transport,false,false
+573,2026-08-09,Eating out,false,false
+574,2026-08-10,Transport,false,false
+575,2026-08-10,Eating out,false,false
+576,2026-08-11,Utilities,false,false
+577,2026-08-11,Groceries,false,false
+578,2026-08-12,Utilities,false,false
+579,2026-08-13,Utilities,false,false
+580,2026-08-14,Groceries,false,false
+581,2026-08-14,Transport,false,false
+582,2026-08-14,Eating out,false,false
+583,2026-08-15,Subscriptions,false,false
+584,2026-08-15,Utilities,false,false
+585,2026-08-15,Groceries,false,false
+586,2026-08-16,Groceries,false,false
+587,2026-08-16,Eating out,false,false
+588,2026-08-17,Transport,false,false
+589,2026-08-18,Entertainment,false,false
+590,2026-08-19,Eating out,false,false
+591,2026-08-20,Eating out,false,false
+592,2026-08-21,Health,false,false
+593,2026-08-21,Shopping,false,false
+594,2026-08-21,Shopping,true,false
+595,2026-08-21,Entertainment,false,false
+596,2026-08-21,Adversarial,false,true
+597,2026-08-22,Groceries,false,false
+598,2026-08-23,Groceries,false,false
+599,2026-08-23,Eating out,false,false
+600,2026-08-24,Shopping,false,false
+601,2026-08-25,Subscriptions,false,false
+602,2026-08-25,Groceries,false,false
+603,2026-08-25,Transport,false,false
+604,2026-08-27,Groceries,false,false
+605,2026-08-27,Groceries,false,false
+606,2026-08-28,Transport,false,false
+607,2026-08-28,Eating out,false,false
+608,2026-08-28,Entertainment,false,false
+609,2026-09-01,Transport,false,false
+610,2026-09-02,Health,false,false
+611,2026-09-02,Shopping,false,false
+612,2026-09-03,Housing,false,false
+613,2026-09-03,Groceries,false,false
+614,2026-09-03,Transport,false,false
+615,2026-09-05,Income,false,false
+616,2026-09-05,Groceries,false,false
+617,2026-09-05,Groceries,false,false
+618,2026-09-06,Savings,false,false
+619,2026-09-06,Transport,false,false
+620,2026-09-07,Subscriptions,false,false
+621,2026-09-07,Transport,false,false
+622,2026-09-08,Subscriptions,false,false
+623,2026-09-09,Groceries,false,false
+624,2026-09-10,Eating out,false,false
+625,2026-09-11,Utilities,false,false
+626,2026-09-11,Groceries,false,false
+627,2026-09-11,Eating out,false,false
+628,2026-09-12,Utilities,false,false
+629,2026-09-12,Groceries,false,false
+630,2026-09-12,Eating out,false,false
+631,2026-09-13,Utilities,false,false
+632,2026-09-13,Transport,false,false
+633,2026-09-14,Groceries,false,false
+634,2026-09-15,Subscriptions,false,false
+635,2026-09-15,Utilities,false,false
+636,2026-09-15,Groceries,false,false
+637,2026-09-15,Transport,false,false
+638,2026-09-15,Transport,false,false
+639,2026-09-17,Groceries,false,false
+640,2026-09-18,Eating out,false,false
+641,2026-09-18,Entertainment,false,false
+642,2026-09-19,Groceries,false,false
+643,2026-09-19,Entertainment,false,false
+644,2026-09-20,Eating out,false,false
+645,2026-09-20,Eating out,false,false
+646,2026-09-20,Health,false,false
+647,2026-09-20,Entertainment,false,false
+648,2026-09-22,Shopping,false,false
+649,2026-09-24,Groceries,false,false
+650,2026-09-24,Groceries,true,false
+651,2026-09-24,Groceries,false,false
+652,2026-09-25,Subscriptions,false,false
+653,2026-09-25,Transport,false,false
+654,2026-09-25,Eating out,false,false
+655,2026-09-26,Groceries,false,false
+656,2026-09-26,Transport,false,false
+657,2026-09-26,Eating out,false,false
+658,2026-09-26,Eating out,false,false
+659,2026-09-26,Shopping,false,false
+660,2026-09-27,Eating out,false,false
+661,2026-09-28,Groceries,false,false
+662,2026-09-28,Transport,false,false
+663,2026-09-28,Transport,true,false

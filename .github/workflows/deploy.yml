@@ -1,0 +1,45 @@
+name: deploy
+
+on:
+  push:
+    branches: [main, staging, qa]
+  workflow_dispatch:
+
+# Required for OIDC. Nothing else is granted to the workflow token.
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # main -> prod, staging -> staging, qa -> qa
+      STAGE: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type check
+        run: npm run build --workspace @smart-finances/infra
+
+      - name: Configure AWS credentials (OIDC, no stored keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy
+        working-directory: infra
+        run: npx cdk deploy "smart-finances-api-${STAGE}" -c stage="${STAGE}" --require-approval never

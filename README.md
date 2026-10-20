@@ -1,41 +1,24 @@
-## Smart Finances
+# smart-finances
 
-Smart Finances is a project designed to simplify the often-complex task of managing your finances. It provides a user-friendly interface for tracking income and expenses, creating budgets, and gaining valuable insights into your financial health.
+A personal finance assistant: import your money data, see it in a dashboard, and ask questions answered by tools and RAG with citations. Built on serverless AWS with an evaluation suite and an AI security review.
 
-### Getting Started (**Prerequisites:** Node.js and Angular CLI)
+## Layout
 
-1. Clone the repository:
+| Path | Purpose |
+| --- | --- |
+| `apps/web` | Next.js dashboard and chat UI |
+| `apps/api` | Lambda handlers |
+| `infra` | AWS CDK stacks |
+| `evals` | Golden set, harness, regression gate |
+| `docs/adr` | Architecture decision records |
+| `data/synthetic` | Synthetic dataset (the only data committed) |
 
-```bash
-git clone https://github.com/YosefBlandin/smart-finances
-```
+## Branches
 
-2. Install dependencies:
+`main` (history of the previous Angular app until this lands) · `qa` · `staging` · `feature/*`
 
-```bash
-npm install
-```
+The Vercel project linked to this repo built the old Angular app. `vercel.json` turns off its Git deployments until `apps/web` has a real app; re-enable them then and point the project's root directory at `apps/web`.
 
-3. Run the development server:
+## Status
 
-```bash
-npm start
-```
-
-This will start the application on your local machine, usually at http://localhost:4200/.
-
-### Script Reference
-
-The `scripts` section in the `package.json` file defines various commands for managing the project. Here's a breakdown of each command:
-
-* **ng:** This is a shortcut for the Angular CLI, a command-line tool for developing Angular applications.
-
-* **start (ng serve):** Starts the development server, which provides live reload functionality as you make changes to the code. This is ideal for working on the project and seeing the immediate effects of your modifications.
-
-* **build (ng build):** Creates an optimized production build of the application. This build is intended for deployment to a hosting environment where users can access the application.
-
-* **watch (ng build --watch --configuration development):** Starts the development server in watch mode. This means that whenever you make changes to the source code, the application will automatically rebuild and reload in the browser, saving you the time of manually running the build command.
-
-* **test (ng test):** Runs unit tests for the application. Unit tests are essential for ensuring the functionality of individual components and preventing regressions as the code evolves.
-
-* **serve:ssr:smart (node dist/smart/server/server.mjs):** Starts the server-side rendering (SSR) mode for the application.  SSR improves SEO (Search Engine Optimization) and initial load performance by rendering the application on the server instead of the client's browser. This can be beneficial for complex applications or those targeting search engines.
+Early scaffold. Work is tracked as Epics 0-7 in the execution plan.

@@ -1,0 +1,23 @@
+{
+  "name": "@smart-finances/infra",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "synth": "cdk synth",
+    "bootstrap:personal": "cdk bootstrap --profile personal",
+    "deploy:oidc:personal": "cdk deploy smart-finances-github-oidc --profile personal",
+    "deploy:dev:personal": "cdk deploy smart-finances-api-dev --profile personal -c stage=dev",
+    "diff:dev:personal": "cdk diff smart-finances-api-dev --profile personal -c stage=dev"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.170.0",
+    "constructs": "^10.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "aws-cdk": "^2.170.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.6.3"
+  }
+}
