@@ -16,6 +16,9 @@ export class ApiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
 
+    const reservedRaw = this.node.tryGetContext('reservedConcurrency');
+    const reservedConcurrency = reservedRaw === undefined ? undefined : Number(reservedRaw);
+
     const logGroup = new logs.LogGroup(this, 'HelloLogs', {
       retention: logs.RetentionDays.ONE_MONTH,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -35,7 +38,10 @@ export class ApiStack extends cdk.Stack {
       logGroup,
       memorySize: 128,
       timeout: cdk.Duration.seconds(5),
-      reservedConcurrentExecutions: 5,
+      // Off by default: new AWS accounts start with a Lambda concurrency quota of 10 and AWS
+      // requires 10 to stay unreserved, so no reservation is possible until the quota is raised.
+      // Enable later with: cdk deploy -c reservedConcurrency=5
+      reservedConcurrentExecutions: reservedConcurrency,
       environment: { STAGE: props.stage },
     });
 
