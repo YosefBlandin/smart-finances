@@ -18,8 +18,9 @@ cdk.context.json
 *.pem
 *.key
 
-# Real financial data stays local; only synthetic data is committed
-data/real/
+# Real financial data stays local; only data/synthetic is committed
+data/*
+!data/synthetic/
 
 # Logs
 npm-debug.log*
