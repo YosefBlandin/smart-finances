@@ -5,7 +5,7 @@
 //
 //   read -s MP_ACCESS_TOKEN && export MP_ACCESS_TOKEN     # paste the token, press Enter
 //   node scripts/mercadopago-report.mjs show-config
-//   node scripts/mercadopago-report.mjs config                 # one-time setup
+//   node scripts/mercadopago-report.mjs config                 # creates, or updates if one exists
 //   node scripts/mercadopago-report.mjs create 2026-08-01 2026-08-31   # end date is inclusive
 //   node scripts/mercadopago-report.mjs list
 //   node scripts/mercadopago-report.mjs download <file_name>   # saved to data/real/mercadopago/
@@ -73,7 +73,14 @@ switch (cmd) {
             'CURRENCY', 'OPERATION_TAGS',
           ].map((key) => ({ key })),
         };
-    show(await call('POST', `${BASE}/config`, body));
+    // POST creates the config and answers 409 once one exists; PUT updates the existing one.
+    const created = await call('POST', `${BASE}/config`, body);
+    if (created.status === 409) {
+      console.log('POST answered 409, so a config exists; updating it with PUT');
+      show(await call('PUT', `${BASE}/config`, body));
+    } else {
+      show(created);
+    }
     break;
   }
   case 'create':
