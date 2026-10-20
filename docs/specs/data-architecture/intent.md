@@ -46,3 +46,14 @@ appetite: about 1 week from intake to handoff; one repo, all parts deploy togeth
 <!-- Every term the plain-language text and question cards use. One line each. Example row: | page view | One visit to one page or named tab, recorded once. | -->
 | Term | Meaning |
 |---|---|
+| source | Where a row came from: the payments app report, the old notes log, or a monthly spreadsheet. |
+| period | The month or span of time a file covers. |
+| import | Loading a file's rows into the app's single list of transactions. |
+| review list | The screen of imported rows that need the owner's look, such as unclear categories or possible duplicates. |
+| review choice | The owner's decision on a row: approve it, change its category, or confirm it is a duplicate. |
+| duplicate | The same payment appearing twice, in one source or in two. |
+| dollar view | A report that shows every amount in dollars, converted with a monthly rate the owner picks. |
+| savings rate | The share of income kept rather than spent; it needs one currency. |
+| second-account test | A security check that a second test sign-in cannot see the first sign-in's data. |
+| budget alarm | A warning that fires when cloud spending passes a set limit. |
+| administrator rights | Permission to read, change or delete everything in a cloud account. |
