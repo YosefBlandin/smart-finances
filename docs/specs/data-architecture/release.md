@@ -21,6 +21,7 @@ status: draft
 ## HUMAN needs
 <!-- Values and actions only a person can supply, each as a HUMAN marker with the gate it blocks. Preflight failures from intake land here. The executor asks for these at the start and never invents them. -->
 - <HUMAN: the user merges into qa and promotes qa to staging to main (D-4)> · Blocks: G-promote
+- <HUMAN: the user creates a budget alarm in the shared AWS account before the first real upload (D-10)> · Blocks: G-promote
 
 ## Staging and device checks
 <!-- One row per check, citing its test ids. Fixtures use internal ids only. Checks that need a login, a device or a real gateway are HUMAN. Example row: | One page open writes one event | T-E2E-1 | staging | HUMAN | exactly one new page-view event | -->
