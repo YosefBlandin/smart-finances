@@ -26,6 +26,23 @@ status: draft
 | D-9 | A new file for the same source and period replaces the earlier rows from that source and period; undo restores the previous file's rows. | 1-way | user (Q-4), 2026-10-21 | accepted |
 | D-10 | The data stays in the current shared AWS account; a budget alarm is added before real data is loaded. | 1-way | user (Q-5), 2026-10-21 | accepted |
 | D-11 | DP2: AC-1 to AC-20 and the no-gos approved; AC-14 and AC-15 then narrowed to follow D-8. | 2-way | user, 2026-10-21 | accepted |
+| D-12 | One table per stage. Partition key is the person (U# plus the sign-in sub); sort key prefixes TXN, OVR, IMP, PER and RATE as in architecture.md Contracts "Table items". No secondary index. | 1-way | design, 2026-10-21 | proposed |
+| D-13 | A separate data stack per stage holds the table, the upload bucket and the user pool. The user pool is retained in every stage; the table and bucket are retained with deletion protection in staging and prod. | 1-way | design, 2026-10-21 | proposed |
+| D-14 | Month totals are summed when read from the asked months' rows with review choices applied; nothing is stored and the table has no stream. Supersedes the stream rollup part of ADR 0003. | 2-way | design, 2026-10-21 | proposed |
+| D-15 | Uploads: the client names the source; the API returns a presigned POST form for one exact key with a size range, valid 15 minutes; an S3 event through EventBridge runs the parser. | 2-way | design, 2026-10-21 | proposed |
+| D-16 | Periods: payments report and budget workbook files cover one calendar month; a notes log or generic CSV covers the whole file. One import at a time per source and period, by a conditional lock. | 2-way | design, 2026-10-21 | proposed |
+| D-17 | Undo applies only to a period's active import: it moves the period pointer to the previous file, or to none, and reconciles; a repeat undo gets conflict. Raw uploads are kept until delete-all. | 2-way | design, 2026-10-21 | proposed |
+| D-18 | Sign-in: Cognito with self sign-up off and users created by the owner; TOTP MFA required; public app client with SRP and refresh; JWT authorizer on every data route. | 2-way | design, 2026-10-21 | proposed |
+| D-19 | Encryption and recovery: AWS-owned key for the table and SSE-S3 for the bucket now; customer-managed keys stay in Epic 6. Point-in-time recovery on in every stage; erased items stay restorable for its 35-day window. | 2-way | design, 2026-10-21 | proposed |
+| D-20 | Packaging: NodejsFunction with esbuild; AWS SDK v3 packages pinned in apps/api and bundled. | 2-way | design, 2026-10-21 | proposed |
+| D-21 | Four functions, one role each: read API, write API, delete-all, parser. No wildcard resources. | 2-way | design, 2026-10-21 | proposed |
+| D-22 | CI runs npm test, including infra synth tests, before deploying and deploys the data stack, then the API stack, of the stage; web origins per stage live in infra/cdk.json. Pinning actions to hashes stays in Epic 6. | 2-way | design, 2026-10-21 | proposed |
+| D-23 | A generic CSV importer reads the synthetic data shape, so evals and the demo use the same upload path. | 2-way | design, 2026-10-21 | proposed |
+| D-24 | The row schema stays in apps/api; how the web app consumes it is decided in the UI spec. | 2-way | design, 2026-10-21 | proposed |
+| D-25 | The workbook reader caps entry count and total inflated size and inflates only the parts it reads. | 2-way | design, 2026-10-21 | proposed |
+| D-26 | List, text search, review list and export read one person's rows for the asked months and filter, sort and page in the function. | 2-way | design, 2026-10-21 | proposed |
+| D-27 | The dollar view is computed when read, from rates stored as pesos per dollar with two decimals, using integer cents. | 2-way | design, 2026-10-21 | proposed |
+| D-28 | An import commits by moving its period pointer before writing rows, then reconciles: the period's stored rows are made equal to the active file's rows. Retries, re-uploads and a repair request re-run the reconcile. | 2-way | design, 2026-10-21 | proposed |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:
@@ -84,3 +101,22 @@ status: draft
 **Why**: no account move or new setup now.
 **Cost / accepted risk**: anything with administrator rights in the shared account, including the deploy roles of other projects, can read this data. Moving later is a data migration. Recorded in the threat model.
 **Confirm by**: the budget alarm exists before the first real upload (release.md HUMAN need).
+
+### D-12 options
+**Options**
+- A. Do nothing: no table; data stays in local files.
+- B. One partition per person, typed sort keys, no index. ✓
+- C. One partition per person and month, with an index for cross-month reads.
+- D. A relational database instead of DynamoDB (revisits ADR 0003).
+**Why**: one person holds low thousands of items, so one partition answers every access pattern with a single query, and keeps delete-all to one partition.
+**Cost / accepted risk**: every read goes through one partition per person; text search is a filter, not an index. Changing keys after real data loads means copying every item.
+**Confirm by**: an access-pattern test per route against the in-memory store, and the second-account test (AC-3).
+
+### D-13 options
+**Options**
+- A. Do nothing: put the table, bucket and pool in the API stack, which uses delete-on-remove settings.
+- B. A separate data stack per stage, the pool always retained, table and bucket retained in staging and prod. ✓
+- C. One shared data stack for all stages.
+**Why**: the person key is the user's sign-in id, so a recreated pool would orphan every stored item; API changes must never replace stores.
+**Cost / accepted risk**: removing a dev or qa stage leaves a retained pool to delete by hand.
+**Confirm by**: a synth test that the pool has retain, the prod table has retain and deletion protection, and the logical ids and replacement-sensitive properties of both are pinned.
