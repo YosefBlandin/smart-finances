@@ -2,7 +2,7 @@
 spec: data-architecture
 ticket: none
 tier: L
-status: executing
+status: locked-v2
 ---
 # Data architecture: model, store, access patterns, ingestion and auth: architecture
 
@@ -119,7 +119,7 @@ All JSON. Errors: { "error": { "code", "message" } } with codes unauthorized 401
 ### Parser input
 - Import mode, from EventBridge: the Object Created event for uploads/<sub>/<importId>.
 - Reconcile mode, by async invoke from undo or repair: { sub, import_id } of the undo or repair record, which already holds the lock.
-- Reconcile: read the period pointer; parse the active import's file (or take an empty set when there is none); put every row of that set; delete every stored transaction of that source and period not in the set (found by a query of the person's TXN items filtered on source and period); mark the active import and the running record done, mark any earlier import of that period still requested or importing as superseded; then release the lock. Running it again gives the same rows.
+- Reconcile: read the period pointer; parse the active import's file (or take an empty set when there is none); put every row of that set; delete every stored transaction of that source and period not in the set (found per D-32: for a one-month period, a query of TXN#<yyyy-mm> filtered on source; for a log period, a query of all TXN items filtered on source and period); mark the active import and the running record done, mark any earlier import of that period still requested or importing as superseded; then release the lock. Running it again gives the same rows.
 
 ### Rollup
 - Input: stream records (keys only) or { sub, months: "all" } from rebuild. Each TXN or OVR key gives a person and a month.
@@ -191,3 +191,6 @@ All lock and pointer writes are conditional on lock_import being this record, so
 | RK-6 | Admin roles of other projects in the shared account can read this data. | medium | high | Accepted in D-10. | owner |
 | RK-7 | Excel amounts pass through a float before rounding to cents. | low | low | Accepted: workbook amounts have at most two decimals, and rounding of such values times 100 is exact far beyond these sizes; the local reconciliation against the Summary sheets still passes (AC-20). | engineering |
 | RK-8 | The same payment imported from two sources is counted twice. | low | medium | Accepted: the three sources cover different periods; possible duplicates within the budget workbooks are flagged for a source fix (D-8). | owner |
+| RK-11 | Reconcile of a log period (notes log, generic CSV) reads every stored transaction, so its cost grows with history. | high | low | Accepted (D-32). Trigger: a log-period import reads more than 20,000 items. Fix then: a sparse index keyed U#<sub>#<source>#<period> on transaction items, keys only, with a base-table re-check because the index is eventually consistent. Month periods already read one month (T-REC-7). | engineering |
+| RK-12 | List, search, review and export read the whole asked range and page by offset, so each page costs the whole range. | medium | low | Accepted (D-26, D-32). Trigger: a person holds more than 20,000 transactions, or a list page exceeds 1 second. Fix then: keyset paging on the sort key for the default date order; amount sort and text search keep the in-memory path. | engineering |
+| RK-13 | Delete-all and export run inside one API request (25 s function, 30 s API limit, 6 MB response). | medium | medium | Accepted (D-32). Trigger: more than 30,000 transactions, or a delete-all or export above 15 seconds. Fix then: async jobs; export writes a short-lived private file under exports/<sub>/ and returns a presigned link, covered by delete-all. A repeat delete-all already resumes an unfinished erase (T-ERA-3). | engineering |

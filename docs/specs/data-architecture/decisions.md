@@ -2,7 +2,7 @@
 spec: data-architecture
 ticket: none
 tier: L
-status: executing
+status: locked-v2
 ---
 # Data architecture: model, store, access patterns, ingestion and auth: decisions
 
@@ -46,6 +46,7 @@ status: executing
 | D-29 | Extends D-12 for D-14: adds SUM#<yyyy-mm> month totals and one ERASED marker per person, and review choices move to OVR#<date>#<id> so the rollup finds them by month. | 1-way | user, 2026-10-22 | accepted |
 | D-30 | After delete-all, imports, undo, repair and totals are refused for a quiet window of 65 minutes, so no late background work can bring erased data back. | 2-way | user, 2026-10-27 | accepted |
 | D-31 | DP4: the three-PR plan in release.md and the values pinned in the briefs are approved; D-4 permissions stay; PR 2's round-2 cold-read blocker is accepted as fixed without a third run. | 2-way | user, 2026-10-28 | accepted |
+| D-32 | Reconcile of a one-month period reads only that month's transaction range, filtered by source; a log period reads every transaction, filtered by source and period. The parser fails a one-month file that has a row dated outside its month. A secondary index, keyset paging and async delete-all and export stay out until their scale triggers in architecture.md Risks are reached. | 2-way | user, 2026-10-28 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:

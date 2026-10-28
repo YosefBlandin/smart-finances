@@ -2,7 +2,7 @@
 spec: data-architecture
 ticket: none
 tier: L
-status: executing
+status: locked-v2
 ---
 # Data architecture: model, store, access patterns, ingestion and auth: test matrix
 
@@ -35,10 +35,12 @@ status: executing
 | T-IMP-4 | AC-13, AC-20 | SF-24 | unit | G-merge | findPossibleDuplicates flags the same rows combine flagged before; combine output is unchanged on fixtures. |
 | T-IMP-6 | AC-4, AC-5 | SF-28 | int | G-merge | A file with some bad rows imports the rest, records counts and every skipped row with its reason. |
 | T-IMP-7 | AC-6 | SF-28 | int | G-merge | Unknown content, a throwing importer, over 2,000 bad rows, or a missing record store no rows and record why. |
+| T-IMP-8 | D-16, D-32 | SF-28 | int | G-merge | A payments report or workbook result with a row dated outside its month fails with no rows written; the real importers' synthetic fixtures never trigger it. |
 | T-REC-1 | AC-6, D-16, D-28, D-30 | SF-25 | unit | G-merge | The lock moves requested to importing once; a live lock, an expired form, or the erase window refuses as States and exits say. |
 | T-REC-2 | AC-7 | SF-26 | int | G-merge | The same file twice stores its rows once and the second import ends unchanged. |
 | T-REC-3 | AC-8, D-9 | SF-26 | int | G-merge | A corrected file for a period replaces its rows; other sources and periods keep theirs. |
 | T-REC-4 | AC-7, AC-8, D-28 | SF-26 | int | G-merge | Late retry of an older import, one event twice and concurrent, crash after some puts then retry, takeover after lock_until: rows equal the active file. |
+| T-REC-7 | D-28, D-32 | SF-26 | unit | G-merge | Reconcile of a month period queries only TXN#<yyyy-mm> and leaves other months' rows of the same source untouched; a log period reads all and keeps other sources. |
 | T-API-1 | AC-4, AC-6 | SF-27 | unit | G-merge | POST /imports refuses a bad source or name with bad_request and an over-cap size with too_large. |
 | T-API-2 | D-15 | SF-27 | unit | G-merge | The form allows exactly uploads/<sub>/<importId>, 1 byte to the cap, and expires in 15 minutes. |
 | T-REC-5 | AC-9, D-17 | SF-29 | int | G-merge | Undo restores the previous file's rows, or none; undo of a non-active import or a repeat undo gets conflict. |
@@ -87,3 +89,6 @@ status: executing
 | Excel amounts pass through a float before cents. | RK-7 | Two-decimal values times 100 round exactly at these sizes; T-IMP-5 still matches. |
 | The same payment imported from two sources. | RK-8 | Sources cover different periods; workbook duplicates are flagged for a source fix. |
 | Skewed clocks let an older rollup win. | RK-9 | Hosts sync to milliseconds; the next change or a rebuild recomputes the month. |
+| Log-period reconcile reads all history. | RK-11, D-32 | Below the trigger in RK-11 the cost is a few hundred read units. |
+| Offset paging reads the whole range per page. | RK-12, D-32 | Below the trigger in RK-12 a range is about 1 MB. |
+| Delete-all and export are synchronous. | RK-13, D-32 | Below the trigger in RK-13 both finish in seconds; a repeat delete-all resumes. |

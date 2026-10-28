@@ -2,14 +2,14 @@
 spec: data-architecture
 ticket: none
 tier: L
-status: executing
+status: locked-v2
 ---
 # Data architecture: model, store, access patterns, ingestion and auth: brief for smart-finances (PR 2 of 3, imports)
 
 <!-- The executor's main document. It must stand alone: copy values in, and link only to sections a task cites. At most 6k tokens; comments do not count. Required reading (intent.md, this file and its Read first sections) stays under 15k. Before the lock, the cold-read dry run must find zero "cannot start" items. -->
 
 - Goal: the owner can upload a file, see its import record, re-upload or correct it without double counting, and undo or repair a period.
-- Implements: AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-20, D-9, D-15, D-16, D-17, D-23, D-25, D-28
+- Implements: AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-20, D-9, D-15, D-16, D-17, D-23, D-25, D-28, D-32
 - Spec folder: /Users/v/projects/smart-finances/.claude/worktrees/data-architecture/docs/specs/data-architecture
 - Refs: smart-finances at the sha in intent.md refs. Before the first task: `git -C /Users/v/projects/smart-finances fetch origin qa`, then `node ~/.claude/skills/spec/scripts/drift.mjs <spec folder> --strict` (exit 0; NEW lines are expected)
 - Worktree: /Users/v/projects/smart-finances/.claude/worktrees/data-imports
@@ -40,6 +40,7 @@ status: executing
 - D-23: A generic CSV importer reads the synthetic data shape, so evals and the demo use the same upload path.
 - D-25: The workbook reader caps entry count and total inflated size and inflates only the parts it reads.
 - D-28: An import commits by moving its period pointer before writing rows, then reconciles: the period's stored rows are made equal to the active file's rows. Retries, re-uploads and a repair request re-run the reconcile.
+- D-32: Reconcile of a one-month period reads only that month's transaction range, filtered by source; a log period reads every transaction, filtered by source and period. The parser fails a one-month file that has a row dated outside its month. A secondary index, keyset paging and async delete-all and export stay out until their scale triggers in architecture.md Risks are reached.
 - D-30: After delete-all, imports, undo, repair and totals are refused for a quiet window of 65 minutes, so no late background work can bring erased data back.
 - Values:
   - Sources and periods: mercadopago and excel use the importer's check.month (yyyy-mm); notion and csv use the period log.
@@ -144,12 +145,12 @@ status: executing
 ### SF-26 · Commit and reconcile
 - Implements: AC-7, AC-8, D-9, D-28 · After: SF-24, SF-25 · Judgment: high
 - Files: apps/api/src/store/imports.mjs, apps/api/test/imports.test.mjs
-- Tests first: T-REC-2, T-REC-3, T-REC-4
+- Tests first: T-REC-2, T-REC-3, T-REC-4, T-REC-7
 - Do:
   - Same content_hash as the active import: unchanged, then reconcile. Else commit: move the pointer (append to history) only if this record holds the lock and the active import id sorts before it; else superseded and release.
-  - reconcile per Contracts "Parser input": put the active file's rows (with period and import_id), delete stored rows of that source and period not in the set, mark done and supersede older open imports, release the lock.
+  - reconcile per Contracts "Parser input": put the active file's rows (with period and import_id), delete stored rows of that source and period not in the set (read per D-32: TXN#<yyyy-mm> range filtered on source for a month period, all TXN filtered on source and period for log), mark done and supersede older open imports, release the lock.
   - Run findPossibleDuplicates against the person's stored rows before the puts.
-- Verify: `node --test apps/api/test/imports.test.mjs` → T-REC-1 to T-REC-4 pass
+- Verify: `node --test apps/api/test/imports.test.mjs` → T-REC-1 to T-REC-4 and T-REC-7 pass
 - Done when: verify is green, evidence is recorded, and the reviewer has no blocker
 
 ### SF-27 · POST /imports
@@ -165,13 +166,13 @@ status: executing
 ### SF-28 · Parser handler
 - Implements: AC-4, AC-5, AC-6, D-15 · After: SF-22, SF-23, SF-26 · Judgment: high
 - Files: apps/api/src/handlers/parser.mjs (new), apps/api/test/parser.test.mjs (new)
-- Tests first: T-IMP-6, T-IMP-7
+- Tests first: T-IMP-6, T-IMP-7, T-IMP-8
 - Do:
   - Import mode: take sub and importId from the event's key per Contracts "S3 keys"; a missing record deletes the object and writes nothing.
   - Run the source's importer, periodOf, then lock, commit and reconcile. Record counts, every skipped row as { where, reason }, checks, and error { code, message } on failure.
-  - Unknown content, an importer throw, a period that differs from a held lock, or more than 2,000 unreadable rows: failed, no rows written.
+  - Unknown content, an importer throw, a period that differs from a held lock, more than 2,000 unreadable rows, or a month-period row dated outside its month (D-32): failed, no rows written.
   - Reconcile mode: { sub, import_id } runs reconcile only.
-- Verify: `node --test apps/api/test/parser.test.mjs` → T-IMP-6 and T-IMP-7 pass
+- Verify: `node --test apps/api/test/parser.test.mjs` → T-IMP-6 to T-IMP-8 pass
 - Done when: verify is green, evidence is recorded, and the reviewer has no blocker
 
 ### SF-29 · Undo and repair
