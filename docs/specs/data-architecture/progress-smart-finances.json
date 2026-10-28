@@ -4,9 +4,96 @@
   "brief": "",
   "tool": "",
   "model": "",
-  "baseline": { "tests": "", "lint": "", "typecheck": "" },
+  "baseline": {
+    "tests": "",
+    "lint": "",
+    "typecheck": ""
+  },
   "tasks": [
-    { "id": "SF-0", "status": "todo", "commit": "", "evidence": [], "review": "" }
+    {
+      "id": "SF-0",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-1",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-2",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-3",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-4",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-5",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-6",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-7",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-8",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-9",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-10",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-11",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    }
   ],
   "deviations": [],
   "surprises": []

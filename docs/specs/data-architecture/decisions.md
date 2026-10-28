@@ -2,7 +2,7 @@
 spec: data-architecture
 ticket: none
 tier: L
-status: draft
+status: locked-v1
 ---
 # Data architecture: model, store, access patterns, ingestion and auth: decisions
 
@@ -44,7 +44,8 @@ status: draft
 | D-27 | The dollar view is computed when read, from rates stored as pesos per dollar with two decimals, using integer cents. | 2-way | design, 2026-10-21; owner accepted in bulk 2026-10-22 | accepted |
 | D-28 | An import commits by moving its period pointer before writing rows, then reconciles: the period's stored rows are made equal to the active file's rows. Retries, re-uploads and a repair request re-run the reconcile. | 2-way | design, 2026-10-21; owner accepted in bulk 2026-10-22 | accepted |
 | D-29 | Extends D-12 for D-14: adds SUM#<yyyy-mm> month totals and one ERASED marker per person, and review choices move to OVR#<date>#<id> so the rollup finds them by month. | 1-way | user, 2026-10-22 | accepted |
-| D-30 | After delete-all, imports, undo, repair and totals are refused for a quiet window of 65 minutes, so no late background work can bring erased data back. | 2-way | design, 2026-10-22 | proposed |
+| D-30 | After delete-all, imports, undo, repair and totals are refused for a quiet window of 65 minutes, so no late background work can bring erased data back. | 2-way | user, 2026-10-27 | accepted |
+| D-31 | DP4: the three-PR plan in release.md and the values pinned in the briefs are approved; D-4 permissions stay; PR 2's round-2 cold-read blocker is accepted as fixed without a third run. | 2-way | user, 2026-10-28 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:

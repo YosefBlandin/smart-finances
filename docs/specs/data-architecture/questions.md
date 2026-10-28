@@ -2,7 +2,7 @@
 spec: data-architecture
 ticket: none
 tier: L
-status: draft
+status: locked-v1
 ---
 # Data architecture: model, store, access patterns, ingestion and auth: questions
 

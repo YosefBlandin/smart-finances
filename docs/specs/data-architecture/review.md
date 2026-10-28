@@ -2,7 +2,7 @@
 spec: data-architecture
 ticket: none
 tier: L
-status: draft
+status: locked-v1
 ---
 # Data architecture: model, store, access patterns, ingestion and auth: review
 
@@ -52,6 +52,11 @@ status: draft
 <!-- At G-handoff, one run per brief and round: a fresh context on a cheaper or different model gets only intent.md, the brief and the sections it cites (tier S: spec.md). Model class is cheaper, different, or same in a fresh context; never a model name. Gate: zero cannot-start items. -->
 | Brief | Round | Date | Model class | Cannot start | Missing values | Assumptions | Fixed in |
 |---|---|---|---|---|---|---|---|
+| pr-smart-finances.md | 1 | 2026-10-27 | same, fresh context | 2 (SF-1 decision text not cited; docs.test.mjs not in Files) | 13 | 15 | brief: Read first items 6 and 7, drift command, SF-1 to SF-9 files and values (store interface, HttpError, makeFunction, addStage, authorizer as a property), versions rule; test-matrix T-INF-7 |
+| pr-smart-finances-imports.md | 1 | 2026-10-27 | same, fresh context | 1 (SF-22 field mapping for generic CSV rows) | 20 | 17 | brief: Values for CSV mapping, timestamps, lock re-entry, page size, expired reason, baseline under data/real, ulid.mjs, PR 1 interfaces; test-matrix T-INF-9 |
+| pr-smart-finances-reads.md | 1 | 2026-10-27 | same, fresh context | 0 | 10 | 19 | brief: drift command, symlink target, SSM name, ROLLUP_FUNCTION, starting position, alarm and topic values, rounding, totals conflict in SF-45, SF-48 after SF-45 |
+| pr-smart-finances.md | 2 | 2026-10-27 | same, fresh context | 0 | 8 | 24 | brief: table and pool types and attributes, keys.mjs exports, repo.mjs test T-KEY-3, review and export read rule in ADR 0004, webOrigins context, lint baseline |
+| pr-smart-finances-imports.md | 2 | 2026-10-27 | same, fresh context | 1 (SF-29 After lacked SF-27) | 8 | 13 | brief: SF-29 After, excel name pattern, ingest:local diff ignores the timestamp line, import record contents, parser-only invoke grant; not re-run (2-round limit); user-accepted, D-31 |
 
 ## Conformance review
 <!-- Before each draft PR: a fresh reviewer compares the diff with the brief and its test ids. A finding that needs a decision becomes a deviation, not an edit. -->

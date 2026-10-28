@@ -1,0 +1,107 @@
+{
+  "spec": "data-architecture",
+  "repo": "smart-finances",
+  "brief": "",
+  "tool": "",
+  "model": "",
+  "baseline": {
+    "tests": "",
+    "lint": "",
+    "typecheck": ""
+  },
+  "tasks": [
+    {
+      "id": "SF-20",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-21",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-22",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-23",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-24",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-25",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-26",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-27",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-28",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-29",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-30",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-31",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-32",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    }
+  ],
+  "deviations": [],
+  "surprises": []
+}

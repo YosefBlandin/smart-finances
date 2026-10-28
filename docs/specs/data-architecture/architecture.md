@@ -2,7 +2,7 @@
 spec: data-architecture
 ticket: none
 tier: L
-status: draft
+status: locked-v1
 ---
 # Data architecture: model, store, access patterns, ingestion and auth: architecture
 
@@ -181,12 +181,12 @@ All lock and pointer writes are conditional on lock_import being this record, so
 <!-- Risks left after the design. Mitigation names a test, a check, or the decision that accepts the risk. At design, describe the test in words; handoff adds its id. Owner is a role. -->
 | RK | Risk | Likelihood | Impact | Mitigation or acceptance | Owner |
 |---|---|---|---|---|---|
-| RK-1 | A handler forgets the person and reads another person's items. | low | high | Keys come only from the key module; a test runs every route as a second person against a seeded first person and expects nothing (AC-3). | engineering |
-| RK-2 | A wrong period removes rows that belong to another file. | low | high | Period rules in one function with a unit test per source; reconcile only touches rows whose source and period match (D-9, D-16, D-28). | engineering |
-| RK-3 | Events arrive twice, runs crash midway, or two runs overlap, leaving a period's rows unlike its active file. | medium | medium | Commit before writing, ordered commits and an idempotent reconcile, with undo and repair under the same lock. In-memory tests: a late retry of an older import after a newer one committed; repair overlapping an import; delete-all during a repair; one event delivered twice and concurrently; a crash after some puts, then a retry; a lock takeover after lock_until; a payments report correction that crashes with overlapping keys, then repair; delete-all after a stalled import; a rollup batch delivered twice, two rollups interleaved, and a stale rollup after an erase; rollups from the erase's own deletions; after the quiet window only ERASED remains (AC-7, AC-8, AC-12, AC-18). A synth test checks the queue alarm. | engineering |
-| RK-10 | A deploy replaces the user pool or table, so new sign-in ids no longer match stored items. | low | high | The synth test of logical ids and replacement-sensitive properties fails CI first. Recovery, by a person: restore from point-in-time recovery, or re-key the partition from the old id to the new one with a one-off script. | engineering |
+| RK-1 | A handler forgets the person and reads another person's items. | low | high | Keys come only from the key module; a test runs every route as a second person against a seeded first person and expects nothing (AC-3): T-AUTH-3, T-KEY-1. | engineering |
+| RK-2 | A wrong period removes rows that belong to another file. | low | high | Period rules in one function with a unit test per source; reconcile only touches rows whose source and period match (D-9, D-16, D-28): T-IMP-1, T-REC-3. | engineering |
+| RK-3 | Events arrive twice, runs crash midway, or two runs overlap, leaving a period's rows unlike its active file. | medium | medium | Commit before writing, ordered commits and an idempotent reconcile, with undo and repair under the same lock. In-memory tests: a late retry of an older import after a newer one committed; repair overlapping an import; delete-all during a repair; one event delivered twice and concurrently; a crash after some puts, then a retry; a lock takeover after lock_until; a payments report correction that crashes with overlapping keys, then repair; delete-all after a stalled import; a rollup batch delivered twice, two rollups interleaved, and a stale rollup after an erase; rollups from the erase's own deletions; after the quiet window only ERASED remains (AC-7, AC-8, AC-12, AC-18). A synth test checks the queue alarm. Tests: T-REC-4, T-REC-5, T-REC-6, T-ROL-2, T-ROL-3, T-ERA-1, T-ERA-2, T-ERA-3, T-INF-12. | engineering |
+| RK-10 | A deploy replaces the user pool or table, so new sign-in ids no longer match stored items. | low | high | The synth test of logical ids and replacement-sensitive properties fails CI first (T-INF-5). Recovery, by a person: restore from point-in-time recovery, or re-key the partition from the old id to the new one with a one-off script. | engineering |
 | RK-9 | Two rollup runs on hosts with skewed clocks could let an older read win. | low | low | Accepted: Lambda hosts sync time to the millisecond range; any later change or a rebuild recomputes the month. | engineering |
-| RK-4 | A hostile workbook exhausts Lambda memory. | low | medium | Entry-count and total-inflate caps with a synthetic zip-bomb test (D-25). | engineering |
+| RK-4 | A hostile workbook exhausts Lambda memory. | low | medium | Entry-count and total-inflate caps with a synthetic zip-bomb test (D-25): T-IMP-3. | engineering |
 | RK-5 | A review choice whose row disappears after a payments report correction is left behind. | low | low | Accepted: payments report ids are stable per operation; orphaned choices are ignored on read and removed by delete-all. | owner |
 | RK-6 | Admin roles of other projects in the shared account can read this data. | medium | high | Accepted in D-10. | owner |
 | RK-7 | Excel amounts pass through a float before rounding to cents. | low | low | Accepted: workbook amounts have at most two decimals, and rounding of such values times 100 is exact far beyond these sizes; the local reconciliation against the Summary sheets still passes (AC-20). | engineering |
