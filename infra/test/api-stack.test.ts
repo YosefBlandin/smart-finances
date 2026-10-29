@@ -15,7 +15,9 @@ const context = {
   webOrigins: { dev: ['http://localhost:3000'], qa: ['http://localhost:3000'], staging: [], prod: [] },
 };
 
-type Resource = { Type: string; Properties: Record<string, any> };
+// CDK's AwsCustomResource singleton: CDK's own function, not one this repo defines.
+const CR_SINGLETON = 'AWS679f53fac002430cb0da5b7982bd2287';
+type Resource = { Type: string; Properties: Record<string, any>; DependsOn?: string[] };
 const resources = (stack: cdk.Stack) => Template.fromStack(stack).toJSON().Resources as Record<string, Resource>;
 const ofType = (all: Record<string, Resource>, type: string) => Object.entries(all).filter(([, r]) => r.Type === type);
 
@@ -38,7 +40,7 @@ test('T-INF-7 GET /health has no authorizer, there is no default route, throttli
     const [[, apiStage]] = ofType(all, 'AWS::ApiGatewayV2::Stage');
     assert.deepEqual(apiStage.Properties.DefaultRouteSettings, { ThrottlingRateLimit: 10, ThrottlingBurstLimit: 20 });
 
-    const functions = ofType(all, 'AWS::Lambda::Function').map(([, r]) => r.Properties);
+    const functions = ofType(all, 'AWS::Lambda::Function').filter(([id]) => !id.startsWith(CR_SINGLETON)).map(([, r]) => r.Properties);
     assert.deepEqual(functions.map((f) => f.FunctionName), [`smart-finances-${stage}-health`]);
     const [health] = functions;
     assert.equal(health.Runtime, 'nodejs22.x');
@@ -46,14 +48,14 @@ test('T-INF-7 GET /health has no authorizer, there is no default route, throttli
     assert.equal(health.Timeout, 5);
     assert.equal(health.Environment.Variables.STAGE, stage);
     assert.equal(health.ReservedConcurrentExecutions, undefined, 'no reservation unless asked for');
-    const [[, logGroup]] = ofType(all, 'AWS::Logs::LogGroup');
-    assert.equal(logGroup.Properties.RetentionInDays, 30);
-    assert.equal(health.LoggingConfig.LogGroup.Ref, ofType(all, 'AWS::Logs::LogGroup')[0][0]);
+    const healthLogs = all[health.LoggingConfig.LogGroup.Ref];
+    assert.equal(healthLogs.Type, 'AWS::Logs::LogGroup');
+    assert.equal(healthLogs.Properties.RetentionInDays, 30);
   }
 
   // The reservedConcurrency switch still works.
   const reserved = addStage(new cdk.App({ context: { ...context, reservedConcurrency: '5' } }), 'dev', env);
-  const [[, fn]] = ofType(resources(reserved.api), 'AWS::Lambda::Function');
+  const [[, fn]] = ofType(resources(reserved.api), 'AWS::Lambda::Function').filter(([id]) => !id.startsWith(CR_SINGLETON));
   assert.equal(fn.Properties.ReservedConcurrentExecutions, 5);
 });
 
@@ -76,11 +78,10 @@ test('T-INF-7 the JWT authorizer trusts the stage pool as issuer and its app cli
   assert.equal(authorizer.Properties.AuthorizerType, 'JWT');
   assert.deepEqual(authorizer.Properties.IdentitySource, ['$request.header.Authorization']);
 
-  const params = Template.fromStack(api).toJSON().Parameters as Record<string, { Default?: string }>;
-  const paramFor = (name: string) => Object.entries(params).find(([, p]) => p.Default === `/smart-finances/qa/${name}`)![0];
+  const [[readerId]] = ofType(all, 'Custom::AWS');
   assert.deepEqual(authorizer.Properties.JwtConfiguration, {
-    Audience: [{ Ref: paramFor('user-pool-client-id') }],
-    Issuer: { 'Fn::Join': ['', ['https://cognito-idp.us-east-1.amazonaws.com/', { Ref: paramFor('user-pool-id') }]] },
+    Audience: [{ 'Fn::GetAtt': [readerId, 'Parameters.2.Value'] }],
+    Issuer: { 'Fn::Join': ['', ['https://cognito-idp.us-east-1.amazonaws.com/', { 'Fn::GetAtt': [readerId, 'Parameters.3.Value'] }]] },
   });
   const probeRoute = ofType(all, 'AWS::ApiGatewayV2::Route').find(([, r]) => r.Properties.RouteKey === 'GET /probe')![1];
   assert.equal(probeRoute.Properties.AuthorizationType, 'JWT');
@@ -138,4 +139,64 @@ test('T-INF-7 makeFunction bundles the pinned AWS SDK instead of using the runti
     .filter((name) => !optional.has(name));
   assert.deepEqual([...new Set(left)], [], 'no @aws-sdk or @smithy import is left for the runtime to resolve');
   assert.ok(bundle.length > 100_000, 'the SDK is inside the bundle');
+});
+
+const NAMES = ['bucket-name', 'table-name', 'user-pool-client-id', 'user-pool-id'];
+const ssmArn = (stage: string, name: string) => ({
+  'Fn::Join': ['', ['arn:', { Ref: 'AWS::Partition' }, `:ssm:us-east-1:111111111111:parameter/smart-finances/${stage}/${name}`]],
+});
+
+test('T-INF-13 one custom resource reads the four SSM values; no SSM template parameters; its policy names only their ARNs', () => {
+  for (const stage of STAGES) {
+    const { api } = addStage(new cdk.App({ context }), stage, env);
+    const json = Template.fromStack(api).toJSON();
+    const all = json.Resources as Record<string, Resource>;
+
+    // CDK's own BootstrapVersion parameter stays; it is the one the deploy role may read.
+    const ssmParams = Object.values((json.Parameters ?? {}) as Record<string, { Type: string; Default?: string }>)
+      .filter((p) => p.Type.startsWith('AWS::SSM::Parameter::Value') && p.Default !== '/cdk-bootstrap/hnb659fds/version');
+    assert.deepEqual(ssmParams, [], `${stage}: no SSM-typed template parameters, which the CDK deploy role cannot resolve`);
+
+    const readers = ofType(all, 'Custom::AWS');
+    assert.equal(readers.length, 1, 'one custom resource');
+    const [[readerId, reader]] = readers;
+    const create = JSON.parse(reader.Properties.Create);
+    const update = JSON.parse(reader.Properties.Update);
+    for (const call of [create, update]) {
+      assert.equal(call.service, 'SSM');
+      assert.equal(call.action, 'getParameters');
+      // Sorted, because GetParameters answers in name order: Parameters.<i> is NAMES[i] either way.
+      assert.deepEqual(call.parameters.Names, NAMES.map((n) => `/smart-finances/${stage}/${n}`));
+      assert.deepEqual(call.outputPaths, NAMES.map((_, i) => `Parameters.${i}.Value`));
+    }
+
+    // The physical id changes on every synth, so every deploy re-reads.
+    const again = Template.fromStack(addStage(new cdk.App({ context }), stage, env).api).toJSON();
+    const [[, readerAgain]] = ofType(again.Resources, 'Custom::AWS');
+    assert.notEqual(JSON.parse(readerAgain.Properties.Update).physicalResourceId.id, update.physicalResourceId.id);
+
+    // Its policy: ssm:GetParameters on exactly the four parameter ARNs, nothing else, no "*".
+    const policies = ofType(all, 'AWS::IAM::Policy').filter(([id]) => reader.DependsOn?.includes(id));
+    assert.equal(policies.length, 1);
+    const statements = policies[0][1].Properties.PolicyDocument.Statement;
+    assert.deepEqual(statements, [{ Action: 'ssm:GetParameters', Effect: 'Allow', Resource: NAMES.map((n) => ssmArn(stage, n)) }]);
+
+    // The reader's function has its own role with no managed policies, and one-month logs.
+    const [[, singleton]] = ofType(all, 'AWS::Lambda::Function').filter(([id]) => id.startsWith(CR_SINGLETON));
+    const roleId = singleton.Properties.Role['Fn::GetAtt'][0];
+    assert.deepEqual(policies[0][1].Properties.Roles, [{ Ref: roleId }]);
+    assert.equal(all[roleId].Properties.ManagedPolicyArns, undefined, 'no managed policy, so no "*"');
+    const roleStatements = ofType(all, 'AWS::IAM::Policy')
+      .filter(([, p]) => p.Properties.Roles.some((r: any) => r.Ref === roleId))
+      .flatMap(([, p]) => p.Properties.PolicyDocument.Statement);
+    for (const statement of roleStatements) assert.equal(hasStar(statement.Resource), false, JSON.stringify(statement.Action));
+    assert.equal(all[singleton.Properties.LoggingConfig.LogGroup.Ref].Properties.RetentionInDays, 30);
+
+    // ApiStack.data comes from that resource, by name.
+    const field = (token: string) => api.resolve(token)['Fn::GetAtt'];
+    assert.deepEqual(field(api.data.bucketName), [readerId, 'Parameters.0.Value']);
+    assert.deepEqual(field(api.data.tableName), [readerId, 'Parameters.1.Value']);
+    assert.deepEqual(field(api.data.userPoolClientId), [readerId, 'Parameters.2.Value']);
+    assert.deepEqual(field(api.data.userPoolId), [readerId, 'Parameters.3.Value']);
+  }
 });

@@ -1,10 +1,10 @@
 import * as cdk from 'aws-cdk-lib';
-import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as apigw from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { Construct } from 'constructs';
 import { makeFunction } from './function';
+import { readStageValues } from './stage-values';
 
 export interface ApiStackProps extends cdk.StackProps {
   stage: string;
@@ -18,7 +18,7 @@ export interface ApiStackProps extends cdk.StackProps {
 export class ApiStack extends cdk.Stack {
   readonly stage: string;
   readonly webOrigins: string[];
-  /** The data stack's values, read from SSM at deploy time (no CloudFormation imports). */
+  /** The data stack's values, read from SSM on every deploy (D-33; no CloudFormation imports). */
   readonly data: { tableName: string; bucketName: string; userPoolId: string; userPoolClientId: string };
   readonly httpApi: apigw.HttpApi;
   readonly authorizer: HttpJwtAuthorizer;
@@ -28,12 +28,12 @@ export class ApiStack extends cdk.Stack {
     this.stage = props.stage;
     this.webOrigins = props.webOrigins;
 
-    const param = (name: string) => ssm.StringParameter.valueForStringParameter(this, `/smart-finances/${props.stage}/${name}`);
+    const values = readStageValues(this, props.stage, ['table-name', 'bucket-name', 'user-pool-id', 'user-pool-client-id']);
     this.data = {
-      tableName: param('table-name'),
-      bucketName: param('bucket-name'),
-      userPoolId: param('user-pool-id'),
-      userPoolClientId: param('user-pool-client-id'),
+      tableName: values['table-name'],
+      bucketName: values['bucket-name'],
+      userPoolId: values['user-pool-id'],
+      userPoolClientId: values['user-pool-client-id'],
     };
 
     this.httpApi = new apigw.HttpApi(this, 'Api', {

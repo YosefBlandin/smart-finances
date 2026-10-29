@@ -39,13 +39,16 @@ test('T-INF-6 each stage has a data and an api stack; the api stack depends on t
     const exports = Object.values((dataJson.Outputs ?? {}) as Record<string, { Export?: unknown }>).filter((o) => o.Export);
     assert.deepEqual(exports, [], 'no CloudFormation exports from the data stack');
 
-    // The api stack reads the data stack's values from SSM.
-    const params = Object.values((apiJson.Parameters ?? {}) as Record<string, { Type: string; Default?: string }>)
-      .filter((p) => p.Type === 'AWS::SSM::Parameter::Value<String>')
-      .map((p) => p.Default)
-      .filter((name) => name?.startsWith('/smart-finances/'))
-      .sort();
-    assert.deepEqual(params, ['table-name', 'bucket-name', 'user-pool-id', 'user-pool-client-id']
+    // The api stack reads the data stack's values from SSM through one custom resource (D-33),
+    // not through SSM-typed template parameters.
+    const ssmParams = Object.entries((apiJson.Parameters ?? {}) as Record<string, { Type: string }>)
+      .filter(([id, p]) => p.Type.startsWith('AWS::SSM::Parameter::Value') && id !== 'BootstrapVersion');
+    assert.deepEqual(ssmParams, [], `${stage} api stack has no SSM template parameters`);
+    const readers = Object.values(apiJson.Resources as Record<string, { Type: string; Properties: any }>)
+      .filter((r) => r.Type === 'Custom::AWS');
+    assert.equal(readers.length, 1);
+    const names = JSON.parse(readers[0].Properties.Create).parameters.Names;
+    assert.deepEqual(names, ['table-name', 'bucket-name', 'user-pool-id', 'user-pool-client-id']
       .map((name) => `/smart-finances/${stage}/${name}`)
       .sort());
   }
