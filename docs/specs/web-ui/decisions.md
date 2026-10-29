@@ -29,6 +29,7 @@ status: draft
 | D-12 | Visual world: Latin American concrete and kinetic art; one bold field per screen, quiet elsewhere. The leading strand is chosen from a side-by-side comparison. | 2-way | user, 2026-10-29 | accepted |
 | D-13 | Bad news: the figure turns red with one plain sentence; nothing else on the screen is red. | 2-way | user, 2026-10-29 | accepted |
 | D-14 | It must never feel like a bank, a game, a crypto app or a chatbot. | 2-way | user, 2026-10-29 | accepted |
+| D-15 | Leading strand: Cruz-Diez bands. Colour arrives as thin vertical bands; spending is plain ink, income blue, savings green, attention amber; category colours exclude red, so red stays only for the bad figure (D-13). | 2-way | user, 2026-10-29 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:
