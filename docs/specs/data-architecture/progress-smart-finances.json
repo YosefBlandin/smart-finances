@@ -1,100 +1,345 @@
 {
   "spec": "data-architecture",
   "repo": "smart-finances",
-  "brief": "",
-  "tool": "",
-  "model": "",
+  "brief": "pr-smart-finances.md@locked-v2",
+  "tool": "Claude Code 2.1.310 (desktop app, Code tab)",
+  "model": "claude-opus-5-5",
   "baseline": {
-    "tests": "",
-    "lint": "",
-    "typecheck": ""
+    "tests": "npm test: 19 pass, 0 fail (apps/api only; infra has no tests)",
+    "lint": "none (no lint script)",
+    "typecheck": "npm run build --workspace @smart-finances/infra (tsc --noEmit): exit 0"
   },
   "tasks": [
     {
       "id": "SF-0",
-      "status": "todo",
+      "status": "done",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        {
+          "command": "git -C /Users/v/projects/smart-finances fetch origin qa; drift.mjs <spec> --strict",
+          "result": "origin/qa = 7ce1ffb; 12 references: 5 NEW, 7 OK; exit 0"
+        },
+        {
+          "command": "npm ci",
+          "result": "found 0 vulnerabilities"
+        },
+        {
+          "command": "npm test",
+          "result": "tests 19, pass 19, fail 0"
+        },
+        {
+          "command": "npm run build --workspace @smart-finances/infra",
+          "result": "tsc --noEmit exit 0"
+        },
+        {
+          "command": "git status --short",
+          "result": "clean"
+        }
+      ],
       "review": ""
     },
     {
       "id": "SF-1",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "f8385c4",
+      "evidence": [
+        {
+          "command": "node --test apps/api/test/docs.test.mjs (before ADRs)",
+          "result": "fail 1: ENOENT docs/adr/0004-access-patterns.md"
+        },
+        {
+          "command": "node --test apps/api/test/docs.test.mjs",
+          "result": "pass 1, fail 0 (T-DOC-1)"
+        }
+      ],
       "review": ""
     },
     {
       "id": "SF-2",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "370a1eb",
+      "evidence": [
+        {
+          "command": "node --test apps/api/test/docs.test.mjs (T-DOC-2 added, threat model unchanged)",
+          "result": "T-DOC-1 pass; T-DOC-2 fail (AssertionError: /DynamoDB table/ does not match)"
+        },
+        {
+          "command": "spec-reviewer subagent (fresh context, same model) on the SF-2 diff",
+          "result": "no blocker, no major; 3 minor: (1) done markers wider than PR 1 tests (authorizer issuer/audience, bucket deletion protection), (2) wrong-type upload control named only the file name, (3) invoke-rights advice left out the stream and api-write async invokes. All three fixed before commit; T-INF-7 will assert the authorizer issuer and audience."
+        },
+        {
+          "command": "node --test apps/api/test/docs.test.mjs",
+          "result": "pass 2, fail 0 (T-DOC-1, T-DOC-2)"
+        }
+      ],
+      "review": "pass"
     },
     {
       "id": "SF-3",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "eff851f",
+      "evidence": [
+        {
+          "command": "npm test --workspace @smart-finances/infra (before the harness)",
+          "result": "npm error Missing script: \"test\""
+        },
+        {
+          "command": "versions (npm view <pkg> time; newest release published on or before 2026-10-14)",
+          "result": "esbuild 0.28.2 (2026-08-08); @aws-sdk/client-dynamodb, lib-dynamodb, client-s3, s3-presigned-post, client-lambda 3.1152.0 (2026-10-14); pinned exactly"
+        },
+        {
+          "command": "npm test",
+          "result": "apps/api: tests 21, pass 21, fail 0; infra: T-INF-1 pass, tests 1, fail 0"
+        }
+      ],
       "review": ""
     },
     {
       "id": "SF-4",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "4fdf1b4",
+      "evidence": [
+        {
+          "command": "cd infra && node --require ts-node/register --test test/data-stack.test.ts (before the stack)",
+          "result": "fail 1: TS2307 Cannot find module ../lib/data-stack"
+        },
+        {
+          "command": "cd infra && node --require ts-node/register --test test/data-stack.test.ts",
+          "result": "pass 2, fail 0 (T-INF-2, T-INF-3)"
+        },
+        {
+          "command": "spec-reviewer subagent (fresh context, same model) on the SF-4 diff",
+          "result": "no findings; reviewer re-ran the test (2 pass) and tsc --noEmit (exit 0)"
+        }
+      ],
+      "review": "pass"
     },
     {
       "id": "SF-5",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "4ecff2e",
+      "evidence": [
+        {
+          "command": "cd infra && node --require ts-node/register --test test/data-stack.test.ts (T-INF-4, T-INF-5 added, no pool yet)",
+          "result": "T-INF-2, T-INF-3 pass; T-INF-4 fail (AssertionError: one AWS::Cognito::UserPool); T-INF-5 fail (no resource UserPool6BA7E5F2)"
+        },
+        {
+          "command": "first synth after adding the pool",
+          "result": "logical ids TableCD117FA1, UserPool6BA7E5F2, UserPoolWebClient4C9370B0; pool UsernameAttributes [email], UsernameConfiguration {CaseSensitive:false}, Schema [{email, Mutable true, Required true}]; these are the pinned literals in T-INF-5"
+        },
+        {
+          "command": "cd infra && node --require ts-node/register --test test/data-stack.test.ts",
+          "result": "pass 4, fail 0 (T-INF-2 to T-INF-5)"
+        },
+        {
+          "command": "cd infra && npx tsc --noEmit",
+          "result": "exit 0"
+        },
+        {
+          "command": "spec-reviewer subagent (fresh context, same model) on the SF-5 diff",
+          "result": "no blocker, no major; 2 minor: (1) SSM user-pool-id Ref matched ^UserPool, which the client id also matches; fixed to exact logical ids; (2) staging hazard with other tasks files, staged by path. Reviewer confirmed disableOAuth and preventUserExistenceErrors conflict with no decision (executor choices: CDK addClient otherwise enables OAuth code and implicit grants)."
+        },
+        {
+          "command": "cd infra && node --require ts-node/register --test test/data-stack.test.ts (after the fix)",
+          "result": "pass 4, fail 0"
+        }
+      ],
+      "review": "pass"
     },
     {
       "id": "SF-6",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "3bfc2e1",
+      "evidence": [
+        {
+          "command": "cd infra && node --require ts-node/register --test test/stacks.test.ts (T-INF-1 moved to addStage, T-INF-6 added)",
+          "result": "fail 1: TS2307 Cannot find module ../lib/stage"
+        },
+        {
+          "command": "cd infra && node --require ts-node/register --test test/stacks.test.ts",
+          "result": "pass 2, fail 0 (T-INF-1, T-INF-6); first run failed on CDK own /cdk-bootstrap/hnb659fds/version SSM parameter, test now filters to /smart-finances/ names"
+        },
+        {
+          "command": "cd infra && npx tsc --noEmit",
+          "result": "exit 0"
+        }
+      ],
       "review": ""
     },
     {
       "id": "SF-7",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "1f19fc8",
+      "evidence": [
+        {
+          "command": "node --test apps/api/test/http.test.mjs (before http.mjs)",
+          "result": "fail: ERR_MODULE_NOT_FOUND apps/api/src/handlers/http.mjs"
+        },
+        {
+          "command": "node --test apps/api/test/http.test.mjs",
+          "result": "pass 2, fail 0 (T-AUTH-1, T-AUTH-2)"
+        },
+        {
+          "command": "spec-reviewer subagent (fresh context, same model) on the SF-7 diff",
+          "result": "no blocker, no major; 1 minor: HttpError used `in`, so inherited names like toString passed the code check. Fixed with Object.hasOwn and tested; the 500 case now also checks headers."
+        },
+        {
+          "command": "node --test apps/api/test/http.test.mjs (after the fix)",
+          "result": "pass 2, fail 0 (T-AUTH-1, T-AUTH-2)"
+        }
+      ],
+      "review": "pass"
     },
     {
       "id": "SF-8",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "1edd5bc, 97d679c",
+      "evidence": [
+        {
+          "command": "node --test apps/api/test/store.test.mjs (before the store modules)",
+          "result": "fail: ERR_MODULE_NOT_FOUND apps/api/src/store/keys.mjs"
+        },
+        {
+          "command": "node --test apps/api/test/store.test.mjs",
+          "result": "pass 3, fail 0 (T-KEY-1, T-KEY-2, T-KEY-3)"
+        },
+        {
+          "command": "spec-reviewer subagent (fresh context, same model) on the SF-8 diff",
+          "result": "no blocker; 3 major, 2 minor: (M1) no test of memory sort order; (M2) repo presignPost size range, multi-page listKeys and deleteObjects batching untested; (M3) memory accepted requests DynamoDB refuses (empty prefix, empty or >100-item transaction, empty any, check with empty if); (m1) ovrKey id refusal untested; (m2) memory gave no cursor on an exactly full last page. All fixed in the same commit: rows inserted out of order (mutation check: removing the sort fails T-KEY-2), presignPost signed offline with dummy credentials and its policy decoded (content-length-range 1..max, key, bucket, ~900 s expiry), 2-page listKeys, 1001-key deleteObjects in 2 batches and a partial-failure throw, shared checkQuery/checkTransaction in both stores, query with neither prefix nor between reads the whole partition (for delete-all), full pages carry a cursor."
+        },
+        {
+          "command": "node --test apps/api/test/store.test.mjs (after the fixes)",
+          "result": "pass 3, fail 0 (T-KEY-1, T-KEY-2, T-KEY-3)"
+        },
+        {
+          "command": "spec-reviewer follow-up on commit 1edd5bc",
+          "result": "all 5 earlier fixes confirmed real (each test fails without its fix); 1 minor: memory transact checked conditions while validating, so a failing early condition hid a malformed later item; limit 0/negative/non-integer accepted. Fixed in a follow-up SF-8 commit."
+        },
+        {
+          "command": "node --test apps/api/test/store.test.mjs (after the follow-up)",
+          "result": "pass 3, fail 0"
+        }
+      ],
+      "review": "findings"
     },
     {
       "id": "SF-9",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "d695869",
+      "evidence": [
+        {
+          "command": "cd infra && node --require ts-node/register --test test/api-stack.test.ts (before the change)",
+          "result": "fail 1: TS2339 Property httpApi does not exist on type ApiStack; Property authorizer does not exist on type ApiStack"
+        },
+        {
+          "command": "cd infra && node --require ts-node/register --test test/api-stack.test.ts",
+          "result": "pass 3, fail 0 (T-INF-7 routes/throttling/names, T-INF-7 authorizer issuer and audience via a probe route, T-INF-8)"
+        },
+        {
+          "command": "cd infra && npx tsc --noEmit; npm test",
+          "result": "tsc exit 0; infra tests 9, pass 9, fail 0"
+        },
+        {
+          "command": "spec-reviewer subagent (fresh context, same model) on the SF-9 diff",
+          "result": "no blocker; 1 major: NodejsFunction on Node 22 marks @aws-sdk/* and @smithy/* external by default, so the SDK pinned in apps/api was not bundled (D-20). 2 minor: T-INF-8 ignored AWS::IAM::ManagedPolicy attached through its Roles list; forward risk for PR 3 (CDK stream grants add dynamodb:ListStreams on *). Fixed the major with bundleAwsSDK: true plus a T-INF-7 test that bundles repo.mjs and finds no @aws-sdk or @smithy import left except the SDK optional SigV4a signers (mutation check: bundleAwsSDK false fails it); T-INF-8 now also reads ManagedPolicy resources. The third is recorded as a surprise for PR 3."
+        },
+        {
+          "command": "cd infra && node --require ts-node/register --test test/api-stack.test.ts (after the fixes); npx tsc --noEmit",
+          "result": "pass 4, fail 0; tsc exit 0"
+        },
+        {
+          "command": "local run of the synthesized health bundle (cdk.out asset index.mjs, STAGE=qa)",
+          "result": "{statusCode:200, body {message: smart-finances api is alive, stage: qa}}"
+        }
+      ],
+      "review": "findings"
     },
     {
       "id": "SF-10",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "269eeff",
+      "evidence": [
+        {
+          "command": "node --test apps/api/test/ci.test.mjs (before the workflow change)",
+          "result": "fail 1: AssertionError deploy.yml has a line matching /^\\s*(- )?run: npm test\\s*$/"
+        },
+        {
+          "command": "node --test apps/api/test/ci.test.mjs",
+          "result": "pass 1, fail 0 (T-CI-1)"
+        }
+      ],
       "review": ""
     },
     {
       "id": "SF-11",
+      "status": "blocked",
+      "commit": "",
+      "evidence": [
+        {
+          "command": "npm test",
+          "result": "apps/api: tests 27, pass 27, fail 0; infra: tests 10, pass 10, fail 0"
+        },
+        {
+          "command": "npm run build --workspace @smart-finances/infra",
+          "result": "tsc --noEmit exit 0"
+        },
+        {
+          "command": "cd infra && npx cdk synth -c stage=qa --quiet (AWS env vars unset, AWS_CONFIG_FILE and AWS_SHARED_CREDENTIALS_FILE = /dev/null)",
+          "result": "Successfully synthesized smart-finances-github-oidc, smart-finances-data-qa, smart-finances-api-qa; exit 0; no cdk.context.json written (no lookups)"
+        },
+        {
+          "command": "privacy scan of git diff origin/qa (12-digit ids, emails, names)",
+          "result": "only the placeholder account 111111111111 and synthetic 16-hex ids"
+        },
+        {
+          "command": "spec-reviewer conformance review (fresh context, same model) of git diff origin/qa...HEAD",
+          "result": "1 blocker, 3 minor. Blocker: smart-finances-api-<stage> reads the data stack values as SSM-typed CloudFormation parameters (valueForStringParameter, as SF-6 prescribes); CreateChangeSet resolves them with the CDK deploy role, which may read only the bootstrap version parameter, so the qa API deploy fails after the data stack deploys. Minors: monthRange upper bound logged only as a surprise (now in deviations); SF-8 has two commits (follow-up commit tied to the task, kept); the SF-6 surprise understated the unused SSM parameters (corrected)."
+        },
+        {
+          "command": "read-only AWS with the personal profile: iam list-roles, get-role-policy default, list-attached-role-policies on cdk-hnb659fds-deploy-role-<acct>-us-east-1",
+          "result": "confirmed: statement ReadVersion allows ssm:GetParameter(s) only on parameter/cdk-bootstrap/hnb659fds/version; no other SSM grant; only managed policy is AWSCloudFormationReadOnlyAccess. Bootstrap version 32."
+        }
+      ],
+      "review": "findings",
+      "blocked_reason": "Stop point: the qa deploy of the API stack would fail on ssm:GetParameters for /smart-finances/qa/* (deploy role lacks it). Fixing it needs either an AWS change by the user (grant the bootstrap deploy role ssm:GetParameters on parameter/smart-finances/*, ideally through a custom bootstrap template so a re-bootstrap keeps it) or a change to the SF-6 approach that the planning session must decide. Branch not pushed; no PR opened."
+    },
+    {
+      "id": "SF-12",
       "status": "todo",
       "commit": "",
       "evidence": [],
       "review": ""
     }
   ],
-  "deviations": [],
-  "surprises": []
+  "deviations": [
+    {
+      "date": "2026-10-28",
+      "task": "SF-6",
+      "from": "brief SF-6 and architecture.md Components Data stack (no D-n): API stack reads data values with valueForStringParameter",
+      "proposal": "Keep the code and have the user grant the CDK deploy role ssm:GetParameters on arn:aws:ssm:<region>:<acct>:parameter/smart-finances/* (custom bootstrap template, so re-bootstrapping keeps it); or the planning session picks another read path (for example an AwsCustomResource GetParameter scoped to those ARNs).",
+      "decidedBy": "",
+      "newDecision": ""
+    },
+    {
+      "date": "2026-10-28",
+      "task": "SF-1",
+      "from": "brief SF-1 wording (no D-n): ranged reads use TXN#<from> to TXN#<to>",
+      "proposal": "Upper bound TXN#<to>~ (keys.mjs monthRange), since BETWEEN with hi = TXN#<to> drops every row of the last month; PR 3 builds ranges through monthRange.",
+      "decidedBy": "",
+      "newDecision": ""
+    }
+  ],
+  "surprises": [
+    "SF-1: Contracts say ranged reads use TXN#<from> to TXN#<to>, but a BETWEEN with hi = TXN#<to> would drop every row of the last month (TXN#<to>-dd#id sorts after TXN#<to>). ADR 0004 documents the upper bound as TXN#<to>~ (tilde sorts after every date and id character). PR 3 handlers should build it that way.",
+    "SF-3: npm 11.19 warns that esbuild@0.28.2 has a postinstall script not covered by allowScripts. It was not approved (no config change); esbuild still runs (npx esbuild --version = 0.28.2) through its platform optional dependency.",
+    "SF-6: the API stack reads all four SSM values, and none is referenced yet (the authorizer is unbound, and table and bucket names wait for PR 2), so synth prints CloudFormation-Validate W2001 warnings for all four in every stage. CloudFormation still resolves them at deploy time, which is why the SF-11 blocker applies to all four.",
+    "SF-6: Stack.addDependency is deprecated in aws-cdk-lib 2.274; stage.ts uses addStackDependency.",
+    "SF-8: the store interface gains one shape the brief did not list: query({ pk }) with neither prefix nor between reads the whole partition, because DynamoDB refuses an empty begins_with prefix and delete-all (PR 3) must read every item. The memory store also returns a cursor on a full last page, as DynamoDB does, so callers must accept an empty final page.",
+    "SF-8 (for PR 3): ERASED.quiet_until is an ISO string and the rollup t is ms epoch; a condition comparing them is false in both stores (type mismatch, as in DynamoDB). The rollup must compare quiet_until with new Date(t).toISOString().",
+    "SF-9 (for PR 3): aws-cdk-lib stream read grants (grantStreamRead, DynamoEventSource) add dynamodb:ListStreams on \"*\", which T-INF-8 refuses. The rollup wiring will need stream-ARN-scoped statements (or an EventSourceMapping without the CDK grant), or a recorded D-21 deviation if ListStreams on * is truly required.",
+    "SF-9: an unbound HttpJwtAuthorizer synthesizes no resource, so T-INF-7 binds it to a probe route inside the test to check issuer and audience. ApiStack also exposes httpApi and stage publicly; makeFunction reads the stage from the stack so its signature stays as the brief.",
+    "SF-9: the bundled SDK keeps two guarded requires of optional packages (@aws-sdk/signature-v4-crt, @aws-sdk/signature-v4a) that are not installed; the SDK loads them only for SigV4a, which nothing here uses.",
+    "SF-11: CI runs Node 22 (setup-node node-version 22) but this machine has only Node 24.21 and 26.10, so the ts-node harness and esbuild bundling were verified on Node 24 only. deploy.yml runs on pushes to main, staging and qa (and by hand), not on pull requests, so the first Node 22 run is the push to qa after merge; a failing npm test there stops before credentials and any deploy.",
+    "SF-8: two commits (1edd5bc and the follow-up 97d679c for a review minor), both tied to SF-8; kept rather than rewriting SF-9 and SF-10 history."
+  ]
 }

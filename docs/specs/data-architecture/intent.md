@@ -2,7 +2,7 @@
 spec: data-architecture
 ticket: none
 tier: L
-status: executing
+status: locked-v3
 refs: smart-finances@7ce1ffb
 door: 1-way                # data store, keys and access rules are hard to undo once real data is loaded
 appetite: about 1 week from intake to handoff; one repo, all parts deploy together on merge, gaps of minutes are fine

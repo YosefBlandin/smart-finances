@@ -2,14 +2,14 @@
 spec: data-architecture
 ticket: none
 tier: L
-status: executing
+status: locked-v3
 ---
 # Data architecture: model, store, access patterns, ingestion and auth: brief for smart-finances (PR 1 of 3, foundation)
 
 <!-- The executor's main document. It must stand alone: copy values in, and link only to sections a task cites. At most 6k tokens; comments do not count. Required reading (intent.md, this file and its Read first sections) stays under 15k. Before the lock, the cold-read dry run must find zero "cannot start" items. Examples sit in these comments. -->
 
 - Goal: the per-stage data stack, sign-in on the API and the key layer exist and are tested, so the import and read PRs only add behaviour.
-- Implements: AC-1, AC-2, AC-19, D-6, D-10, D-12, D-13, D-18, D-19, D-20, D-21, D-22, D-24, D-29; the ADRs also record D-8, D-9, D-14, D-16, D-17, D-26, D-28
+- Implements: AC-1, AC-2, AC-19, D-6, D-10, D-12, D-13, D-18, D-19, D-20, D-21, D-22, D-24, D-29, D-33; the ADRs also record D-8, D-9, D-14, D-16, D-17, D-26, D-28
 - Spec folder: /Users/v/projects/smart-finances/.claude/worktrees/data-architecture/docs/specs/data-architecture
 - Refs: smart-finances at the sha in intent.md refs. Before the first task: `git -C /Users/v/projects/smart-finances fetch origin qa`, then `node ~/.claude/skills/spec/scripts/drift.mjs <spec folder> --strict` (exit 0; NEW lines are expected)
 - Worktree: /Users/v/projects/smart-finances/.claude/worktrees/data-foundation
@@ -22,7 +22,7 @@ status: executing
 2. intent.md: Acceptance criteria, No-gos, Glossary.
 3. architecture.md: Components "Data stack", "API stack", "CI and docs"; Contracts "Identity", "Table items", "S3 keys"; Cross-cutting.
 4. CLAUDE.md or AGENTS.md in the worktree, if present; README.md section "Layout".
-5. test-matrix.md rows whose task is SF-1 to SF-11.
+5. test-matrix.md rows whose task is SF-1 to SF-12.
 6. For SF-1 only: decisions.md, the decision table and its Options blocks; architecture.md Contracts "Rollup".
 7. progress-smart-finances.json: baseline, then per task status, commit, evidence (command and result), review; deviations and surprises as lists.
 
@@ -41,6 +41,7 @@ status: executing
 - D-20: Packaging: NodejsFunction with esbuild; AWS SDK v3 packages pinned in apps/api and bundled.
 - D-22: CI runs npm test, including infra synth tests, before deploying and deploys the data stack, then the API stack, of the stage; web origins per stage live in infra/cdk.json.
 - D-24: The row schema stays in apps/api; how the web app consumes it is decided in the UI spec.
+- D-33: The API stack reads the data stack's SSM parameters at deploy time through a CDK custom resource that calls SSM GetParameters, scoped to the /smart-finances/<stage>/ parameter ARNs and re-run on every deploy, because CloudFormation resolves SSM parameter types with the CDK deploy role, which cannot read them.
 - D-10: The data stays in the current shared AWS account; a budget alarm is added before real data is loaded.
 - Values: table keys pk and sk (strings); stack names smart-finances-data-<stage> and smart-finances-api-<stage>; SSM prefix /smart-finances/<stage>/ with names table-name, bucket-name, user-pool-id, user-pool-client-id; webOrigins in infra/cdk.json context: dev and qa ["http://localhost:3000"], staging and prod []; health function 128 MB, 5 s; timestamps are ISO 8601 UTC strings except computed_at (ms epoch); function names smart-finances-<stage>-<name> for health, api-read, api-write, api-delete, parser and rollup (a release script invokes them by name).
 - Rules: README.md "Layout" (only data/synthetic is committed); .gitignore block "Real financial data stays local"; docs/adr/README.md (one ADR per decision, NNNN-short-title.md); docs/threat-model.md (update for every new store, upload path and identity).
@@ -138,7 +139,7 @@ status: executing
 - Files: infra/bin/app.ts, infra/lib/stage.ts (new), infra/cdk.json, smart-finances:infra/lib/api-stack.ts#ApiStack, infra/test/stacks.test.ts
 - Tests first: T-INF-6
 - Do:
-  - addStage(app, stage, env) in infra/lib/stage.ts reads webOrigins[stage] from context (default []), passes it to both stacks, and creates smart-finances-data-<stage> and smart-finances-api-<stage>; app.ts calls it and tests call it; the API stack depends on the data stack and reads its values through SSM (valueForStringParameter), with no CloudFormation exports.
+  - addStage(app, stage, env) in infra/lib/stage.ts reads webOrigins[stage] from context (default []), passes it to both stacks, and creates smart-finances-data-<stage> and smart-finances-api-<stage>; app.ts calls it and tests call it; the API stack depends on the data stack and reads its values through SSM (valueForStringParameter; SF-12 replaces this read per D-33), with no CloudFormation exports.
   - Add the webOrigins map to cdk.json context; tests pass it with new cdk.App({ context }).
 - Verify: `cd infra && node --require ts-node/register --test test/stacks.test.ts` → T-INF-1 and T-INF-6 pass
 - Done when: verify is green and evidence is recorded
@@ -185,8 +186,19 @@ status: executing
 - Verify: `node --test apps/api/test/ci.test.mjs` → T-CI-1 passes
 - Done when: verify is green and evidence is recorded
 
+### SF-12 · Read the SSM values through a custom resource
+- Implements: D-33 · After: SF-10 · Judgment: high
+- Files: smart-finances:infra/lib/api-stack.ts#ApiStack, infra/lib/stage-values.ts (new), infra/test/api-stack.test.ts
+- Tests first: T-INF-13
+- Do:
+  - Replace the valueForStringParameter reads with one AwsCustomResource (SSM getParameters for the four names, onCreate and onUpdate) whose physicalResourceId changes on every synth, so each deploy re-reads; policy fromSdkCalls with resources the four parameter ARNs only (arn:aws:ssm:<region>:<account>:parameter/smart-finances/<stage>/<name>).
+  - Put it behind a small helper in infra/lib/stage-values.ts that PR 3 extends with table-stream-arn.
+  - T-INF-13: no AWS::SSM::Parameter::Value template parameters remain; the custom resource's policy names exactly those ARNs and no "*".
+- Verify: `cd infra && node --require ts-node/register --test test/api-stack.test.ts test/stacks.test.ts` → T-INF-1, T-INF-6 to T-INF-8 and T-INF-13 pass
+- Done when: verify is green, evidence is recorded, and the reviewer has no blocker
+
 ### SF-11 · Full verify and draft PR
-- Implements: none · After: SF-1 to SF-10 · Judgment: normal
+- Implements: none · After: SF-1 to SF-10, SF-12 · Judgment: normal
 - Files: none beyond earlier tasks
 - Tests first: none
 - Do:

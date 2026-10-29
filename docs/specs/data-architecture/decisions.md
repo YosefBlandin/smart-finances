@@ -2,7 +2,7 @@
 spec: data-architecture
 ticket: none
 tier: L
-status: executing
+status: locked-v3
 ---
 # Data architecture: model, store, access patterns, ingestion and auth: decisions
 
@@ -47,6 +47,8 @@ status: executing
 | D-30 | After delete-all, imports, undo, repair and totals are refused for a quiet window of 65 minutes, so no late background work can bring erased data back. | 2-way | user, 2026-10-27 | accepted |
 | D-31 | DP4: the three-PR plan in release.md and the values pinned in the briefs are approved; D-4 permissions stay; PR 2's round-2 cold-read blocker is accepted as fixed without a third run. | 2-way | user, 2026-10-28 | accepted |
 | D-32 | Reconcile of a one-month period reads only that month's transaction range, filtered by source; a log period reads every transaction, filtered by source and period. The parser fails a one-month file that has a row dated outside its month. A secondary index, keyset paging and async delete-all and export stay out until their scale triggers in architecture.md Risks are reached. | 2-way | user, 2026-10-28 | accepted |
+| D-33 | The API stack reads the data stack's SSM parameters at deploy time through a CDK custom resource that calls SSM GetParameters, scoped to the /smart-finances/<stage>/ parameter ARNs and re-run on every deploy, because CloudFormation resolves SSM parameter types with the CDK deploy role, which cannot read them. | 2-way | user, 2026-10-28 | accepted |
+| D-34 | dynamodb:ListStreams, which has no resource-level permission, is the one allowed "*" resource, on the rollup role only. | 2-way | design, 2026-10-28 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:

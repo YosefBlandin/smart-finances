@@ -2,7 +2,7 @@
 spec: data-architecture
 ticket: none
 tier: L
-status: executing
+status: locked-v3
 ---
 # Data architecture: model, store, access patterns, ingestion and auth: test matrix
 
@@ -22,7 +22,8 @@ status: executing
 | T-INF-5 | D-13 | SF-5 | unit | G-merge | Logical ids, key schema and sign-in attributes of the table and pool equal the pinned values. |
 | T-INF-6 | D-13, D-22 | SF-6 | unit | G-merge | Each stage has a data and an api stack; the api stack depends on the data stack and uses no CloudFormation imports. |
 | T-INF-7 | AC-1, D-18 | SF-9 | unit | G-merge | GET /health has no authorizer; there is no default route; throttling is 10 and 20; functions are named smart-finances-<stage>-<name>. |
-| T-INF-8 | D-21 | SF-9 | unit | G-merge | No function role policy has a "*" resource. |
+| T-INF-8 | D-21, D-34 | SF-9 | unit | G-merge | No function role policy has a "*" resource, except dynamodb:ListStreams on the rollup role (added in PR 3). |
+| T-INF-13 | D-33 | SF-12 | unit | G-merge | The API stack has no SSM template parameters; one custom resource reads the four values, and its policy names only their ARNs. |
 | T-AUTH-1 | AC-1, AC-2, D-6 | SF-7 | unit | G-merge | personOf returns the claims sub and throws unauthorized when it is missing or empty, whatever the path, query or body say. |
 | T-AUTH-2 | AC-1 | SF-7 | unit | G-merge | reply maps each error code to its status and the { error: { code, message } } body. |
 | T-KEY-1 | AC-2, D-12, D-29 | SF-8 | unit | G-merge | Every key kind is built from person and parts and pins the count of 7 kinds; another person never yields the same pk. |

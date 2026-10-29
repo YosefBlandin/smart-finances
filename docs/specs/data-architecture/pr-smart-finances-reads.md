@@ -2,7 +2,7 @@
 spec: data-architecture
 ticket: none
 tier: L
-status: executing
+status: locked-v3
 ---
 # Data architecture: model, store, access patterns, ingestion and auth: brief for smart-finances (PR 3 of 3, reads)
 
@@ -44,7 +44,10 @@ status: executing
   - Review reasons are the flags needs_review and possible_duplicate. approved true hides both for that row, in lists, review and export. Review choices apply before filters.
   - Timestamps are ISO 8601 UTC strings except computed_at (ms epoch). Totals are stored as { kind: { category: { currency: cents } } }.
   - Rounding in the dollar view is half away from zero.
-  - SSM: /smart-finances/<stage>/table-stream-arn. Env: ROLLUP_FUNCTION on api-write, next to TABLE_NAME, BUCKET_NAME and PARSER_FUNCTION.
+  - SSM: /smart-finances/<stage>/table-stream-arn, read in the API stack through PR 1's stage-values helper (D-33), never valueForStringParameter.
+  - D-34: dynamodb:ListStreams may have resource "*" on the rollup role only; update T-INF-8 to allow exactly that.
+  - Month ranges end at TXN#<to>~ (and OVR#<to>~) so the last month is included.
+  - The erase check compares quiet_until (ISO string) with new Date(t).toISOString(), never with t in ms. Env: ROLLUP_FUNCTION on api-write, next to TABLE_NAME, BUCKET_NAME and PARSER_FUNCTION.
   - q matches, case-insensitively, a substring of description_raw, merchant or category. Ties in a sort break by date, then id.
   - Cursor: base64url of { offset, hash }, where hash is a sha-256 of the query without cursor.
   - Rates: month yyyy-mm; ars_per_usd a string with exactly two decimals, above 0.00; else bad_request.
@@ -120,7 +123,7 @@ status: executing
 - Files: apps/api/src/store/query.mjs (new), apps/api/src/handlers/read.mjs, apps/api/test/query.test.mjs (new)
 - Tests first: T-API-4, T-API-5
 - Do:
-  - Query TXN#<from> to TXN#<to> and OVR# for the same range; apply review choices; filter, sort and page per the route row and the Values.
+  - Query TXN#<from> to TXN#<to>~ and OVR# for the same range; apply review choices; filter, sort and page per the route row and the Values.
   - Over 36 months, a bad sort or limit, or a cursor from another query: bad_request.
 - Verify: `node --test apps/api/test/query.test.mjs` → T-API-4 and T-API-5 pass
 - Done when: verify is green and evidence is recorded

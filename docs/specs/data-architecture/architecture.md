@@ -2,7 +2,7 @@
 spec: data-architecture
 ticket: none
 tier: L
-status: executing
+status: locked-v3
 ---
 # Data architecture: model, store, access patterns, ingestion and auth: architecture
 
@@ -29,7 +29,7 @@ browser --form POST--> bucket --event--> parser --> table --stream--> rollup -->
 - A synth test pins the logical ids and the replacement-sensitive properties of the table (keys) and the pool (sign-in attributes), so a change that would replace either fails CI (D-13).
 
 ### API stack
-- smart-finances:infra/lib/api-stack.ts#ApiStack reads the data stack's SSM parameters and builds ARNs from the names. Serves AC-1, AC-2, D-18, D-20, D-21.
+- smart-finances:infra/lib/api-stack.ts#ApiStack reads the data stack's SSM parameters through a custom resource at deploy time (D-33) and builds ARNs from the names. Serves AC-1, AC-2, D-18, D-20, D-21.
 - HTTP API: JWT authorizer (issuer = the pool, audience = the app client) on every route in Contracts "HTTP routes" except GET /health. The hello function moves to GET /health; the catch-all default integration is removed. Throttling stays at 10 rps, burst 20. CORS allows the stage's origins from the webOrigins map in infra/cdk.json (dev and qa: http://localhost:3000; staging and prod: empty until the web app has a host).
 - Functions (NodejsFunction, Node 22, esbuild bundle with esbuild in the root package.json, one role each, one-month log group; D-20, D-21):
   - api-read: GET routes. 256 MB, 10 s. Table read only.
@@ -37,7 +37,7 @@ browser --form POST--> bucket --event--> parser --> table --stream--> rollup -->
   - api-delete: DELETE /data. 256 MB, 25 s. Table read and delete; s3:ListBucket on the bucket ARN with an s3:prefix condition of uploads/*; s3:DeleteObject on the uploads/* object ARN.
   - rollup: 512 MB, 60 s. Stream source with a filter on sort keys starting TXN# or OVR# (the handler also ignores other keys), batch 100, parallelization 1, bisect on error, 3 retries, record age up to 1 hour, on-failure SQS queue with 14-day retention and a CloudWatch alarm on its depth above 0 that publishes to an SNS topic (the owner subscribes an email); also invoked async by the rebuild route. Table read and write.
   - parser: 1024 MB, 5 minutes (below the 10-minute lock). Triggered by an EventBridge rule in the API stack for Object Created in the bucket under uploads/, and by async invoke for undo. Async retries stay at the default 2; no on-failure destination. s3:GetObject and s3:DeleteObject on the uploads/* object ARN; table read and write.
-- No function gets a wildcard resource.
+- No function gets a wildcard resource, except dynamodb:ListStreams on the rollup role (D-34).
 
 ### Handlers
 - smart-finances:apps/api/src/handlers/ (new): read.mjs, write.mjs, delete.mjs, parser.mjs, rollup.mjs. Each is a thin adapter: it reads the person from the verified claims (Contracts "Identity"), validates input, and calls the core below. Serves AC-1 to AC-18.
