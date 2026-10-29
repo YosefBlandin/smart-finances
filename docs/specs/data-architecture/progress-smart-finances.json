@@ -1,7 +1,7 @@
 {
   "spec": "data-architecture",
   "repo": "smart-finances",
-  "brief": "pr-smart-finances.md@locked-v2",
+  "brief": "pr-smart-finances.md@locked-v3",
   "tool": "Claude Code 2.1.310 (desktop app, Code tab)",
   "model": "claude-opus-5-5",
   "baseline": {
@@ -272,8 +272,8 @@
     },
     {
       "id": "SF-11",
-      "status": "blocked",
-      "commit": "",
+      "status": "done",
+      "commit": "60b240e (no own commit)",
       "evidence": [
         {
           "command": "npm test",
@@ -298,17 +298,53 @@
         {
           "command": "read-only AWS with the personal profile: iam list-roles, get-role-policy default, list-attached-role-policies on cdk-hnb659fds-deploy-role-<acct>-us-east-1",
           "result": "confirmed: statement ReadVersion allows ssm:GetParameter(s) only on parameter/cdk-bootstrap/hnb659fds/version; no other SSM grant; only managed policy is AWSCloudFormationReadOnlyAccess. Bootstrap version 32."
+        },
+        {
+          "command": "npm test; npm run build --workspace @smart-finances/infra; cd infra && npx cdk synth -c stage=qa with no AWS credentials or config",
+          "result": "api 27/27, infra 11/11 pass; build exit 0; synth exit 0 with no warnings and no lookups, 3 templates; api-qa has 1 Custom::AWS"
+        },
+        {
+          "command": "node ~/.claude/skills/spec/scripts/drift.mjs <spec-dir> --strict",
+          "result": "12 references: 5 NEW, 7 OK"
+        },
+        {
+          "command": "conformance review (spec-reviewer, sonnet, fresh context) of git diff origin/qa...HEAD against locked-v3",
+          "result": "0 blocker, 0 major, 4 minor: F1 stale SF-11 evidence (re-run recorded above on HEAD 60b240e); F2 Node 22 CI unrun (risk in PR body); F3 GetParameters order assumption (surprise plus a HUMAN check in PR body); F4 small unnamed choices (surprise)"
+        },
+        {
+          "command": "git push -u origin feature/data-foundation; gh pr create --draft --base qa",
+          "result": "pushed 60b240e; draft PR https://github.com/YosefBlandin/smart-finances/pull/3 (not ready, not merged)"
         }
       ],
-      "review": "findings",
-      "blocked_reason": "Stop point: the qa deploy of the API stack would fail on ssm:GetParameters for /smart-finances/qa/* (deploy role lacks it). Fixing it needs either an AWS change by the user (grant the bootstrap deploy role ssm:GetParameters on parameter/smart-finances/*, ideally through a custom bootstrap template so a re-bootstrap keeps it) or a change to the SF-6 approach that the planning session must decide. Branch not pushed; no PR opened."
+      "review": "conformance: 0 blocker, 0 major, 4 minor (all recorded; none needs a code change)"
     },
     {
       "id": "SF-12",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "60b240e",
+      "evidence": [
+        {
+          "command": "read-only AWS (personal profile): ssm get-parameters with two existing names in both orders",
+          "result": "both answers list the names alphabetically, not in request order; so readStageValues requests names sorted and reads Parameters.<i> as the i-th sorted name"
+        },
+        {
+          "command": "cd infra && node --require ts-node/register --test test/api-stack.test.ts with the final tests and the HEAD api-stack.ts",
+          "result": "T-INF-13 fail (AssertionError: dev: no SSM-typed template parameters, which the CDK deploy role cannot resolve); T-INF-7 authorizer test fail (still SSM Refs); others pass"
+        },
+        {
+          "command": "cd infra && node --require ts-node/register --test test/api-stack.test.ts; npx tsc --noEmit",
+          "result": "pass 5, fail 0 (T-INF-7 x3, T-INF-8, T-INF-13); tsc exit 0"
+        },
+        {
+          "command": "review fix (minor: CDK custom-resource singleton had AWSLambdaBasicExecutionRole and logs with no retention): stage-values.ts passes its own role (no managed policies) and a one-month log group; T-INF-13 asserts the singleton role has no ManagedPolicyArns, no \"*\" resource, and 30-day logs. cd infra && npx tsc --noEmit; node --require ts-node/register --test test/api-stack.test.ts",
+          "result": "tsc exit 0; pass 5, fail 0"
+        },
+        {
+          "command": "T-INF-6 updated in infra/test/stacks.test.ts (approved deviation); npm test; cd infra && npx tsc --noEmit",
+          "result": "api 27/27 pass; infra 11/11 pass (T-INF-1, T-INF-6, T-INF-2..5, T-INF-7 x3, T-INF-8, T-INF-13); tsc exit 0"
+        }
+      ],
+      "review": "spec-reviewer: findings (0 blocker, 0 major, 1 minor: CR singleton role had AWSLambdaBasicExecutionRole and unretained logs; fixed with own role and one-month log group, asserted in T-INF-13). Callers read values by name (readStageValues returns a record keyed by name); inside the custom resource the SSM response is positional, mapped over the sorted names."
     }
   ],
   "deviations": [
@@ -317,16 +353,24 @@
       "task": "SF-6",
       "from": "brief SF-6 and architecture.md Components Data stack (no D-n): API stack reads data values with valueForStringParameter",
       "proposal": "Keep the code and have the user grant the CDK deploy role ssm:GetParameters on arn:aws:ssm:<region>:<acct>:parameter/smart-finances/* (custom bootstrap template, so re-bootstrapping keeps it); or the planning session picks another read path (for example an AwsCustomResource GetParameter scoped to those ARNs).",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "user, 2026-10-28 (via the planning session)",
+      "newDecision": "D-33 (task SF-12)"
     },
     {
       "date": "2026-10-28",
       "task": "SF-1",
       "from": "brief SF-1 wording (no D-n): ranged reads use TXN#<from> to TXN#<to>",
       "proposal": "Upper bound TXN#<to>~ (keys.mjs monthRange), since BETWEEN with hi = TXN#<to> drops every row of the last month; PR 3 builds ranges through monthRange.",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "planning session, 2026-10-28",
+      "newDecision": "none needed: the wording matches; PR 3 brief adopts TXN#<to>~ (locked-v3)"
+    },
+    {
+      "date": "2026-10-28",
+      "task": "SF-12",
+      "from": "Files: also infra/test/stacks.test.ts; T-INF-6 asserted the SSM template parameters that D-33 removes",
+      "proposal": "Replace that block of T-INF-6 with: no SSM template parameters besides BootstrapVersion, exactly one Custom::AWS reading the four /smart-finances/<stage>/ names; the no Fn::ImportValue and no-exports checks stay.",
+      "decidedBy": "planner, 2026-10-28",
+      "newDecision": "approved by the planner, no decision touched"
     }
   ],
   "surprises": [
@@ -340,6 +384,9 @@
     "SF-9: an unbound HttpJwtAuthorizer synthesizes no resource, so T-INF-7 binds it to a probe route inside the test to check issuer and audience. ApiStack also exposes httpApi and stage publicly; makeFunction reads the stage from the stack so its signature stays as the brief.",
     "SF-9: the bundled SDK keeps two guarded requires of optional packages (@aws-sdk/signature-v4-crt, @aws-sdk/signature-v4a) that are not installed; the SDK loads them only for SigV4a, which nothing here uses.",
     "SF-11: CI runs Node 22 (setup-node node-version 22) but this machine has only Node 24.21 and 26.10, so the ts-node harness and esbuild bundling were verified on Node 24 only. deploy.yml runs on pushes to main, staging and qa (and by hand), not on pull requests, so the first Node 22 run is the push to qa after merge; a failing npm test there stops before credentials and any deploy.",
-    "SF-8: two commits (1edd5bc and the follow-up 97d679c for a review minor), both tied to SF-8; kept rather than rewriting SF-9 and SF-10 history."
+    "SF-8: two commits (1edd5bc and the follow-up 97d679c for a review minor), both tied to SF-8; kept rather than rewriting SF-9 and SF-10 history.",
+    "SF-12: the SF-6 W2001 warnings are gone (no SSM template parameters remain). The custom resource adds one CDK singleton function (logical id AWS679f53fac002430cb0da5b7982bd2287) that T-INF-7 and T-INF-8 recognise by that id. Each deploy re-reads the four values, because the physical id changes every synth; a missing parameter fails the api stack deploy.",
+    "SF-12 (conformance F3): readStageValues assumes SSM GetParameters answers in name order. It was checked read-only with two names, and AWS does not document it. T-INF-13 cannot catch a different live order. A swap of user-pool-id and client-id would make the authorizer refuse every token (fails closed). Check after the first qa deploy: aws ssm get-parameters with the four names lists bucket-name, table-name, user-pool-client-id, user-pool-id in that order. Mapping by name inside the resource would need one GetParameter resource per name, against D-33's single resource, so it was not done.",
+    "Conformance F4: choices the brief does not name, no decision touched: preventUserExistenceErrors on the app client; API CORS methods GET/POST/PUT/DELETE, headers authorization and content-type, maxAge 1 hour; esbuild minify plus a createRequire banner for ESM bundles."
   ]
 }
