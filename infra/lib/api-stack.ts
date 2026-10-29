@@ -1,26 +1,31 @@
-import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
-import * as iam from 'aws-cdk-lib/aws-iam';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as apigw from 'aws-cdk-lib/aws-apigatewayv2';
+import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { Construct } from 'constructs';
+import { makeFunction } from './function';
 
 export interface ApiStackProps extends cdk.StackProps {
   stage: string;
   webOrigins: string[];
 }
 
-/** Hello-world API: HTTP API -> one Lambda with its own role. Replaced by real functions in Epic 2. */
+/**
+ * HTTP API for one stage. GET /health is public; every data route binds `authorizer`, which
+ * trusts only this stage's user pool and app client. Data routes arrive in later PRs.
+ */
 export class ApiStack extends cdk.Stack {
+  readonly stage: string;
   readonly webOrigins: string[];
   /** The data stack's values, read from SSM at deploy time (no CloudFormation imports). */
   readonly data: { tableName: string; bucketName: string; userPoolId: string; userPoolClientId: string };
+  readonly httpApi: apigw.HttpApi;
+  readonly authorizer: HttpJwtAuthorizer;
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
+    this.stage = props.stage;
     this.webOrigins = props.webOrigins;
 
     const param = (name: string) => ssm.StringParameter.valueForStringParameter(this, `/smart-finances/${props.stage}/${name}`);
@@ -31,44 +36,34 @@ export class ApiStack extends cdk.Stack {
       userPoolClientId: param('user-pool-client-id'),
     };
 
-    const reservedRaw = this.node.tryGetContext('reservedConcurrency');
-    const reservedConcurrency = reservedRaw === undefined ? undefined : Number(reservedRaw);
-
-    const logGroup = new logs.LogGroup(this, 'HelloLogs', {
-      retention: logs.RetentionDays.ONE_MONTH,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-    });
-
-    // One dedicated role per function. Only permission: write to its own log group.
-    const helloRole = new iam.Role(this, 'HelloRole', {
-      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-    });
-    logGroup.grantWrite(helloRole);
-
-    const hello = new lambda.Function(this, 'Hello', {
-      runtime: lambda.Runtime.NODEJS_22_X,
-      handler: 'index.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../../apps/api/src/hello')),
-      role: helloRole,
-      logGroup,
-      memorySize: 128,
-      timeout: cdk.Duration.seconds(5),
-      // Off by default: new AWS accounts start with a Lambda concurrency quota of 10 and AWS
-      // requires 10 to stay unreserved, so no reservation is possible until the quota is raised.
-      // Enable later with: cdk deploy -c reservedConcurrency=5
-      reservedConcurrentExecutions: reservedConcurrency,
-      environment: { STAGE: props.stage },
-    });
-
-    const api = new apigw.HttpApi(this, 'Api', {
+    this.httpApi = new apigw.HttpApi(this, 'Api', {
       apiName: `smart-finances-${props.stage}`,
-      defaultIntegration: new HttpLambdaIntegration('HelloIntegration', hello),
+      corsPreflight: props.webOrigins.length
+        ? {
+            allowOrigins: props.webOrigins,
+            allowMethods: [apigw.CorsHttpMethod.GET, apigw.CorsHttpMethod.POST, apigw.CorsHttpMethod.PUT, apigw.CorsHttpMethod.DELETE],
+            allowHeaders: ['authorization', 'content-type'],
+            maxAge: cdk.Duration.hours(1),
+          }
+        : undefined,
     });
 
     // Throttle the default stage so a loop or abuse cannot run up cost.
-    const stage = api.defaultStage?.node.defaultChild as apigw.CfnStage;
+    const stage = this.httpApi.defaultStage?.node.defaultChild as apigw.CfnStage;
     stage.defaultRouteSettings = { throttlingRateLimit: 10, throttlingBurstLimit: 20 };
 
-    new cdk.CfnOutput(this, 'ApiUrl', { value: api.apiEndpoint });
+    // Tokens must come from this stage's pool, issued to its web client. The person is the sub claim.
+    this.authorizer = new HttpJwtAuthorizer('Jwt', `https://cognito-idp.${this.region}.amazonaws.com/${this.data.userPoolId}`, {
+      jwtAudience: [this.data.userPoolClientId],
+    });
+
+    const health = makeFunction(this, { name: 'health', entry: 'apps/api/src/hello/index.mjs', memoryMb: 128, timeoutSeconds: 5 });
+    this.httpApi.addRoutes({
+      path: '/health',
+      methods: [apigw.HttpMethod.GET],
+      integration: new HttpLambdaIntegration('HealthIntegration', health),
+    });
+
+    new cdk.CfnOutput(this, 'ApiUrl', { value: this.httpApi.apiEndpoint });
   }
 }
