@@ -22,6 +22,13 @@ status: draft
 | D-5 | Agent access: local tests, builds and the dev server viewed in the browser pane, plus read-only AWS calls with the personal profile. No AWS writes and no real sign-ins; the user does those. | 2-way | intake, 2026-10-29 | accepted |
 | D-6 | Roles: the agent writes code, commits, pushes feature branches and opens draft PRs into qa; the user reviews, merges and promotes. Source: data-architecture spec D-4 (default). | 2-way | intake, 2026-10-29 | accepted |
 | D-7 | Stakeholders: only the user, no fixed date. Source: data-architecture spec D-5 (default). | 2-way | intake, 2026-10-29 | accepted |
+| D-8 | Audience: the brand speaks to future savers, not only the owner; screens need onboarding and plain words. Sign-up stays off for now, so strangers meet it through a demo account. | 2-way | user, 2026-10-29 | accepted |
+| D-9 | Name: Cuenta, pending a trademark check. The repo keeps its name. | 2-way | user, 2026-10-29 | accepted |
+| D-10 | Character: a straight-talking friend. It says the hard thing plainly, then helps. | 2-way | user, 2026-10-29 | accepted |
+| D-11 | Language: English and Spanish, switchable. Spanish addresses people with tú. | 2-way | user, 2026-10-29 | accepted |
+| D-12 | Visual world: Latin American concrete and kinetic art; one bold field per screen, quiet elsewhere. The leading strand is chosen from a side-by-side comparison. | 2-way | user, 2026-10-29 | accepted |
+| D-13 | Bad news: the figure turns red with one plain sentence; nothing else on the screen is red. | 2-way | user, 2026-10-29 | accepted |
+| D-14 | It must never feel like a bank, a game, a crypto app or a chatbot. | 2-way | user, 2026-10-29 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:
