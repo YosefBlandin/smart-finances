@@ -1,4 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
@@ -10,13 +11,15 @@ export interface DataStackProps extends cdk.StackProps {
 }
 
 /**
- * Per-stage stores (ADR 0004): one table, one private upload bucket. The API stack reads their
- * names from SSM, never from CloudFormation exports, so it can stop using a value without
- * blocking a deploy of this stack.
+ * Per-stage stores (ADR 0004): one table, one private upload bucket, one user pool. The API
+ * stack reads their names and ids from SSM, never from CloudFormation exports, so it can stop
+ * using a value without blocking a deploy of this stack.
  */
 export class DataStack extends cdk.Stack {
   readonly table: dynamodb.Table;
   readonly uploads: s3.Bucket;
+  readonly userPool: cognito.UserPool;
+  readonly webClient: cognito.UserPoolClient;
 
   constructor(scope: Construct, id: string, props: DataStackProps) {
     super(scope, id, props);
@@ -54,6 +57,29 @@ export class DataStack extends cdk.Stack {
       autoDeleteObjects: !keep,
     });
 
+    // The sign-in sub is the person key of every stored item, so the pool is kept in every stage:
+    // a new pool would orphan all data (RK-10). The owner creates each user by hand.
+    this.userPool = new cognito.UserPool(this, 'UserPool', {
+      selfSignUpEnabled: false,
+      signInAliases: { email: true },
+      signInCaseSensitive: false,
+      standardAttributes: { email: { required: true, mutable: true } },
+      autoVerify: { email: true },
+      accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      featurePlan: cognito.FeaturePlan.LITE,
+      mfa: cognito.Mfa.REQUIRED,
+      mfaSecondFactor: { sms: false, otp: true },
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    // Public client for the web app: no secret, SRP sign-in and refresh only, no hosted UI or OAuth.
+    this.webClient = this.userPool.addClient('WebClient', {
+      generateSecret: false,
+      authFlows: { userSrp: true },
+      disableOAuth: true,
+      preventUserExistenceErrors: true,
+    });
+
     const prefix = `/smart-finances/${props.stage}`;
     new ssm.StringParameter(this, 'TableNameParam', {
       parameterName: `${prefix}/table-name`,
@@ -62,6 +88,14 @@ export class DataStack extends cdk.Stack {
     new ssm.StringParameter(this, 'BucketNameParam', {
       parameterName: `${prefix}/bucket-name`,
       stringValue: this.uploads.bucketName,
+    });
+    new ssm.StringParameter(this, 'UserPoolIdParam', {
+      parameterName: `${prefix}/user-pool-id`,
+      stringValue: this.userPool.userPoolId,
+    });
+    new ssm.StringParameter(this, 'UserPoolClientIdParam', {
+      parameterName: `${prefix}/user-pool-client-id`,
+      stringValue: this.webClient.userPoolClientId,
     });
   }
 }
