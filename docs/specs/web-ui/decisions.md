@@ -40,6 +40,7 @@ status: draft
 | D-23 | Amounts: summaries (the overview's colour field, category rows and places) show pesos as whole numbers and dollars with cents. Lists of single transactions keep exact cents in both currencies. | 2-way | user, 2026-10-29 | accepted |
 | D-24 | Phones: under 720px the side rail folds into a top bar with the brand and a menu button that names the current screen. Nothing else sits above the overview's answer, so it shows in the first screen. | 2-way | user, 2026-10-29 | accepted |
 | D-25 | Category colours: each category keeps one colour in every month, taken from twelve category colours in order of all-time spending; none is red (D-15). Grey is only for "Everything else", and a category without its own colour is counted there. | 2-way | user, 2026-10-29 | accepted |
+| D-26 | The kept bar in the overview's colour field labels its parts: what you spent and what you kept, each with its share, plus a marker for what a typical month keeps. In a bad month it labels where earnings ran out and how much you went over. Its texture is still open. | 2-way | user, 2026-10-29 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:
