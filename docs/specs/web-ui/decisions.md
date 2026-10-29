@@ -45,6 +45,7 @@ status: draft
 | D-28 | In the colour field, the typical month appears in the comparison sentence and at the bar's marker only. The right-hand list keeps Earned and Spent; when an unusual month moves the average, one short line under the bar says so. | 2-way | user, 2026-10-29 | accepted |
 | D-29 | Spent in the colour field stays in pesos, with what was spent in dollars as a second line. The user accepted that it can't be compared at a glance with Earned, which is in dollars. | 2-way | user, 2026-10-29 | accepted |
 | D-30 | Percentages in the colour field are whole numbers (32%, not 31.7%); the comparison sentence keeps its exact points. | 2-way | user, 2026-10-29 | accepted |
+| D-31 | Earned in the colour field shows pesos first, at the month's dollar rate, with the dollars actually received as a second line ("USD 1,922.00 at ARS 1,375.00 per dollar"). A month with no rate shows dollars only and says it has no rate yet. Earned and Spent can now be compared in pesos, which removes the cost accepted in D-29. | 2-way | user, 2026-10-29 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:
