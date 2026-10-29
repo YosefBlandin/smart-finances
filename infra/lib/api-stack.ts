@@ -3,18 +3,33 @@ import * as cdk from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as apigw from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { Construct } from 'constructs';
 
 export interface ApiStackProps extends cdk.StackProps {
   stage: string;
+  webOrigins: string[];
 }
 
 /** Hello-world API: HTTP API -> one Lambda with its own role. Replaced by real functions in Epic 2. */
 export class ApiStack extends cdk.Stack {
+  readonly webOrigins: string[];
+  /** The data stack's values, read from SSM at deploy time (no CloudFormation imports). */
+  readonly data: { tableName: string; bucketName: string; userPoolId: string; userPoolClientId: string };
+
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
+    this.webOrigins = props.webOrigins;
+
+    const param = (name: string) => ssm.StringParameter.valueForStringParameter(this, `/smart-finances/${props.stage}/${name}`);
+    this.data = {
+      tableName: param('table-name'),
+      bucketName: param('bucket-name'),
+      userPoolId: param('user-pool-id'),
+      userPoolClientId: param('user-pool-client-id'),
+    };
 
     const reservedRaw = this.node.tryGetContext('reservedConcurrency');
     const reservedConcurrency = reservedRaw === undefined ? undefined : Number(reservedRaw);

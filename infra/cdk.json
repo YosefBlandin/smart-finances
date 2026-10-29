@@ -3,6 +3,12 @@
   "watch": { "include": ["**"], "exclude": ["README.md", "cdk*.json", "node_modules", "cdk.out", "dist"] },
   "context": {
     "@aws-cdk/core:checkSecretUsage": true,
-    "@aws-cdk/aws-iam:minimizePolicies": true
+    "@aws-cdk/aws-iam:minimizePolicies": true,
+    "webOrigins": {
+      "dev": ["http://localhost:3000"],
+      "qa": ["http://localhost:3000"],
+      "staging": [],
+      "prod": []
+    }
   }
 }
