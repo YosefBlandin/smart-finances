@@ -47,3 +47,22 @@ test('T-DOC-1 ADRs 0004, 0006 and 0007 exist, cite their decisions and are liste
   }
   assert.match(row('0005') ?? '', /\bplanned\b/, 'README keeps 0005 planned');
 });
+
+test('T-DOC-2 the threat model covers the data stack, the upload path, delete-all, recovery and the shared account', () => {
+  const text = read('threat-model.md');
+  const named = [
+    /DynamoDB table/,
+    /upload bucket/,
+    /user pool/,
+    /presigned POST/,
+    /delete-all/,
+    /ERASED/,
+    /35-day/,
+    /self sign-up/,
+    /TOTP/,
+    /\bD-10\b/,
+    /\bRK-6\b/,
+    /invoke rights/,
+  ];
+  for (const pattern of named) assert.match(text, pattern);
+});
