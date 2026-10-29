@@ -86,7 +86,7 @@ export function createRepo({ ddb, s3, lambda, tableName, bucketName } = {}) {
     // Without a limit every page is read; with one, a single page and a cursor when it is full.
     // With neither prefix nor between, the whole partition (for delete-all).
     async query({ pk, prefix, between, consistent, limit, cursor } = {}) {
-      checkQuery({ pk, prefix, between });
+      checkQuery({ pk, prefix, between, limit });
       const range = prefix !== undefined
         ? { KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :prefix)', ExpressionAttributeValues: { ':pk': pk, ':prefix': prefix } }
         : between !== undefined

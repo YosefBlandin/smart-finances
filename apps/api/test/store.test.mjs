@@ -200,6 +200,14 @@ test('T-KEY-2 the memory store honours conditions, all-or-nothing transactions a
   await assert.rejects(store.transact(tooMany), /1 to 100/);
   await assert.rejects(store.put({ ...a }, { if: [{ any: [] }] }), /any clause/);
   await assert.rejects(store.transact([{ check: a, if: [] }]), /check needs a condition/);
+  // A malformed later item wins over a failing condition on an earlier one.
+  await assert.rejects(
+    store.transact([{ put: { ...a }, if: [{ attr: 'pk', exists: true }] }, { check: imp, if: [] }]),
+    /check needs a condition/,
+  );
+  for (const limit of [0, -1, 1.5, '2']) {
+    await assert.rejects(store.query({ pk, prefix: PREFIX.TXN, limit }), /positive integer/);
+  }
   assert.deepEqual((await store.query({ pk, prefix: 'TXN#2026-05' })).items, [], 'nothing of a refused transaction landed');
   await assert.rejects(store.query({ pk, prefix: PREFIX.TXN, between: ['a', 'b'] }), /prefix or between/);
   await assert.rejects(store.query({ prefix: PREFIX.TXN }), /pk/);
@@ -300,6 +308,7 @@ test('T-KEY-3 repo.mjs turns conditions into a ConditionExpression and a cancell
   await assert.rejects(repo.transact([]), /1 to 100/);
   await assert.rejects(repo.put({ ...a }, { if: [{ any: [] }] }), /any clause/);
   await assert.rejects(repo.query({ pk: personPk('sub-a'), prefix: '' }), /non-empty/);
+  await assert.rejects(repo.query({ pk: personPk('sub-a'), prefix: PREFIX.TXN, limit: 0 }), /positive integer/);
 
   // Other errors pass through unchanged.
   const throttled = stubClient(() => { throw awsError('ProvisionedThroughputExceededException'); });

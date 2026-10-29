@@ -40,8 +40,9 @@ function holdsOne(item, clause) {
 }
 
 // Requests DynamoDB refuses are refused here too, so a test cannot pass on something AWS rejects.
-export function checkQuery({ pk, prefix, between }) {
+export function checkQuery({ pk, prefix, between, limit }) {
   if (typeof pk !== 'string' || !pk) throw new Error('query needs a pk');
+  if (limit !== undefined && !(Number.isInteger(limit) && limit >= 1)) throw new Error('query limit must be a positive integer');
   if (prefix !== undefined && between !== undefined) throw new Error('query takes a prefix or between, not both');
   if (prefix !== undefined && (typeof prefix !== 'string' || !prefix)) throw new Error('query prefix must be a non-empty string');
   if (between !== undefined && !(between.length === 2 && between.every((b) => typeof b === 'string' && b) && between[0] <= between[1])) {
@@ -91,7 +92,7 @@ export function createMemoryStore() {
 
     // With neither prefix nor between, the whole partition (for delete-all).
     async query({ pk, prefix, between, limit, cursor } = {}) {
-      checkQuery({ pk, prefix, between });
+      checkQuery({ pk, prefix, between, limit });
       const inside = prefix !== undefined
         ? (sk) => sk.startsWith(prefix)
         : between !== undefined
@@ -111,13 +112,17 @@ export function createMemoryStore() {
     // checked before anything is written, so a failure leaves the store unchanged.
     async transact(ops) {
       checkTransaction(ops);
+      // A malformed request is refused as a whole before any condition is looked at, as in DynamoDB.
       const seen = new Set();
-      ops.forEach((op, index) => {
+      const keys = ops.map((op) => {
         const key = requireKey(op.put ?? op.remove ?? op.check);
         if (seen.has(id(key))) throw new Error('one item twice in a transaction');
         seen.add(id(key));
         if (op.check && !op.if?.length) throw new Error('a check needs a condition');
-        if (!holds(items.get(id(key)), op.if)) throw new ConditionFailed(index);
+        return key;
+      });
+      keys.forEach((key, index) => {
+        if (!holds(items.get(id(key)), ops[index].if)) throw new ConditionFailed(index);
       });
       for (const op of ops) {
         if (op.put) items.set(id(op.put), copy(op.put));
