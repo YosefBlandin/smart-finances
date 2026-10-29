@@ -31,6 +31,7 @@ status: draft
 | D-14 | It must never feel like a bank, a game, a crypto app or a chatbot. | 2-way | user, 2026-10-29 | accepted |
 | D-15 | Leading strand: Cruz-Diez bands. Colour arrives as thin vertical bands; spending is plain ink, income blue, savings green, attention amber; category colours exclude red, so red stays only for the bad figure (D-13). | 2-way | user, 2026-10-29 | accepted |
 | D-16 | Type: Chivo for words and amounts, with tabular digits; Chivo Mono only for raw imported text and ids. Both are by a Buenos Aires foundry. Chivo is the widest of the shortlist, so Spanish wraps in tables and chips get checked. | 2-way | user, 2026-10-29 | accepted |
+| D-17 | Icons: Tabler outline icons at a 2px line, which matches the stem of Chivo 400. They mark the current screen, statuses, review reasons, notes and assistant answers, always next to a word. Narrows D-15: bands now appear only where they carry a number (the spending strip, bars and the category key) plus the logo. | 2-way | user, 2026-10-29 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:
