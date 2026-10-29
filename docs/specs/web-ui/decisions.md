@@ -41,6 +41,10 @@ status: draft
 | D-24 | Phones: under 720px the side rail folds into a top bar with the brand and a menu button that names the current screen. Nothing else sits above the overview's answer, so it shows in the first screen. | 2-way | user, 2026-10-29 | accepted |
 | D-25 | Category colours: each category keeps one colour in every month, taken from twelve category colours in order of all-time spending; none is red (D-15). Grey is only for "Everything else", and a category without its own colour is counted there. | 2-way | user, 2026-10-29 | accepted |
 | D-26 | The kept bar in the overview's colour field labels its parts: what you spent and what you kept, each with its share, plus a marker for what a typical month keeps. In a bad month it labels where earnings ran out and how much you went over. Its texture is still open. | 2-way | user, 2026-10-29 | accepted |
+| D-27 | The kept bar has no texture. The part that is the answer is solid: what you kept in a good month, the overspend in a bad one. The rest is a pale fill at 3:1 against the field. Narrows D-17: this bar carries numbers but is not drawn as bands. | 2-way | user, 2026-10-29 | accepted |
+| D-28 | In the colour field, the typical month appears in the comparison sentence and at the bar's marker only. The right-hand list keeps Earned and Spent; when an unusual month moves the average, one short line under the bar says so. | 2-way | user, 2026-10-29 | accepted |
+| D-29 | Spent in the colour field stays in pesos, with what was spent in dollars as a second line. The user accepted that it can't be compared at a glance with Earned, which is in dollars. | 2-way | user, 2026-10-29 | accepted |
+| D-30 | Percentages in the colour field are whole numbers (32%, not 31.7%); the comparison sentence keeps its exact points. | 2-way | user, 2026-10-29 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:
