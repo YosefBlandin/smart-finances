@@ -30,6 +30,8 @@ status: draft
 - <HUMAN: refine the prototype in Claude Design and hand off the design system and screens (D-4)> · Blocks: the build tasks
 - <HUMAN: merge the data-foundation PR into qa and create the owner and second test user in the qa pool> · Blocks: checks against qa
 - <HUMAN: the web address for staging and prod, for the allowed-origins list> · Blocks: the infra task for allowed web addresses
+- <HUMAN: check in the Vercel dashboard whether main or staging still deploy the old app> · Blocks: Q-1
+- <HUMAN: walk one first sign-in on qa with a test user (new password, authenticator setup) and note which token the API accepts> · Blocks: the sign-in task
 - <HUMAN: point the hosting project root at apps/web and turn Git deploys back on> · Blocks: first preview deploy
 
 ## Global constraints
