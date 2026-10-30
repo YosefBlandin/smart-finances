@@ -123,9 +123,13 @@
     },
     {
       "id": "SF-108",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "267a9f4",
+      "evidence": [
+        "T-WEB-14 fail first: npm test --workspace @smart-finances/web -- src/adapters/container.test.ts -> Error: Cannot find module './container', Tests: no tests",
+        "After: same command -> Test Files 1 passed, Tests 14 passed (14): under STAGE=test the container returns one memory adapter per port (13, each the matching Memory class); 13 interface files in ports/ and 13 adapters in adapters/memory/; one shared controllable MemoryClock; fresh adapters per call; outside STAGE=test (qa, prod, empty) it throws until real adapters arrive; sessions and pre-auth rows expire with the clock and update only while they exist; counters per key and window; a pow salt claims once; reserveImport refuses running, bytes (200 MiB) and daily (10) and resets per day; the identity fake (email code 123456, authenticator code 000000) runs sign-up, confirm, setup, code, refresh, global sign-out, reset and delete; the data fake parses requests with @smart-finances/contracts, refuses unknown tokens, pages transactions by cursor and erases",
+        "npm run lint --workspace @smart-finances/web -> eslint clean (boundary rules: domain imports nothing, ports import domain and contracts, adapters import ports), Prettier clean; tsc --noEmit -> exit 0; root npm test -> exit 0 (37 api+contracts, 101 web, 11 infra pass); npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0"
+      ],
       "review": ""
     },
     {
@@ -207,6 +211,10 @@
     "SF-107: style-src has no 'unsafe-inline', so server-rendered style=\"...\" attributes are blocked; next dev's error page logged 5 inline-style violations. Parts must style through CSS modules (D-57); SF-111's build and e2e should confirm the real pages log none.",
     "SF-107: with only a cookie-presence check, a stale __Host-sid can loop (/overview -> guard -> /sign-in -> middleware -> /overview) unless the PR 3 guard deletes the cookie when the session is gone. Not in this brief; PR 3 should cover it.",
     "SF-107: Next.js 15.5 also takes the nonce from the middleware's response policy, so dropping the request-header copy alone does not break the page scripts; both are set, as Next's docs show.",
-    "SF-107: the preinstalled Chromium here (1243) does not match @playwright/test 1.64.1 (1248) and channel chrome is absent; e2e ran through a scratchpad config with executablePath, nothing committed. next dev also tries www.google.com (blocked by the proxy) without failing."
+    "SF-107: the preinstalled Chromium here (1243) does not match @playwright/test 1.64.1 (1248) and channel chrome is absent; e2e ran through a scratchpad config with executablePath, nothing committed. next dev also tries www.google.com (blocked by the proxy) without failing.",
+    "SF-108: apps/web/package.json gains @smart-finances/contracts (this PR's package) and zod 4.6.7 (in Values; the version contracts already uses) so ports type the data API from the shared Zod schemas. package-lock.json was edited by those two lines only; npm 10 here would also drop the libc fields the owner's newer npm writes.",
+    "SF-108: the Ports table gives method names but not every row or reason shape. Rows follow the Sessions and Accounts tables in camelCase; IdentityProvider results use the reasons exists, not_found, unconfirmed, bad_credentials, bad_code, expired_code, bad_session, revoked, limited, failed; PreAuthRow.step is a plain string. PR 3 may narrow them.",
+    "SF-108: the memory identity fake already uses email code 123456 and authenticator code 000000, which the Interfaces section lists under PR 3; PR 3 should reuse it rather than add a second fake. domain/ holds only result.ts and application/ only a README until PR 3 and PR 4 add code.",
+    "SF-108: the memory data API is seeded with contract-shaped rows; mapping apps/web/fixtures/sample.json (prototype shapes such as rates as strings and review: null) into it is left to PR 4."
   ]
 }
