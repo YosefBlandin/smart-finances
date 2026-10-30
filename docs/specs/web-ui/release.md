@@ -28,7 +28,9 @@ status: draft
 <!-- Values and actions only a person can supply, each as a HUMAN marker with the gate it blocks. Preflight failures from intake land here. The executor asks for these at the start and never invents them. -->
 - <HUMAN: store the Amplify app id as /smart-finances/<stage>/amplify-app-id in us-east-1 (D-102); qa done 2026-10-30, staging and prod later> · Blocks: the web stack
 - <HUMAN: turn auto-build off on each Amplify branch, or let the web stack do it on its first deploy; qa done 2026-10-30> · Blocks: first qa build
-- <HUMAN: set support-address and, on qa, signup-allowlist stage parameters> · Blocks: the auth tasks' qa check
+- <HUMAN: set support-address, signup-open (false) and, on qa, signup-allowlist stage parameters> · Blocks: the auth tasks' qa check
+- <HUMAN: redeploy the OIDC stack with Amplify job rights and amplify-app-id read (D-113); again when staging and prod apps exist> · Blocks: the first qa deploy
+- <HUMAN: read-only check that /aws/amplify/<app id> exists before the first web stack deploy (D-112)> · Blocks: the web stack
 - <HUMAN: confirm the SNS alarm email subscription> · Blocks: G-promote
 - <HUMAN: verify an SES domain identity and request SES production access> · Blocks: sign-up on staging and prod (D-77)
 - <HUMAN: raise the account's Lambda concurrency quota and confirm it> · Blocks: sign-up on any stage beyond the qa allow-list (D-95)
@@ -60,9 +62,9 @@ Never: open sign-up on any stage before Q-8; open staging or prod before SES and
 |---|---|
 | Trigger | sign-in broken, a data leak between accounts, or a cost alarm at 100% |
 | Who decides | the owner |
-| Revert path | (a) web only: redeploy the previous Amplify job from the console. (b) sign-up only: set self sign-up off in the pool; accounts stay. (c) full: turn the branch's auto-build off, destroy the alarms and web stacks, then revert the merge; the pool and the confidential client stay until the web stack is gone. Rehearse (c) on qa before promotion. |
+| Revert path | (a) web only: redeploy the previous Amplify job from the console. (b) sign-up only: set signup-open to false; accounts stay (D-109). (c) full: revert the merge; CI redeploys the stacks and starts the Amplify job for the revert commit; on qa only, destroy the alarms and web stacks afterwards; staging and prod keep the retained accounts table (D-111). Rehearse (c) on qa before promotion. |
 | Exposure window | from the qa merge until the revert's deploy finishes |
-| Verify after revert | /api/health gone or at the old sha; no new sign-ups in the pool metrics |
+| Verify after revert | /api/health reports the revert commit, or the branch is stopped; no new sign-ups in the pool metrics |
 
 ## Definition of done
 <!-- The close step ticks these. List each AC with the check where it passed, for example: - [ ] AC-1 passes on production (T-E2E-1). -->

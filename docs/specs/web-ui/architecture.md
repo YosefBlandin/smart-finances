@@ -25,7 +25,7 @@ browser ─https─▶ WAF (CloudFront scope) ─▶ Amplify: Next.js web server
 ### Web app (Next.js)
 - Where: smart-finances:apps/web/package.json, apps/web/next.config.ts (new), apps/web/src/app/ (new), apps/web/src/middleware.ts (new), apps/web/amplify.yml (new).
 - What: App Router with server components; routes in Contracts, "Web routes". The rail, top bar and account area follow D-24, D-35 to D-44; the Ask link and assistant screens are not built (D-46); the prototype-only nav group is not built (D-36). Month and view live in the address; free-text search does not (D-82).
-- Middleware sets a fresh nonce and the content policy on every response (Contracts), loads the session for money routes and sends people without one to sign-in, sends a signed-in person away from auth routes to the overview, and refuses every request of an account marked deleting (D-97).
+- Middleware sets a fresh nonce and the content policy on every response (Contracts) and redirects by cookie presence only (D-108). A server-only helper, called by the money layout and every route handler, loads the session, checks consent and refuses an account marked deleting except on its finish route (D-104).
 - 403 and 404 from the API both show one "not found" screen with a link to the overview. A kept path is resumed with a GET after sign-in, never by replaying a post; the sign-in screen says when the session ended for idle time.
 - Switching language keeps the address; unsent form input is cleared (D-83).
 - Accessibility: html lang follows the language; focus moves to the main heading after navigation; field errors use aria-describedby and the form message role=alert; import status goes to a polite live region; reduced motion is honoured (AC-10).
@@ -47,30 +47,30 @@ browser ─https─▶ WAF (CloudFront scope) ─▶ Amplify: Next.js web server
 - Calls the pool with the confidential client (secret hash) and the person's IP as context data (D-73, D-94). The IP is the right-most X-Forwarded-For entry added by Amplify's CDN, never the left-most; a qa check confirms the header.
 - Between steps the state lives in the pre-auth row (D-91); a completed sign-in deletes it and issues a new __Host-sid.
 - At the first completed sign-in the consent from the pre-auth row is written to the accounts table before any money screen (D-87); a person without a consent row sees the consent screen.
-- Every auth post is a route handler that checks the Origin, then the window counters (D-90); a WAF 429 or a counter refusal shows the "too many tries" message with the wait.
-- Sign-up, reset and sign-in give the same message and timing for known and unknown emails. An existing unconfirmed email gets a new code and the confirm screen (D-99).
-- After a reset: global sign-out and session rows removed (D-92). Delete account: D-97, after a fresh authenticator code.
+- Every auth post is a route handler that checks the Origin against the stage's web address (D-115), then the window counters (D-90); a WAF 429 or a counter refusal shows the "too many tries" message with the wait; a WAF challenge reply shows "reload and try again" (D-105).
+- Sign-up, reset and sign-in give the same message and timing for known and unknown emails. A sign-up for an existing unconfirmed email replaces it with the new password (D-106); code emails are capped per email (Limits).
+- After a reset: global sign-out, session rows removed and a notice email (D-92, D-115). Delete account: D-104, after a full re-sign-in. Lost authenticator: the owner's runbook in Docs (D-115).
 - Logs: one security event per outcome (Contracts); the logger refuses fields named password, code, secret or token.
 - Serves: AC-1, AC-12, AC-13, AC-14, AC-17, AC-18, AC-19, AC-20; D-66, D-73, D-75, D-87, D-90 to D-92, D-94, D-97, D-99, D-103.
 
 ### Sessions and accounts
 - Where: apps/web/src/server/session.ts (new), apps/web/src/server/accounts.ts (new); tables in smart-finances:infra/lib/web-stack.ts#WebStack (new).
 - Sessions: D-72. The key is the SHA-256 of the cookie id, so a table read cannot be replayed as a cookie. Every read checks expires_at and last_seen_at itself; the TTL only cleans up. Refresh on the server when the access token has under 5 minutes left. Sign out removes the row and revokes the refresh token.
-- Accounts: one row per person with consent, status (active or deleting) and the per-person caps (D-87, D-96, D-97).
+- Accounts: one row per person with consent, status (active or deleting) and the per-person caps, reserved by one conditional update (D-87, D-104, D-114).
 - Serves: AC-14, AC-15, AC-16, AC-17, AC-18; D-72, D-87, D-91, D-96, D-97.
 
 ### Data access (web server)
 - Where: apps/web/src/server/api.ts (new), apps/web/src/server/types.ts (new), apps/web/src/app/(app)/ (new) screens and route handlers.
 - Reads: server components call api.ts, which adds the access token, times out at 5 seconds (D-101), keys errors on HTTP status (401: one refresh, then signed out; 403 and 404: not found; 409, 429 and 5xx: failed state with retry; bodies without the F-3 shape accepted) and counts the request against the person's limit. types.ts mirrors the data-architecture spec's HTTP routes and is the web's single copy (D-82).
 - Changes (review choice, rate, erase, delete account, import request) are route handlers that check the session, the Origin and the limit; the button is busy while the request runs; the page re-renders from the server afterwards.
-- Imports: the route handler checks the caps and the pause switch (D-96), asks POST /imports, and returns the presigned form; the browser sends the file with fetch and FormData; the page polls the import through the server.
+- Imports: the route handler reserves a cap slot and checks the pause switch (D-114), asks POST /imports, and returns the presigned form; the browser sends the file with fetch and FormData; the page polls the import through the server.
 - Serves: AC-5, AC-6, AC-7, AC-9, AC-15, AC-17; D-53, D-82, D-96, D-101.
 
 ### Screens
 - Where: apps/web/src/app/(app)/overview, transactions, review, imports, rates, data (new).
 - Overview: totals and rates for the month and up to six before it; kept, typical month (D-20, D-85) and the bad-month case (D-26 to D-31); the waiting line; SVG charts with a table alternative (D-57); net worth hidden (D-18). Each section fails alone (D-101).
 - Transactions: every filter, sort and page is a request (AC-6). Review: category or approve for payments-report rows; other sources show the fix-in-source note (F-11). Imports: source, name check, upload, status, skipped rows (AC-5).
-- Your data: export; "Erase my data" with the typed word DELETE, the 35-day note and counts (AC-7); "Delete my account" with a fresh authenticator code, its own warning (data, sign-in and consent removed; backups kept 35 days) and a signed-out result with counts (AC-18).
+- Your data: export; "Erase my data" with the typed word DELETE, the 35-day note and counts (AC-7); "Delete my account" after a full re-sign-in, its own warning (data, sign-in and consent removed; backups kept 35 days) and a signed-out result with counts (AC-18).
 - Imported text renders only as text nodes; no raw HTML insertion, no markdown renderer (AC-9; its assistant half moves to Epic 4 with D-46).
 - Serves: AC-2, AC-5 to AC-9, AC-11, AC-18; D-18 to D-21, D-23, D-26 to D-31, D-34, D-85, D-97, D-101.
 
@@ -90,7 +90,7 @@ browser ─https─▶ WAF (CloudFront scope) ─▶ Amplify: Next.js web server
 
 ### Sign-in pool changes
 - Where: smart-finances:infra/lib/data-stack.ts#DataStack.
-- What: self sign-up on; Plus plan with threat protection per D-94; password policy per Contracts; a new confidential web-server client (secret, password flow, refresh, additional context data; access token 60 minutes, refresh token 12 hours, challenge session 15 minutes); its secret copied into a Secrets Manager secret in this stack, whose ARN (never the value) is a stage parameter. Pre-sign-up trigger per D-98; custom message trigger for the email language. Email through SES once the owner's domain exists (D-77).
+- What: self sign-up on; Plus plan with threat protection per D-94; password policy per Contracts; a new confidential web-server client (secret, password flow, refresh, additional context data; access token 60 minutes, refresh token 12 hours, challenge session 15 minutes); its secret copied into a Secrets Manager secret in this stack, whose ARN (never the value) is a stage parameter. Pre-sign-up trigger per D-98 and D-109; custom message trigger for the email language. Triggers take no pool or client id from their environment; they read stage parameters at run time (D-109). Email through SES once the owner's domain exists (D-77).
 - The public SRP client stays only until the web server signs in on qa, and goes before any stage opens sign-up (D-98). Meanwhile the API's audience lists both clients (smart-finances:infra/lib/api-stack.ts#ApiStack).
 - Stays the same: the pool itself (not replaced; a synth test checks), email sign-in, TOTP required, email-only recovery.
 - Serves: AC-12, AC-13, AC-19, AC-20; D-73, D-77, D-94, D-98.
@@ -107,25 +107,26 @@ browser ─https─▶ WAF (CloudFront scope) ─▶ Amplify: Next.js web server
 
 ### Web stack
 - Where: smart-finances:infra/lib/web-stack.ts#WebStack (new), smart-finances:infra/lib/stage.ts#addStage, smart-finances:infra/lib/stage-values.ts#readStageValues.
-- Adopts the Amplify app by the amplify-app-id stage parameter (D-102). Custom resources set the app's platform to web compute and its service and compute roles, set the branch's auto-build off and its compute role, and put the upload bucket's browser rule with the branch address (D-88, D-93).
-- Owns: the CloudFront-scoped web ACL and its association with the app (D-89, D-90), the WAF log group (30 days), the Amplify log group /aws/amplify/<app id> (one month), the Amplify service role (write to that log group only), the compute role, the sessions and accounts tables, and the hourly housekeeping function (D-99).
-- The compute role may: read the client secret and the stage parameters; read and write both tables; admin get, delete and global sign-out users on this pool only (D-92, D-97).
+- Adopts the Amplify app by the amplify-app-id stage parameter (D-102). Custom resources set the app's platform to web compute and its service and compute roles, set the branch's auto-build off, its compute role and its variables (merged, D-110), and put the upload bucket's browser rule (D-88, D-93). They may pass only those two roles and clear them on delete (D-111).
+- Owns: the CloudFront-scoped web ACL and its association with the app (D-89, D-90, D-105), the WAF log group (30 days, blocked and challenged requests, cookie redacted), the Amplify service role (write to /aws/amplify/<app id>, which it references and sets to one month, D-112), the compute role, the sessions table, the accounts table (retained, point-in-time recovery and deletion protection on staging and prod, D-111), and the hourly housekeeping function (D-104, D-106, D-107).
+- The compute role may: read the client secret and the stage parameters; read and write both tables; admin get, delete and global sign-out on this pool only (D-92, D-104). The housekeeping function may also list users on this pool and invoke the data service's delete function (D-104, D-106).
 - Serves: AC-15 to AC-19; D-72, D-87 to D-93, D-97 to D-99, D-102.
 
 ### Alarms
 - Where: smart-finances:infra/lib/alarms-stack.ts#AlarmsStack (new); apps/web/src/server/log.ts (new).
-- What: one SNS topic per stage with the owner's email, the alarms in Contracts, one dashboard (D-80). Metric filters on /aws/amplify/<app id>; a heartbeat (at least one health line an hour) treats missing data as breaching, so a silent log pipe alarms.
+- What: one SNS topic per stage with the owner's email, the alarms in Contracts, one dashboard (D-80). Metric filters on /aws/amplify/<app id>; the hourly job calls /api/health (D-107), and a missing health line for an hour breaches, so a silent log pipe alarms.
 - Serves: AC-17, AC-19; D-80.
 
 ### CI and build
 - Where: smart-finances:.github/workflows/deploy.yml, smart-finances:infra/lib/github-oidc-stack.ts, apps/web/amplify.yml (new).
 - deploy.yml: web unit and browser tests before credentials; deploy data, API, web and alarms; then start the Amplify job for the commit and poll /api/health until it reports that sha, then check the headers against the contract (D-93, RK-2, RK-3).
-- The OIDC role gains Amplify start-job and get-job on this app only. amplify.yml runs the web unit tests before the build.
+- The owner redeploys the OIDC stack with Amplify job rights on each stage's app and read of amplify-app-id (D-113). The poll waits at most 15 minutes; the job limit is 45 minutes. amplify.yml runs the web unit tests, then writes the settings and commit id into .env.production, then builds (D-110).
 - Serves: D-59, D-93.
 
 ### Docs
 - docs/adr/0004-web-framework-and-host.md (new): D-62, D-65, D-89, D-93, D-102. docs/adr/0005-sessions-and-sign-up.md (new): D-72, D-73, D-87, D-90 to D-94, D-97, D-98.
 - smart-finances:docs/threat-model.md: open sign-up, the web server, the sessions and accounts tables and the secret as trust boundaries; B1 updated; "single user" leaves the out-of-scope list.
+- docs/runbooks/lost-authenticator.md (new): identity proof, 72-hour wait, admin MFA reset, global sign-out, session rows removed, notice email (D-115).
 - README.md, "Layout" and "Status"; the data-architecture spec's decisions get the follow-up rows for D-81 and D-95.
 
 ## Contracts
@@ -149,6 +150,7 @@ Search values: month (yyyy-mm), view (native or usd), kind, category, sort. Free
 ### Cookies
 - __Host-sid: 32 random bytes, base64url; Secure; HttpOnly; SameSite=Lax; Path=/; no Max-Age.
 - __Host-pre: 32 random bytes; Secure; HttpOnly; SameSite=Strict; Path=/; Max-Age 900; deleted when sign-in completes.
+- CSRF: every post's Origin must equal the stage's web address from the settings; missing or null is refused (403); no GET changes state; sign-out is a post (D-115).
 - lang: en or es; SameSite=Lax; one year.
 Nothing else is written to browser storage.
 
@@ -157,24 +159,25 @@ Nothing else is written to browser storage.
 |---|---|---|
 | session | pk SID#<sha256 of id> | sub, access_token, id_token, refresh_token, created_at, last_seen_at, expires_at (+12 h) |
 | pre-auth | pk PRE#<sha256 of id> | step, email_hash, challenge_session, totp_secret?, accepted_versions, lang, attempts, expires_at (+15 min) |
-| counter | pk RL#<scope>#<value>#<window start> | n, expires_at (window end + 1 min) |
+| counter | pk RL#<scope>#<value>#<window start> | n, expires_at (window end + 1 min); value is an HMAC of the email or address prefix, or the sub (D-115) |
 | GSI | sub | every session of a person |
 Idle 30 minutes; absolute 12 hours; a new id at every sign-in.
 
 ### Accounts table (DynamoDB, on demand, no TTL)
-pk ACCT#<sub>: consent { terms_version, privacy_version, lang, accepted_at }, status (active or deleting), deleting_since?, imports_today { day, n }, stored_bytes. Erase-all resets stored_bytes and keeps the row; delete account removes it last.
+pk ACCT#<sub>: consent { terms_version, privacy_version, lang, accepted_at }, status (active or deleting), deleting_since?, imports_today { day, n }, running_import_id?, stored_bytes. Erase-all resets stored_bytes and keeps the row; delete account removes it last.
 
 ### Limits (D-90, D-96)
 | Scope | Limit | Where | On excess |
 |---|---|---|---|
 | requests per IP, excluding /_next/static | 1,000 per 5 minutes | WAF rate rule | block 429 |
-| GET of auth pages | every request | WAF challenge, token 30 minutes | silent browser check |
+| GET of auth pages and auth posts | every request | WAF challenge, token 30 minutes (D-105) | silent check; a post without a token gets "reload and try again" |
 | auth posts per IP | 20 per 5 minutes | WAF rate rule | block with custom 429 body |
 | sign-in or reset failures per email and address prefix | 5 per 15-minute window | counter | same message, wait shown |
+| code emails per email | 3 an hour, 10 a day | counter | same reply, no email sent (D-106) |
 | data requests per person | 120 per 1-minute window | counter | 429 page (AC-17) |
 | imports per person | 10 a day, 200 MiB stored, 1 running | accounts table | plain refusal |
 | all imports | pause switch | stage parameter | plain refusal |
-| sign-up email | web-server client only; not disposable; qa allow-list until Q-8 | pre-sign-up trigger | plain refusal (AC-19) |
+| sign-up email | web-server client only; not disposable; signup-open true, or on the qa allow-list | pre-sign-up trigger (D-109) | plain refusal (AC-19) |
 
 ### Password and code rules (D-75, D-94)
 Length 12 to 128, any characters, no composition rules or expiry; breached passwords blocked from launch; TOTP required at first sign-in; the email code expires in 24 hours and the reset code in 1 hour; 5 wrong codes lock the step.
@@ -183,6 +186,20 @@ Length 12 to 128, any characters, no composition rules or expiry; breached passw
 - Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-<n>' 'strict-dynamic'; style-src 'self' 'nonce-<n>'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://<upload bucket host>; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'.
 - Strict-Transport-Security max-age=31536000; X-Content-Type-Options nosniff; Referrer-Policy no-referrer; Permissions-Policy camera=(), microphone=(), geolocation=(); Cache-Control no-store on signed-in pages.
 - Amplify custom headers set no content policy.
+
+### Web server settings (D-110)
+| Name | Source | Written by | Read by |
+|---|---|---|---|
+| STAGE, AWS_REGION | stage | WebStack, branch variables | server |
+| API_URL | api-url parameter | WebStack | api.ts |
+| USER_POOL_ID, WEB_CLIENT_ID | DataStack parameters | WebStack | auth flows |
+| WEB_CLIENT_SECRET_ARN, HMAC_SECRET_ARN | parameters | WebStack | server, read at run time through the compute role |
+| SESSIONS_TABLE, ACCOUNTS_TABLE | WebStack | WebStack | session.ts, accounts.ts |
+| UPLOAD_HOST | bucket-name parameter | WebStack | content policy |
+| WEB_ORIGIN | the branch address | WebStack | Origin check |
+| SUPPORT_ADDRESS | support-address parameter | WebStack | lost-authenticator page |
+| COMMIT_SHA | Amplify's commit id | amplify.yml | /api/health |
+amplify.yml writes these into apps/web/.env.production before next build; no secret value is ever a variable.
 
 ### Security events (web server log, one JSON line each)
 { "event": "signup" | "signup_confirm" | "signin" | "signin_fail" | "mfa_setup" | "reset" | "signout" | "account_delete" | "rate_limited" | "health", "outcome", "sub"?, "request_id", "ts" }. Never an email, password, code, token, IP or imported text.
@@ -197,7 +214,8 @@ Length 12 to 128, any characters, no composition rules or expiry; breached passw
 | web server errors | Amplify 5xx | over 2% for 10 minutes |
 | API errors and throttles | HTTP API 5xx and 429 | over 2%, or any 429 for 5 minutes |
 | function errors and throttles | Lambda, including housekeeping | any for 5 minutes |
-| log heartbeat | security events, health | missing for 1 hour (missing data breaches) |
+| log heartbeat | health lines from the hourly job's call | missing for 1 hour (missing data breaches) |
+| stuck deletion | accounts table, deleting older than 6 hours (hourly job metric) | any |
 | email sender health | SES bounce and complaint rate | over 5% bounce or 0.1% complaint |
 | cost | AWS Budgets (existing) | 50%, 80%, 100% |
 | rollup failures | on-failure queue (existing) | any message |
@@ -211,6 +229,8 @@ Length 12 to 128, any characters, no composition rules or expiry; breached passw
 | api-url | ApiStack | WebStack (build setting) |
 | support-address | a person | WebStack (build setting, D-103) |
 | signup-allowlist | a person (qa only) | pre-sign-up trigger (D-98) |
+| signup-open | a person; false or missing means closed | pre-sign-up trigger, sign-up screen (D-109) |
+| housekeeping-hmac-secret-arn | WebStack | compute role, housekeeping (counter keys, D-115) |
 | imports-paused | a person, in an emergency | web server (D-96) |
 
 ## Alternatives
@@ -246,8 +266,8 @@ Length 12 to 128, any characters, no composition rules or expiry; breached passw
 ## States and exits
 | State | Entered when | Exits when | On failure or timeout |
 |---|---|---|---|
-| sign-up | form posted with accepted terms | code sent: confirm | existing confirmed email: same screen; unconfirmed: code resent (D-99); refused or limited: plain message |
-| confirm | code screen | right code: sign in | wrong: try again; 5 wrong: wait; expired: send a new code; never confirmed: removed after 24 hours |
+| sign-up | form posted with accepted terms | code sent: confirm | existing confirmed email: same screen; unconfirmed: replaced with the new password (D-106); closed, refused or limited: plain message |
+| confirm | code screen | right code: sign in | wrong: try again; 5 wrong: wait; expired: new code (within the email cap); never confirmed: removed after 24 hours |
 | password | sign-in posted | setup or code challenge | wrong email or password: one message; unconfirmed: code resent, confirm screen; limited: wait |
 | setup | first sign-in | valid code from the new key: consent, then session | wrong code: same key; challenge expired after 15 minutes: back to password, remove the old entry in the app |
 | code | later sign-ins | valid code: new session id, overview | wrong: try again; 5 wrong or expired: back to password; lost: lost-authenticator page |
@@ -257,7 +277,7 @@ Length 12 to 128, any characters, no composition rules or expiry; breached passw
 | reset confirm | code and new password | changed: everywhere signed out (D-92), sign in again | wrong code or breached password: the reason |
 | import | file chosen | final status | stalled: repair; still running after 15 minutes: say it continues |
 | erasing | DELETE typed and pressed | 202 with counts | import running: refused; timeout or 5xx: may be unfinished, Finish erasing repeats it |
-| deleting account | fresh code and confirm | each D-97 step done: signed-out page with counts | a step fails: deleting status stays; the person or the hourly job finishes it |
+| deleting account | full re-sign-in, no running import | each D-104 step done: signed-out page with counts | a step fails: the same session can finish it; otherwise the hourly job finishes it through the delete function; 6 hours still deleting: alarm |
 
 ## Cross-cutting
 - **Security and permissions:** OWASP ASVS 5.0 V6, V7, V3 and V14 and the OWASP Authentication, Session Management and CSRF cheat sheets are the checklist (D-75). The browser holds only opaque cookies (AC-16). CSRF: SameSite plus an Origin check on every post. The person comes only from the session; the API checks the token's sub (AC-15). Admin rights on the pool are limited to get, delete and global sign-out for the compute role and the housekeeping function.
@@ -283,4 +303,5 @@ Length 12 to 128, any characters, no composition rules or expiry; breached passw
 | RK-10 | Legal duties are unmet when sign-up opens. | medium | high | Q-8 gates every stage's public sign-up (D-98). | legal |
 | RK-11 | Chivo is wide, so Spanish wraps in tables, chips and the rail. | medium | low | Screenshots in Spanish at 400 and 1400 pixels, checked by a person. | owner |
 | RK-12 | A few heavy imports use the account's Lambda concurrency and every read fails. | medium | high | The quota raise and reservations (D-95) before sign-up opens; a load check on qa. | owner |
-| RK-13 | The log pipe breaks and the security alarms go silent. | low | medium | The heartbeat alarm treats missing data as breaching. | owner |
+| RK-13 | The log pipe breaks and the security alarms go silent. | low | medium | The hourly job's health call and the missing-data alarm (D-107). | owner |
+| RK-14 | Node middleware or the SDK does not run as expected on Amplify. | medium | high | Middleware needs no SDK (D-108); a qa check in the first web task. | owner |

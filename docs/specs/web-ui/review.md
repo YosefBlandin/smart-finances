@@ -45,6 +45,27 @@ status: draft
 | frontend | minor | Privacy, terms and code emails have no language rule. | AC-4, AC-14 | Words | accepted: both languages, custom message trigger |
 | frontend | minor | Form errors and contrast lack checks. | AC-10, D-22 | Web app | accepted: aria rules added; an axe check in the browser tests |
 | contract | minor | Alarms deploy before the log group exists. | D-80 | Release order | accepted: the web stack creates the log group before alarms |
+| premortem, security, contract (round 2) | blocker | A half-done account deletion cannot be finished: the person is refused and the job has no token. | AC-18, D-97 | architecture.md Web app; data-architecture DELETE /data | accepted: the deleting session may finish; the job invokes the delete function; alarm after 6 hours (D-104) |
+| premortem (round 2) | major | No Cognito call checks a TOTP code for a signed-in person. | AC-18, D-97 | F-28 | accepted: full re-sign-in before delete (D-104) |
+| premortem (round 2) | major | Scripts can post to the auth handlers and skip the challenge. | AC-19, D-90 | AWS WAF token labels | accepted: challenge on auth posts with a reload message (D-105) |
+| premortem (round 2) | major | An unconfirmed sign-up keeps the first password, so an email can be squatted. | AC-12, D-99 | States and exits | accepted: replace the unconfirmed user on a new sign-up (D-106) |
+| premortem, security (round 2) | major | The hourly job cannot list unconfirmed users. | D-99 | Cross-cutting grants | accepted: list users for the job only (D-106) |
+| premortem (round 2) | major | Nothing caps code emails per email. | AC-19, RK-7, D-77 | Limits | accepted: 3 an hour, 10 a day (D-106) |
+| premortem (round 2) | major | The heartbeat has no caller and would fire every hour. | RK-13, D-80 | Alarms | accepted: the hourly job calls /api/health (D-107) |
+| premortem (round 2) | major | Middleware may not run the AWS SDK on Amplify. | AC-15, AC-16 | F-35 | accepted: middleware without SDK; checks in a server helper (D-108, RK-14) |
+| security (round 2) | major | WAF logs would keep session cookies. | AC-16, D-80 | Web stack | accepted: cookie redacted; only blocked or challenged requests logged (D-105) |
+| security (round 2) | major | Lost-authenticator recovery has no identity proof. | D-103, AC-20 | ASVS V6.4 | accepted: runbook with proof, 72-hour wait, sign-out, notice (D-115) |
+| security (round 2) | major | Import caps can be raced and stored bytes has no writer. | D-96, AC-17 | Accounts table | accepted: one conditional reservation (D-114) |
+| security (round 2) | minor | Origin check has no exact target; Referer is off. | AC-15 | Cross-cutting | accepted: exact stage address, missing refused (D-115) |
+| security (round 2) | minor | Counter keys hold raw emails. | D-90 | Sessions table | accepted: HMAC keys (D-115) |
+| security (round 2) | minor | No ASVS level; no notice after a reset. | D-75 | D-75 | accepted: level 2 and notice emails (D-115) |
+| contract (round 2) | major | CI cannot start Amplify jobs or read the app id. | D-93 | github-oidc-stack.ts | accepted: OIDC stack redeploy as a HUMAN step (D-113) |
+| contract (round 2) | major | A trigger reading the client id from its environment makes a cycle. | D-98 | data-stack.ts | accepted: triggers read SSM at run time (D-109) |
+| contract (round 2) | major | No per-stage switch keeps sign-up off; console changes are undone by deploys. | D-98 | Rollback card | accepted: signup-open parameter (D-109) |
+| contract (round 2) | major | The web server's settings have no contract; Amplify's variable map can be wiped. | D-65, D-93 | Web stack | accepted: settings table and merged variables (D-110) |
+| contract (round 2) | major | Rollback (c) loses consent and leaves the app serving. | D-87, D-102 | release.md | accepted: retained accounts table; rollback (c) rewritten (D-111) |
+| contract (round 2) | major | The console app's log group already exists, so creating it fails. | D-102 | Web stack | accepted: referenced by name, retention by custom resource (D-112) |
+| contract (round 2) | minor | The deploy job will pass 20 minutes. | D-93 | deploy.yml | accepted: poll 15 minutes, job 45 (D-113) |
 
 ## Cold-read log
 <!-- At G-handoff, one run per brief and round: a fresh context on a cheaper or different model gets only intent.md, the brief and the sections it cites (tier S: spec.md). Model class is cheaper, different, or same in a fresh context; never a model name. Gate: zero cannot-start items. -->
