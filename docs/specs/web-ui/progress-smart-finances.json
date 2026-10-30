@@ -1,7 +1,7 @@
 {
   "spec": "web-ui",
   "repo": "smart-finances",
-  "brief": "pr-smart-finances.md@locked-v1",
+  "brief": "pr-smart-finances.md@locked-v2",
   "tool": "Claude Code (desktop app)",
   "model": "claude-sonnet-5-5",
   "baseline": {
@@ -124,6 +124,7 @@
   ],
   "deviations": [],
   "surprises": [
-    "feature/web-foundation was cut from origin/feature/web-ui, which held only the draft spec; locked-v1 was merged in from origin/claude/intent-web-ui-spec-ssm5mn at the owner's request (commit 923c1f8)."
+    "feature/web-foundation was cut from origin/feature/web-ui, which held only the draft spec; locked-v1 was merged in from origin/claude/intent-web-ui-spec-ssm5mn at the owner's request (commit 923c1f8).",
+    "Owner merged spec PR #6 mid-session: brief re-locked at locked-v2 (adds D-140 to D-143; SF-104, SF-109, SF-111 text changed; SF-101 unchanged; D-17 dropped from the brief copy but still accepted in decisions.md, so followed). SF-100 baseline was taken under locked-v1; origin/feature/web-ui merged into the branch."
   ]
 }
