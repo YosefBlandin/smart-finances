@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: locked-v4
+status: executing
 ---
 # Web UI: design system and screens: brief for smart-finances (PR 3 of 4, auth)
 
