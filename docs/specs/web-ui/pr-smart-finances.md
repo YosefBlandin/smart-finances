@@ -23,7 +23,7 @@ status: executing
 ## Read first
 1. This file, all of it.
 2. intent.md: Acceptance criteria, No-gos, Glossary.
-3. architecture.md: Components "Web app (Next.js)", "Code structure", "Design tokens and parts", "Words and formats", "Shared contracts package"; Contracts "Ports", "Interfaces between the PRs", "Web routes", "Cookies", "Response headers", "Web server settings".
+3. architecture.md: Components "Web app (Next.js)", "Code structure", "Component architecture", "Design tokens and parts", "Words and formats", "Shared contracts package"; Contracts "Ports", "Interfaces between the PRs", "Web routes", "Cookies", "Response headers", "Web server settings".
 4. docs/specs/data-architecture/architecture.md: Contracts "HTTP routes" (for SF-102).
 5. test-matrix.md rows whose task is SF-101 to SF-114.
 
@@ -32,7 +32,6 @@ status: executing
 - <HUMAN: merge the spec PR into feature/web-ui so the spec and this brief are on the base> · Blocks: SF-100
 
 ## Global constraints
-- D-17: Icons: Tabler outline icons at a 2px line, which matches the stem of Chivo 400. They mark the current screen, statuses, review reasons, notes and assistant answers, always next to a word. Narrows D-15: bands now appear only where they carry a number (the spending strip, bars and the category key) plus the logo.
 - D-19: Wording: each overview section opens with its finding as a short headline sentence, not a neutral label.
 - D-22: Type and spacing rules: sizes 12, 14, 16, 20, 24, 32, 48 plus one display size; body 16, tables and data 14, uppercase labels 12 with one letter-spacing. Weights 400, 500 and 700, with 800 only for the display figure. Spacing uses only the 4px-based tokens. Text meets 4.5:1 contrast and input borders 3:1. Click targets are at least 32px, and 44px on touch screens.
 - D-23: Amounts: summaries (the overview's colour field, category rows and places) show pesos as whole numbers and dollars with cents. Lists of single transactions keep exact cents in both currencies.
@@ -57,7 +56,7 @@ status: executing
 - D-128: Loading: skeletons for content that is loading, and a spinner only inside the button whose action runs; nothing else spins. Narrows D-101.
 - Values:
   - Prototype: https://claude.ai/code/artifact/10e1188c-9601-4133-9a2d-3502b0bc2ac6 (synthetic data only).
-  - Packages allowed: next 15, react 19, typescript, zod, next-intl, @tanstack/react-query (+ devtools), vitest, jsdom, @testing-library/react, @playwright/test, @axe-core/playwright, storybook (@storybook/nextjs, -addon-a11y, -test-runner, http-server, wait-on), eslint (eslint-config-next, -plugin-jsx-a11y, -plugin-import), prettier, @lhci/cli, @tabler/icons-react, @fontsource/chivo, @fontsource/chivo-mono.
+  - Packages allowed: next 15, react 19, typescript, zod, next-intl, @tanstack/react-query (+ devtools), vitest, jsdom, @testing-library/react, @playwright/test, @axe-core/playwright, react-aria-components, storybook (@storybook/nextjs, -addon-a11y, -test-runner, http-server, wait-on), eslint (eslint-config-next, -plugin-jsx-a11y, -plugin-import), prettier, @lhci/cli, @tabler/icons-react, @fontsource/chivo, @fontsource/chivo-mono.
   - Web tests: `npm test --workspace @smart-finances/web -- <file>`; browser tests: `npm run e2e --workspace @smart-finances/web -- <file>`.
 - Rules: README.md "Layout" (only data/synthetic is committed); .gitignore block "Real financial data stays local"; docs/adr/README.md (one ADR per decision, NNNN-short-title.md); docs/threat-model.md (update when a trust boundary or data store changes); public repo: no personal data or account ids in anything committed.
 
@@ -125,7 +124,7 @@ status: executing
 - Files: apps/web/eslint.config.mjs (new), apps/web/.prettierrc (new), apps/web/src/boundaries.test.ts (new)
 - Tests first: T-WEB-13
 - Do:
-  - eslint-config-next, react-hooks, jsx-a11y, and import/no-restricted-paths for the D-138 direction: domain imports only domain and contracts; application only domain and ports; ui, screens and queries never adapters or application.
+  - eslint-config-next, react-hooks, jsx-a11y, and import/no-restricted-paths for the D-138 direction (domain imports only domain and contracts; application only domain and ports; ui, screens and queries never adapters or application) and the D-140 tiers (primitives import nothing from patterns or screens; patterns nothing from screens).
   - Scripts lint (eslint + prettier --check); root `npm test` runs it. The test lints fixture files that break each rule and expects errors.
 - Verify: `npm test --workspace @smart-finances/web -- src/boundaries.test.ts` and `npm run lint --workspace @smart-finances/web` → pass
 - Done when: verify is green, evidence is in progress-smart-finances.json
@@ -168,12 +167,13 @@ status: executing
   - container.ts returns the memory adapters when STAGE=test; real adapters are added by later PRs.
 - Verify: `npm test --workspace @smart-finances/web -- src/adapters/container.test.ts` and the lint → pass
 - Done when: verify is green, evidence is in progress-smart-finances.json
-### SF-109 · Build the base parts and set up Storybook
-- Implements: AC-8, AC-10, AC-11, D-63, D-22, D-34, D-128, D-129, D-136 · After: SF-105, SF-106 · Judgment: normal
-- Files: apps/web/src/ui/ (new): Button, Field, Chip, Note, StateBlock, Skeleton, Table, CategorySquare with *.module.css, *.stories.tsx and ui.test.tsx; apps/web/.storybook/ (new)
+### SF-109 · Build the primitives and patterns, and set up Storybook
+- Implements: AC-8, AC-10, AC-11, D-63, D-22, D-34, D-128, D-129, D-136, D-140, D-141, D-143 · After: SF-105, SF-106 · Judgment: normal
+- Files: apps/web/src/ui/primitives/ (new: Button, Field, Chip, Note, Skeleton, CategorySquare, Icon), apps/web/src/ui/patterns/ (new: MonthPicker, DataTable, KeptBar, BandStrip, StateBlock, CategoryRow, MenuPanel, ConfirmDialog), one folder each with module, stories and test; apps/web/.storybook/ (new)
 - Tests first: T-WEB-9, T-WEB-15
 - Do:
-  - Parts use tokens only; Button shows a spinner only while busy; Field ties its error with aria-describedby; form messages role=alert; red only for errors and failed statuses (D-63).
+  - Layout and API per architecture.md "Component architecture"; tokens only.
+  - Interactive patterns (MonthPicker, MenuPanel, ConfirmDialog, selects) on React Aria Components, styled through their data attributes; Button spins only while busy; Field ties errors with aria-describedby; red only for errors and failed statuses (D-63).
   - Storybook (Next.js framework) with the a11y add-on and the test runner; a story per part in both languages and both colour schemes; script test-storybook builds Storybook, serves it with http-server, waits with wait-on, and runs the test runner.
 - Verify: `npm test --workspace @smart-finances/web -- src/ui/ui.test.tsx` and `npm run test-storybook --workspace @smart-finances/web` → pass
 - Done when: verify is green, evidence is in progress-smart-finances.json
@@ -190,7 +190,7 @@ status: executing
 - Files: apps/web/src/app/(app)/layout.tsx (new), apps/web/src/ui/Shell.tsx (new), apps/web/src/app/api/lang/route.ts (new), placeholder pages apps/web/src/app/(app)/{overview,transactions,review,imports,rates,data}/page.tsx (new), apps/web/e2e/shell.spec.ts (new)
 - Tests first: T-WEB-10, T-WEB-11
 - Do:
-  - Server shell with the menu panel as the only client island; rail per D-35 to D-42 (Money without Ask, Account; no Prototype group); top bar under 960px (D-43, D-44); a placeholder address until PR 3.
+  - Server shell with MenuPanel (from ui/patterns) as the only client island; rail per D-35 to D-42 (Money without Ask, Account; no Prototype group); top bar under 960px (D-43, D-44); a placeholder address until PR 3.
   - /api/lang: POST, Origin must equal WEB_ORIGIN, sets the lang cookie; the address is kept; html lang follows; focus moves to the h1 after navigation. The e2e adds a dummy __Host-sid cookie.
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/shell.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances.json
