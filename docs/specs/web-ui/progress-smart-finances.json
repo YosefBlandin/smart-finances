@@ -36,7 +36,12 @@
         "Screenshots, en and es, light and dark, 1400 and 400 wide, saved under apps/web/design/shots/ (130 files, not staged)",
         "Prototype republished: https://claude.ai/code/artifact/10e1188c-9601-4133-9a2d-3502b0bc2ac6 version 21",
         "apps/web/fixtures/sample.json: 12 months, 11 rates (2026-03 present as a bad month, 2026-10 has none), 553 rows, 11 imports in all 9 states, 64 review rows, 174 mercadopago rows; no emails or names",
-        "Owner review of T-WEB-1 is the manual gate: pending"
+        "Owner review of T-WEB-1 is the manual gate: pending",
+        "Design audit (calm-ui + impeccable audit, rendered in the browser pane, 66 states x light/dark, desktop and 375px): 16/20; findings P1 QR inverted in dark mode; P2 text links 32px on touch, partly-erased counts ambiguous, two acceptance paths, working states not announced; P3 h2 title, stacked sign-up blocks, mixed severity, Backspace in code boxes",
+        "Audit fixes, tests first: smoke.py extended with 9 audit assertions; on the pre-fix prototype -> \"ERROR missing state consent:read\" and \"audit findings: 33\" (QR changes with theme; .ax-link no 44px rule; partial state; consent links; stacked proof note; heading level; no status message; chip colour), exit 1",
+        "After fixes: smoke.py -> \"screens rendered: 68  failing: 0  with unlabeled inputs: 0\", \"audit findings: 0\", exit 0; existing screens 216 combinations, 0 failures; syntax_check ok; class_check \"no class has two separate top-level rules (92 classes checked)\"",
+        "Touch emulation 375px: 0 controls under 44px, 0 overflow in 68 states, Backspace moves back in the code boxes; QR pair 21:1 in light and dark; impeccable detect: 0 anti-patterns (its 2 advisories predate the new screens)",
+        "Prototype republished: version 22 at the same link; screenshots retaken (136 files, not staged); audit-fix commit df2dd10"
       ],
       "review": ""
     },
@@ -140,6 +145,7 @@
     "The prototype already had a red \"Delete everything\" button on Your data (.btn.danger), which reads against D-13/D-63 (red only for errors and failed statuses). The new delete-account screen uses an ink button instead. Owner to decide on the old one.",
     "The prototype had imports in 7 of the 9 import states; two synthetic imports (waiting for file, replaced) were added so the sample covers every state.",
     "Prototype values to confirm before build: confirm-code lifetime \"15 minutes\" and lost-authenticator reply time \"a day or two\" are copy guesses, not settings.",
-    "Brief said \"npm run dev\" cannot show this work: apps/web has no dev script until SF-103; the owner asked to see progress, so the working copy was served locally at 127.0.0.1:8765 for the browser pane."
+    "Brief said \"npm run dev\" cannot show this work: apps/web has no dev script until SF-103; the owner asked to see progress, so the working copy was served locally at 127.0.0.1:8765 for the browser pane.",
+    "Acceptance path decision made by the executor to resolve the audit finding: terms are accepted once on sign-up; the Privacy and terms screen is the read-only full text and the re-accept step when the notice changes. Needs recording as a decision by the planning session (the executor cannot write a D-n)."
   ]
 }
