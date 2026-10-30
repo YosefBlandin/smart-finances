@@ -164,7 +164,16 @@
       "review": ""
     }
   ],
-  "deviations": [],
+  "deviations": [
+    {
+      "date": "2026-10-30",
+      "task": "SF-111",
+      "from": "pr-smart-finances.md SF-111 Files (lists only the (app) layout)",
+      "proposal": "Add apps/web/src/app/layout.tsx and apps/web/next.config.ts to SF-111's Files: import tokens.css and base.css, put fontVariables on <html>, set html lang from next-intl, wrap children in NextIntlClientProvider, and wrap the config with createNextIntlPlugin('./src/i18n/request.ts'). Needed so SF-105 and SF-106 take effect.",
+      "decidedBy": "owner, in chat, 2026-10-30 (chose SF-111 over SF-107)",
+      "newDecision": "pending: the planning session writes it into the brief as a new version; SF-111 must not start until then"
+    }
+  ],
   "surprises": [
     "feature/web-foundation was cut from origin/feature/web-ui, which held only the draft spec; locked-v1 was merged in from origin/claude/intent-web-ui-spec-ssm5mn at the owner's request (commit 923c1f8).",
     "Owner merged spec PR #6 mid-session: brief re-locked at locked-v2 (adds D-140 to D-143; SF-104, SF-109, SF-111 text changed; SF-101 unchanged; D-17 dropped from the brief copy but still accepted in decisions.md, so followed). SF-100 baseline was taken under locked-v1; origin/feature/web-ui merged into the branch.",
