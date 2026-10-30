@@ -11,7 +11,8 @@
     "build": "next build",
     "start": "next start -p 3000",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "lint": "eslint . && prettier --check --no-error-on-unmatched-pattern \"{src,e2e,scripts,.storybook}/**/*.{ts,tsx,mjs,css}\" \"*.{ts,mjs,json}\""
   },
   "dependencies": {
     "next": "15.5.28",
@@ -23,6 +24,11 @@
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "15.5.28",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "prettier": "3.9.10",
     "typescript": "5.9.3",
     "vitest": "5.0.5"
   }
