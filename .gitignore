@@ -42,3 +42,4 @@ apps/web/design/shots/
 apps/web/storybook-static/
 apps/web/test-results/
 apps/web/playwright-report/
+apps/web/.lighthouseci/
