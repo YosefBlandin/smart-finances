@@ -1,0 +1,32 @@
+{
+  "ci": {
+    "collect": {
+      "startServerCommand": "STAGE=test NEXT_TELEMETRY_DISABLED=1 next start -p 3000",
+      "startServerReadyPattern": "Ready in",
+      "startServerReadyTimeout": 60000,
+      "url": [
+        "http://localhost:3000/overview",
+        "http://localhost:3000/transactions",
+        "http://localhost:3000/review",
+        "http://localhost:3000/imports",
+        "http://localhost:3000/rates",
+        "http://localhost:3000/data"
+      ],
+      "numberOfRuns": 5,
+      "settings": {
+        "formFactor": "mobile",
+        "throttlingMethod": "simulate",
+        "onlyCategories": ["performance"],
+        "extraHeaders": { "Cookie": "__Host-sid=lhci-dummy-session" }
+      }
+    },
+    "assert": {
+      "aggregationMethod": "median",
+      "assertions": {
+        "largest-contentful-paint": ["error", { "maxNumericValue": 2500 }],
+        "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1 }],
+        "resource-summary:script:size": ["error", { "maxNumericValue": 204800 }]
+      }
+    }
+  }
+}

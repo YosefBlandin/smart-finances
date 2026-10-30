@@ -15,6 +15,7 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build --quiet -o storybook-static",
     "test-storybook": "storybook build --quiet -o storybook-static && (http-server storybook-static -p 6007 -a 127.0.0.1 --silent & SERVER=$!; wait-on -t 120000 tcp:127.0.0.1:6007 && test-storybook --url http://127.0.0.1:6007; CODE=$?; kill $SERVER; exit $CODE)",
+    "lhci": "node --test scripts/lhci.test.mjs && next build && lhci collect && lhci assert",
     "lint": "eslint . && prettier --check --no-error-on-unmatched-pattern \"{src,e2e,scripts,.storybook}/**/*.{ts,tsx,mjs,css}\" \"*.{ts,mjs,json}\""
   },
   "dependencies": {
@@ -32,6 +33,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@lhci/cli": "0.15.1",
     "@playwright/test": "1.64.1",
     "@storybook/addon-a11y": "10.6.2",
     "@storybook/nextjs": "10.6.2",
