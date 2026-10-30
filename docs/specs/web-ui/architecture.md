@@ -23,13 +23,16 @@ browser ─https─▶ Amplify (CDN) ─▶ Next.js web server ─────�
 <!-- One subsection per component that changes. -->
 
 ### Web app (Next.js)
-- Where: smart-finances:apps/web/package.json, apps/web/next.config.ts (new), apps/web/src/app/ (new), apps/web/src/middleware.ts (new), apps/web/amplify.yml (new).
-- What: App Router with server components; routes in Contracts, "Web routes". The rail, top bar and account area follow D-24, D-35 to D-44; the Ask link and assistant screens are not built (D-46); the prototype-only nav group is not built (D-36). Month and view live in the address; free-text search does not (D-82).
-- Middleware sets a fresh nonce and the content policy on every response (Contracts) and redirects by cookie presence only (D-108). A server-only helper, called by the money layout and every route handler, loads the session, checks consent and refuses an account marked deleting except on its finish route (D-104).
-- 403 and 404 from the API both show one "not found" screen with a link to the overview. A kept path is resumed with a GET after sign-in, never by replaying a post; the sign-in screen says when the session ended for idle time.
-- Switching language keeps the address; unsent form input is cleared (D-83).
+- Where: smart-finances:apps/web/package.json, apps/web/next.config.ts (new), apps/web/src/app/ (new), apps/web/src/middleware.ts (new), apps/web/amplify.yml (new), apps/web/.storybook/ (new).
+- What: App Router. A server shell (layouts, rail, static text) with client islands for the interactive screens (D-137); routes in Contracts, "Web routes". The rail, top bar and account area follow D-24, D-35 to D-44; the Ask link and assistant screens are not built (D-46); the prototype-only nav group is not built (D-36).
+- Interactivity: TanStack Query in the browser over the same-origin JSON routes /api/data/* (D-127, D-130); the server prefetches and hydrates the first view; filters, sort and paging update without a page load and keep month, view, kind, category and sort in the address; free text stays in the form (D-82). Optimistic updates for review choices, approvals and rates only (D-131).
+- Forms: server actions through guarded() (D-125); Zod at every boundary (D-124).
+- Loading: skeletons for loading content, a spinner only inside the busy button (D-128).
+- Middleware sets a fresh nonce and the content policy on every response and redirects by cookie presence only (D-108). The server-only guard loads the session, checks consent and refuses an account marked deleting except on its finish action (D-104).
+- 403 and 404 both show one "not found" screen. A kept path is resumed with a GET after sign-in; the sign-in screen says when the session ended for idle time.
 - Accessibility: html lang follows the language; focus moves to the main heading after navigation; field errors use aria-describedby and the form message role=alert; import status goes to a polite live region; reduced motion is honoured (AC-10).
-- Serves: AC-4, AC-8, AC-10, AC-16; D-24, D-35 to D-46, D-71, D-82, D-83, D-101.
+- Quality: ESLint (Next.js, React Hooks, jsx-a11y) and Prettier (D-132); Storybook with the accessibility add-on and interaction tests, in CI only (D-129, D-136); Lighthouse CI budgets (D-134); CloudWatch RUM in the browser (D-135).
+- Serves: AC-4, AC-6, AC-8, AC-10, AC-16; D-24, D-35 to D-46, D-71, D-82, D-83, D-124 to D-137.
 
 ### Design tokens and parts
 - Where: apps/web/src/styles/tokens.css (new), apps/web/src/styles/base.css (new), apps/web/src/ui/ (new).
@@ -38,9 +41,9 @@ browser ─https─▶ Amplify (CDN) ─▶ Next.js web server ─────�
 - Serves: AC-10, AC-11; D-12, D-13, D-15 to D-17, D-21, D-22, D-25, D-27, D-32 to D-34, D-57, D-58, D-63, D-100.
 
 ### Words and formats
-- Where: apps/web/src/i18n/en.ts (new), apps/web/src/i18n/es.ts (new), apps/web/src/i18n/format.ts (new).
-- What: one catalogue per language with the same keys and none, one and many forms (D-19); amounts per D-23 and D-30; every error code and auth outcome maps to a sentence. Language from the lang cookie, else Accept-Language (D-83). Skipped-row reasons per D-86. /privacy and /terms exist in both languages under one version id. Sign-up and reset emails go out in the person's language through the pool's custom message trigger, which reads the language the web server passes as client metadata.
-- Serves: AC-4, AC-5, AC-8, AC-14; D-10, D-11, D-19, D-23, D-30, D-42, D-83, D-86.
+- Where: apps/web/messages/en.json (new), apps/web/messages/es.json (new), apps/web/src/i18n/request.ts (new), apps/web/src/i18n/format.ts (new).
+- What: next-intl without locale routing (D-126): the lang cookie, else Accept-Language, picks en or es; ICU messages with zero, one and other forms (D-19); the same keys in both files, checked by a test. Amounts per D-23 and D-30 through next-intl's number formatting. Every error code and auth outcome maps to a message. Skipped-row reasons per D-86. /privacy and /terms exist in both languages under one version id. Sign-up and reset emails go out in the person's language through the pool's custom message trigger.
+- Serves: AC-4, AC-5, AC-8, AC-14; D-10, D-11, D-19, D-23, D-30, D-42, D-83, D-86, D-126.
 
 ### Auth flows (web server)
 - Where: apps/web/src/server/auth/ (new): signUp.ts, confirm.ts, signIn.ts, challenges.ts, reset.ts, signOut.ts, deleteAccount.ts, preauth.ts; apps/web/src/app/(auth)/ (new) screens.
@@ -60,11 +63,12 @@ browser ─https─▶ Amplify (CDN) ─▶ Next.js web server ─────�
 - Serves: AC-14, AC-15, AC-16, AC-17, AC-18; D-72, D-87, D-91, D-104, D-114.
 
 ### Data access (web server)
-- Where: apps/web/src/server/api.ts (new), apps/web/src/server/types.ts (new), apps/web/src/app/(app)/ (new) screens and route handlers.
-- Reads: server components call api.ts, which adds the access token, times out at 5 seconds (D-101), keys errors on HTTP status (401: one refresh, then signed out; 403 and 404: not found; 409, 429 and 5xx: failed state with retry; bodies without the F-3 shape accepted) and counts the request against the person's limit. types.ts mirrors the data-architecture spec's HTTP routes and is the web's single copy (D-82).
-- Changes (review choice, rate, erase, delete account, import request) are route handlers that check the session, the Origin and the limit; the button is busy while the request runs; the page re-renders from the server afterwards.
-- Imports: the route handler reserves a cap slot and checks the pause switch (D-114), asks POST /imports, and returns the presigned form; the browser sends the file with fetch and FormData; the page polls the import through the server.
-- Serves: AC-5, AC-6, AC-7, AC-9, AC-15, AC-17; D-53, D-82, D-96, D-101.
+- Where: apps/web/src/server/api.ts (new), apps/web/src/app/api/data/ (new), apps/web/src/queries/ (new), apps/web/src/actions/ (new).
+- Server reads: api.ts adds the access token, times out at 5 seconds (D-101), parses every reply with the shared Zod schema (D-133), keys errors on HTTP status (401: one refresh, then signed out; 403 and 404: not found; 409, 429 and 5xx: failed state with retry) and counts the request against the person's limit.
+- Browser reads: /api/data/* JSON routes (one per data read: transactions, totals, rates, review, imports, import) check the session and consent, call api.ts and return the parsed JSON; TanStack Query hooks in queries/ use them, with infinite queries for cursor paging and a stale time of 30 seconds (D-127, D-130).
+- Changes: server actions in actions/ (review choice, rate, import request, erase, delete account), each through guarded() (D-125); review and rate mutations are optimistic and roll back on error, then invalidate totals (D-131); the others wait for the answer.
+- Imports: the action reserves a cap slot and checks the pause switch (D-114), asks POST /imports and returns the presigned form; the browser sends the file with fetch and FormData; the import query polls until a final status.
+- Serves: AC-5, AC-6, AC-7, AC-9, AC-15, AC-17; D-53, D-82, D-96, D-101, D-114, D-124, D-125, D-127, D-130, D-131.
 
 ### Screens
 - Where: apps/web/src/app/(app)/overview, transactions, review, imports, rates, data (new).
@@ -100,17 +104,18 @@ browser ─https─▶ Amplify (CDN) ─▶ Next.js web server ─────�
 - What: stage throttle 50 per second, burst 100; no API browser rule; the data stack stops managing the bucket's browser rule (D-88). Reserved concurrency for the read handler and a cap for the parser once the quota is raised (D-95). Quotas, sizing and owner-only alarms go to the data-architecture spec as follow-ups (D-81).
 - Serves: AC-15, AC-17; D-81, D-88, D-95.
 
-### Shared field and category lists
-- Where: smart-finances:apps/api/src/ingest/fields.mjs (new) with FIELDS and KINDS, re-exported by smart-finances:apps/api/src/ingest/schema.mjs#FIELDS; smart-finances:apps/api/src/ingest/categories.mjs#CATEGORIES (new) beside smart-finances:apps/api/src/ingest/categories.mjs#categoryFor; an exports map in smart-finances:apps/api/package.json for these two files.
-- Why: the schema module loads the server's hashing module (F-13); the review screen needs the category list.
-- Serves: AC-6; D-82.
+### Shared contracts package
+- Where: packages/contracts (new) with Zod schemas for every data route, FIELDS, KINDS and CATEGORIES; smart-finances:apps/api/src/ingest/schema.mjs#FIELDS and smart-finances:apps/api/src/ingest/categories.mjs#categoryFor re-export or import from it; smart-finances:package.json gains packages/* in workspaces.
+- Why: one source of truth for the API and the web (D-133); the schema module loads the server's hashing module (F-13), so the lists move to a browser-safe package.
+- The data PRs validate with the same schemas as they build the routes (a follow-up row in the data-architecture spec).
+- Serves: AC-6; D-124, D-133.
 
 ### Web stack
 - Where: smart-finances:infra/lib/web-stack.ts#WebStack (new), smart-finances:infra/lib/stage.ts#addStage, smart-finances:infra/lib/stage-values.ts#readStageValues.
 - Adopts the Amplify app by the amplify-app-id stage parameter (D-102). Custom resources set the app's platform to web compute and its service and compute roles, set the branch's auto-build off, its compute role and its variables (merged, D-110), and put the upload bucket's browser rule (D-88, D-93). They may pass only those two roles and clear them on delete (D-111).
-- Owns: the Amplify service role (write to /aws/amplify/<app id>, which it references and sets to one month, D-112), the compute role, the sessions table, the accounts table (retained, point-in-time recovery and deletion protection on staging and prod, D-111), and the hourly housekeeping function (D-104, D-106, D-107). No WAF (D-120).
+- Owns: the Amplify service role (write to /aws/amplify/<app id>, which it references and sets to one month, D-112), the compute role, the sessions table, the accounts table (retained, point-in-time recovery and deletion protection on staging and prod, D-111), the hourly housekeeping function (D-104, D-106, D-107), and the RUM app monitor with its guest identity pool, whose role may only put RUM events to that monitor (D-135). No WAF (D-120).
 - The compute role may: read the client secret and the stage parameters; read and write both tables; admin get, delete and global sign-out on this pool only (D-92, D-104). The housekeeping function may also list users on this pool and invoke the data service's delete function (D-104, D-106).
-- Serves: AC-15 to AC-19; D-72, D-87, D-88, D-89, D-91 to D-93, D-102, D-104, D-106, D-107, D-110 to D-112.
+- Serves: AC-15 to AC-19; D-72, D-87, D-88, D-89, D-91 to D-93, D-102, D-104, D-106, D-107, D-110 to D-112, D-135.
 
 ### Alarms
 - Where: smart-finances:infra/lib/alarms-stack.ts#AlarmsStack (new); apps/web/src/server/log.ts (new).
@@ -118,10 +123,10 @@ browser ─https─▶ Amplify (CDN) ─▶ Next.js web server ─────�
 - Serves: AC-17, AC-19; D-80.
 
 ### CI and build
-- Where: smart-finances:.github/workflows/deploy.yml, smart-finances:infra/lib/github-oidc-stack.ts, apps/web/amplify.yml (new).
-- deploy.yml: web unit and browser tests before credentials; deploy data, API, web and alarms; then start the Amplify job for the commit and poll /api/health until it reports that sha, then check the headers against the contract (D-93, RK-2, RK-3).
-- The owner redeploys the OIDC stack with Amplify job rights on each stage's app and read of amplify-app-id (D-113). The poll waits at most 15 minutes; the job limit is 45 minutes. amplify.yml runs the web unit tests, then writes the settings and commit id into .env.production, then builds (D-110).
-- Serves: D-59, D-93.
+- Where: smart-finances:.github/workflows/deploy.yml, smart-finances:infra/lib/github-oidc-stack.ts, apps/web/amplify.yml (new), apps/web/lighthouserc.json (new).
+- deploy.yml, before credentials: lint and format check (D-132), web unit tests, browser tests, the Storybook build with its accessibility and interaction tests (D-136), and Lighthouse CI on the fixtures (D-134). Then deploy data, API, web and alarms; start the Amplify job for the commit and poll /api/health until it reports that sha; check the headers against the contract (D-93, RK-2, RK-3).
+- The owner redeploys the OIDC stack with Amplify job rights on each stage's app and read of amplify-app-id (D-113). The poll waits at most 15 minutes; the job limit is 45 minutes. amplify.yml runs lint and the web unit tests, then writes the settings and commit id into .env.production, then builds (D-110).
+- Serves: D-59, D-93, D-132, D-134, D-136.
 
 ### Docs
 - docs/adr/0008-web-framework-and-host.md (new): D-62, D-65, D-89, D-93, D-102. docs/adr/0009-sessions-and-sign-up.md (new): D-72, D-73, D-87, D-91 to D-93, D-98, D-104, D-115, D-117, D-120.
@@ -150,8 +155,13 @@ What each PR (pr-smart-finances*.md) provides to the later ones. A later PR impo
 | /consent | signed in, no consent row | accept the current versions (D-87) |
 | /privacy, /terms | anyone | both languages, one version id each |
 | /overview, /transactions, /review, /imports, /rates, /data | signed in with consent | money screens |
-| /api/auth/* | route handlers | auth posts, Origin-checked |
+| /api/auth/pow | anyone, GET | a proof-of-work challenge (D-120) |
+| /api/data/* | signed in with consent, GET | JSON reads for TanStack Query (D-127) |
+| /api/data/export | signed in with consent, GET | the CSV download |
+| /api/lang | anyone, POST | sets the lang cookie |
 | /api/health | anyone | { sha, stage } for the deploy check and the heartbeat |
+
+Every change is a server action through guarded() (D-125), not a route.
 
 Search values: month (yyyy-mm), view (native or usd), kind, category, sort. Free text stays in the form (D-82).
 
@@ -190,7 +200,7 @@ pk ACCT#<sub>: consent { terms_version, privacy_version, lang, accepted_at }, st
 Length 12 to 128, any characters, no composition rules or expiry; breached passwords refused by the range check (D-117); TOTP required at first sign-in; the email code expires in 24 hours and the reset code in 1 hour; 5 wrong codes lock the step.
 
 ### Response headers (middleware, every response)
-- Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-<n>' 'strict-dynamic'; style-src 'self' 'nonce-<n>'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://<upload bucket host>; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'.
+- Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-<n>' 'strict-dynamic'; style-src 'self' 'nonce-<n>'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://<upload bucket host> https://dataplane.rum.us-east-1.amazonaws.com https://cognito-identity.us-east-1.amazonaws.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'.
 - Strict-Transport-Security max-age=31536000; X-Content-Type-Options nosniff; Referrer-Policy no-referrer; Permissions-Policy camera=(), microphone=(), geolocation=(); Cache-Control no-store on signed-in pages.
 - Amplify custom headers set no content policy.
 
