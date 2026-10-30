@@ -141,9 +141,13 @@
     },
     {
       "id": "SF-110",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "bb4f783",
+      "evidence": [
+        "T-WEB-16 fail first: npm test --workspace @smart-finances/web -- src/queries/provider.test.tsx -> Error: Failed to resolve import \"./prefetch\" from \"src/queries/provider.test.tsx\", Tests: no tests (before that, the runner could not parse JSX at all: \"make sure to not set jsx to preserve\"; fixed by the owner-approved vitest.config.ts line, see deviations)",
+        "After: same command -> Test Files 1 passed, Tests 7 passed (7): prefetch() dehydrates the fetched query; QueryProvider + HydrationBoundary shows the prefetched data and the browser fetcher is never called; without a prefetch the client does fetch once; default staleTime 30000; a fresh server client per call; a failed prefetch is not dehydrated; devtools absent normally and rendered when NODE_ENV=development",
+        "npm run lint --workspace @smart-finances/web -> clean; tsc --noEmit -> exit 0; root npm test -> exit 0 (37 api+contracts, 108 web, 11 infra pass); npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0"
+      ],
       "review": ""
     },
     {
@@ -183,6 +187,14 @@
       "proposal": "Add apps/web/src/app/layout.tsx and apps/web/next.config.ts to SF-111's Files: import tokens.css and base.css, put fontVariables on <html>, set html lang from next-intl, wrap children in NextIntlClientProvider, and wrap the config with createNextIntlPlugin('./src/i18n/request.ts'). Needed so SF-105 and SF-106 take effect.",
       "decidedBy": "owner, in chat, 2026-10-30 (chose SF-111 over SF-107)",
       "newDecision": "D-144"
+    },
+    {
+      "date": "2026-10-30",
+      "task": "SF-110",
+      "from": "pr-smart-finances.md SF-110 Files (apps/web/vitest.config.ts is SF-103's file)",
+      "proposal": "Add oxc: { jsx: { runtime: 'automatic' } } to apps/web/vitest.config.ts so unit tests can compile JSX while tsconfig keeps jsx as preserve for Next.js. SF-109's component tests need it too.",
+      "decidedBy": "owner, in chat, 2026-10-30 (allowed the one-line change in SF-110)",
+      "newDecision": "pending: the planning session records it in the brief or decisions"
     }
   ],
   "surprises": [
@@ -215,6 +227,8 @@
     "SF-108: apps/web/package.json gains @smart-finances/contracts (this PR's package) and zod 4.6.7 (in Values; the version contracts already uses) so ports type the data API from the shared Zod schemas. package-lock.json was edited by those two lines only; npm 10 here would also drop the libc fields the owner's newer npm writes.",
     "SF-108: the Ports table gives method names but not every row or reason shape. Rows follow the Sessions and Accounts tables in camelCase; IdentityProvider results use the reasons exists, not_found, unconfirmed, bad_credentials, bad_code, expired_code, bad_session, revoked, limited, failed; PreAuthRow.step is a plain string. PR 3 may narrow them.",
     "SF-108: the memory identity fake already uses email code 123456 and authenticator code 000000, which the Interfaces section lists under PR 3; PR 3 should reuse it rather than add a second fake. domain/ holds only result.ts and application/ only a README until PR 3 and PR 4 add code.",
-    "SF-108: the memory data API is seeded with contract-shaped rows; mapping apps/web/fixtures/sample.json (prototype shapes such as rates as strings and review: null) into it is left to PR 4."
+    "SF-108: the memory data API is seeded with contract-shaped rows; mapping apps/web/fixtures/sample.json (prototype shapes such as rates as strings and review: null) into it is left to PR 4.",
+    "SF-110: added @tanstack/react-query 5.104.3, @tanstack/react-query-devtools 5.104.3, jsdom 30.1.3 and @testing-library/react 16.3.3 (all in Values, pinned exact, released by 2026-10-15). npm also installed @testing-library/dom as its required peer (lockfile only). npm 10 here dropped the lockfile's libc fields; they were restored so the lockfile diff is only the new packages.",
+    "SF-110: the provider test uses a per-file jsdom environment comment; vitest.config.ts keeps node as the default environment."
   ]
 }
