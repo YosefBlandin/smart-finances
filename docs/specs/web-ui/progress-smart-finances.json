@@ -1,20 +1,26 @@
 {
   "spec": "web-ui",
   "repo": "smart-finances",
-  "brief": "",
-  "tool": "",
-  "model": "",
+  "brief": "pr-smart-finances.md@locked-v1",
+  "tool": "Claude Code (desktop app)",
+  "model": "claude-sonnet-5-5",
   "baseline": {
-    "tests": "",
-    "lint": "",
-    "typecheck": ""
+    "tests": "27 root tests pass (api) + 11 infra tests pass, 0 fail",
+    "lint": "none (no lint before SF-104)",
+    "typecheck": "infra tsc --noEmit exit 0"
   },
   "tasks": [
     {
       "id": "SF-100",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "923c1f8",
+      "evidence": [
+        "drift --strict exit 0 (10 OK, 2 NEW) after fetch origin qa feature/web-ui",
+        "npm ci ok, 0 vulnerabilities",
+        "npm test exit 0: 27 pass, 0 fail; infra 11 pass, 0 fail",
+        "npm run build --workspace @smart-finances/infra exit 0 (tsc --noEmit)",
+        "worktree clean before progress edit"
+      ],
       "review": ""
     },
     {
@@ -117,5 +123,7 @@
     }
   ],
   "deviations": [],
-  "surprises": []
+  "surprises": [
+    "feature/web-foundation was cut from origin/feature/web-ui, which held only the draft spec; locked-v1 was merged in from origin/claude/intent-web-ui-spec-ssm5mn at the owner's request (commit 923c1f8)."
+  ]
 }
