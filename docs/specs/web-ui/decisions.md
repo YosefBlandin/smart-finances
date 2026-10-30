@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v3
 ---
 # Web UI: design system and screens: decisions
 
@@ -158,6 +158,7 @@ status: executing
 | D-141 | Accessible behaviour for interactive parts (menus, popovers, the month picker, selects, dialogs, tabs) comes from React Aria Components (react-aria-components), unstyled and styled by our CSS modules through its data attributes; simple parts stay plain elements. Narrows D-57. | 2-way | user, 2026-10-30 (after locked-v1) | accepted |
 | D-142 | Container and View: each screen section has a View (props in, markup out, never fetches, server-safe unless it needs interaction, the unit Storybook renders) and a thin client Container that calls TanStack hooks and server actions and passes props down. | 2-way | user, 2026-10-30 (after locked-v1) | accepted |
 | D-143 | Component API: typed variant props (variant, size, tone) rendered as data-* attributes that CSS modules style; compound components for multi-part patterns (for example DataTable.Root, Header, Row); no className from callers; ref forwarding on interactive primitives; one folder per component with its module, stories and test. | 2-way | user, 2026-10-30 (after locked-v1) | accepted |
+| D-144 | The root layout and the Next config are wired in SF-111: app/layout.tsx imports tokens.css and base.css, puts the font class on html, sets html lang from next-intl and wraps the app in NextIntlClientProvider; next.config.ts is wrapped with the next-intl plugin. Closes the SF-105 and SF-106 gap. | 2-way | user, 2026-10-30 (after locked-v2, executor deviation) | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:

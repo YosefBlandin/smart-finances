@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v3
 ---
 # Web UI: design system and screens: test matrix
 

@@ -2,14 +2,14 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v3
 ---
 # Web UI: design system and screens: brief for smart-finances (PR 1 of 4, foundation)
 
 <!-- The executor's main document. It must stand alone: copy values in, and link only to sections a task cites. At most 6k tokens; comments do not count. Required reading (intent.md, this file and its Read first sections) stays under 15k. Before the lock, the cold-read dry run must find zero "cannot start" items. -->
 
 - Goal: the prototype has every auth and account screen, the contracts package exists, and apps/web is a linted Next.js app with tokens, words, headers, parts, Storybook, the query provider, the hexagonal skeleton and the shell.
-- Implements: AC-4, AC-8, AC-9, AC-10, AC-11, AC-16, D-57, D-58, D-62, D-71, D-100, D-108, D-124, D-126, D-127, D-129, D-130, D-132 to D-134, D-136 to D-138
+- Implements: AC-4, AC-8, AC-9, AC-10, AC-11, AC-16, D-57, D-58, D-62, D-71, D-100, D-108, D-124, D-126, D-127, D-129, D-130, D-132 to D-134, D-136 to D-138, D-144
 - Spec folder: /home/user/smart-finances/docs/specs/web-ui in a cloud session; locally <repo root>/docs/specs/web-ui. Read and write the spec there, on the branch named under Branch, never a copy elsewhere.
 - Refs: smart-finances at the sha in intent.md refs. Before the first task: `git fetch origin qa feature/web-ui`, then `node ~/.claude/skills/spec/scripts/drift.mjs docs/specs/web-ui --strict` (exit 0; NEW lines are expected)
 - Worktree: a cloud session's own checkout; locally <repo root>/.claude/worktrees/web-foundation (profile Notes)
@@ -186,13 +186,14 @@ status: executing
 - Verify: `npm test --workspace @smart-finances/web -- src/queries/provider.test.tsx` → pass
 - Done when: verify is green, evidence is in progress-smart-finances.json
 ### SF-111 · Build the shell: rail, top bar and account area
-- Implements: AC-4, AC-10, D-24, D-35 to D-44, D-36, D-46, D-137 · After: SF-101, SF-109, SF-110 · Judgment: normal
-- Files: apps/web/src/app/(app)/layout.tsx (new), apps/web/src/ui/Shell.tsx (new), apps/web/src/app/api/lang/route.ts (new), placeholder pages apps/web/src/app/(app)/{overview,transactions,review,imports,rates,data}/page.tsx (new), apps/web/e2e/shell.spec.ts (new)
+- Implements: AC-4, AC-10, D-24, D-35 to D-44, D-36, D-46, D-137, D-144 · After: SF-101, SF-109, SF-110 · Judgment: normal
+- Files: apps/web/src/app/layout.tsx, apps/web/next.config.ts, apps/web/src/app/(app)/layout.tsx (new), apps/web/src/ui/Shell.tsx (new), apps/web/src/app/api/lang/route.ts (new), placeholder pages apps/web/src/app/(app)/{overview,transactions,review,imports,rates,data}/page.tsx (new), apps/web/e2e/shell.spec.ts (new)
 - Tests first: T-WEB-10, T-WEB-11
 - Do:
   - Server shell with MenuPanel (from ui/patterns) as the only client island; rail per D-35 to D-42 (Money without Ask, Account; no Prototype group); top bar under 960px (D-43, D-44); a placeholder address until PR 3.
+  - Root wiring (D-144): app/layout.tsx imports tokens.css and base.css, puts fontVariables on <html>, sets lang from getLocale, wraps children in NextIntlClientProvider; next.config.ts uses createNextIntlPlugin('./src/i18n/request.ts').
   - /api/lang: POST, Origin must equal WEB_ORIGIN, sets the lang cookie; the address is kept; html lang follows; focus moves to the h1 after navigation. The e2e adds a dummy __Host-sid cookie.
-- Verify: `npm run e2e --workspace @smart-finances/web -- e2e/shell.spec.ts` → pass
+- Verify: `npm run e2e --workspace @smart-finances/web -- e2e/shell.spec.ts` → pass; `npm run build --workspace @smart-finances/web` → succeeds
 - Done when: verify is green, evidence is in progress-smart-finances.json
 ### SF-112 · Add not-found, error and the sign-in placeholder
 - Implements: AC-8, AC-15, D-101 · After: SF-111 · Judgment: normal
