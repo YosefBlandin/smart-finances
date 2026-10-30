@@ -148,6 +148,10 @@ status: draft
 | D-131 | Optimistic updates only for review choices and approvals, and dollar rates; erase, delete account, imports and the language switch wait for the server's answer. | 2-way | user, 2026-10-30 | accepted |
 | D-132 | Lint and format: ESLint with Next.js's config, React Hooks and jsx-a11y, plus Prettier; both run in CI and in the Amplify build. | 2-way | user, 2026-10-30 | accepted |
 | D-133 | A shared workspace packages/contracts holds the Zod schemas for every data route; the web parses replies with them and the API validates with them, so the web keeps no copy of its own. The data PRs adopt it as they build routes (a follow-up row in the data-architecture spec). Replaces the web-only types.ts copy. | 2-way | user, 2026-10-30 | accepted |
+| D-134 | Performance budgets in CI: Lighthouse CI on the fixtures at phone settings fails a PR when largest contentful paint is over 2.5 s, layout shift over 0.1, or a route's first-load JavaScript over 200 KB. | 2-way | user, 2026-10-30 | accepted |
+| D-135 | Browser monitoring with CloudWatch RUM: page loads, web vitals and JavaScript errors, client bundled from npm, no cookies, addresses stripped of search values, no person ids; a guest identity pool may only put RUM events; about 1 dollar per 100,000 events. | 2-way | user, 2026-10-30 | accepted |
+| D-136 | Storybook runs locally and in CI only: CI builds it and runs the accessibility checks and interaction tests on every story; nothing is published. | 2-way | user, 2026-10-30 | accepted |
+| D-137 | Component boundaries: a server shell (layouts, rail, static text) with client islands for the interactive screens, driven by TanStack Query over hydrated data. | 2-way | user, 2026-10-30 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:
