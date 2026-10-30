@@ -15,6 +15,8 @@
     "lint": "eslint . && prettier --check --no-error-on-unmatched-pattern \"{src,e2e,scripts,.storybook}/**/*.{ts,tsx,mjs,css}\" \"*.{ts,mjs,json}\""
   },
   "dependencies": {
+    "@fontsource/chivo": "5.3.0",
+    "@fontsource/chivo-mono": "5.3.0",
     "next": "15.5.28",
     "react": "19.3.1",
     "react-dom": "19.3.1"
