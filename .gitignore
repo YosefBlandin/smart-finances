@@ -33,3 +33,7 @@ yarn-error.log*
 !.vscode/extensions.json
 .DS_Store
 Thumbs.db
+
+# Generated or local-only web files
+apps/web/next-env.d.ts
+apps/web/design/shots/

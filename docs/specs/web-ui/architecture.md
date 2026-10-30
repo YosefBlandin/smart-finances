@@ -71,9 +71,9 @@ app/             pages and layouts assemble sections; server components prefetch
 
 ### Design tokens and parts
 - Where: apps/web/src/styles/tokens.css (new), apps/web/src/styles/base.css (new), apps/web/src/ui/primitives/ and ui/patterns/ (new, D-140).
-- What: the prototype's custom properties copied as they are, light and dark, theme from the system setting; parts use only tokens, through CSS modules (D-57). Fonts through next/font from local files (D-58); Tabler outline icons at 2px (D-17). Red: the bad money figure (AC-11) and error notes or failed statuses (D-63), never a second money figure.
+- What: the prototype's custom properties copied as they are, light and dark, theme from the system setting; parts use only tokens, through CSS modules (D-57). Fonts through next/font from local files (D-58); Tabler outline icons at 2px (D-17). Red: the bad money figure (AC-11) error notes or failed statuses (D-63) and destructive buttons (D-146), never a second money figure.
 - The prototype is extended first with every auth and account screen and its states (D-100).
-- Serves: AC-10, AC-11; D-12, D-13, D-15 to D-17, D-21, D-22, D-25, D-27, D-32 to D-34, D-57, D-58, D-63, D-100.
+- Serves: AC-10, AC-11; D-12, D-13, D-15 to D-17, D-21, D-22, D-25, D-27, D-32 to D-34, D-57, D-58, D-63, D-100, D-146.
 
 ### Words and formats
 - Where: apps/web/messages/en.json (new), apps/web/messages/es.json (new), apps/web/src/i18n/request.ts (new), apps/web/src/i18n/format.ts (new).
@@ -84,7 +84,7 @@ app/             pages and layouts assemble sections; server components prefetch
 - Where: apps/web/src/application/auth/ (new): signUp.ts, confirm.ts, signIn.ts, reset.ts, signOut.ts; apps/web/src/application/account/deleteAccount.ts (new); apps/web/src/app/(auth)/ (new) screens with actions.ts.
 - Calls the pool with the confidential client (secret hash) (D-73). Before sign-up and reset it checks the new password against the Pwned Passwords range API (D-117). The client IP for the counters is the right-most X-Forwarded-For entry added by Amplify's CDN, never the left-most; a qa check confirms the header.
 - Between steps the state lives in the pre-auth row (D-91); a completed sign-in deletes it and issues a new __Host-sid.
-- At the first completed sign-in the consent from the pre-auth row is written to the accounts table before any money screen (D-87); a person without a consent row sees the consent screen.
+- At the first completed sign-in the consent from the pre-auth row is written to the accounts table before any money screen (D-87); a person without a consent row, or with an older terms or privacy version, sees the consent screen (D-145).
 - Every auth form is a server action through guarded() (D-125): the Origin against the stage's web address (D-115), then the proof-of-work answer, then the window counters (D-120); a refusal shows the "too many tries" message with the wait.
 - Sign-up, reset and sign-in give the same message and timing for known and unknown emails. A sign-up for an existing unconfirmed email replaces it with the new password (D-106); code emails are capped per email (Limits).
 - After a reset: global sign-out, session rows removed and a notice email (D-92, D-115). Delete account: D-104, after a full re-sign-in. Lost authenticator: the owner's runbook in Docs (D-115).
@@ -204,7 +204,7 @@ What each PR (pr-smart-finances*.md) provides to the later ones. A later PR impo
 | Path | Who | Purpose |
 |---|---|---|
 | /sign-up, /sign-up/confirm, /sign-in, /sign-in/code, /sign-in/setup, /reset, /reset/confirm, /lost-authenticator | signed out | auth screens (D-66, D-103) |
-| /consent | signed in, no consent row | accept the current versions (D-87) |
+| /consent | signed in, no consent row or an older version | accept the current versions (D-87, D-145) |
 | /privacy, /terms | anyone | both languages, one version id each |
 | /overview, /transactions, /review, /imports, /rates, /data | signed in with consent | money screens |
 | /api/auth/pow | anyone, GET | a proof-of-work challenge (D-120) |

@@ -21,7 +21,7 @@ status: executing
 | T-WEB-6 | D-23, D-30, D-83 | SF-106 | unit | G-merge | Amount formats per D-23 and D-30; lang from the cookie, else Accept-Language. |
 | T-WEB-7 | AC-16, AC-9, D-108 | SF-107 | unit | G-merge | Every response carries the contract headers with a fresh nonce; redirects use cookie presence only. |
 | T-WEB-8 | AC-9, AC-16 | SF-107 | e2e | G-merge | In a browser, an inline script without the nonce does not run. |
-| T-WEB-9 | AC-8, AC-10, D-63, D-141, D-143 | SF-109 | unit | G-merge | Field errors are tied by aria-describedby; Button shows busy; error notes use red, others never. |
+| T-WEB-9 | AC-8, AC-10, D-63, D-141, D-143, D-146 | SF-109 | unit | G-merge | Field errors are tied by aria-describedby; Button shows busy; error notes and the danger Button use red, others never. |
 | T-WEB-10 | AC-10, D-24, D-43, D-44 | SF-111 | e2e | G-merge | The rail and the top bar under 960px follow the decisions; focus moves to the main heading after navigation. |
 | T-WEB-11 | AC-4 | SF-111 | e2e | G-merge | Switching language keeps the address and sets html lang. |
 | T-WEB-12 | AC-8, AC-15 | SF-112 | e2e | G-merge | 403 and 404 show the same not-found screen; the idle sign-out notice shows on sign-in. |
@@ -51,7 +51,7 @@ status: executing
 | T-WAUTH-10 | AC-12, D-75 | SF-148 | unit | G-merge | Known and unknown emails get the same reply and timing; code emails stop at the cap. |
 | T-WAUTH-11 | AC-1, AC-13 | SF-149 | unit | G-merge | First sign-in walks setup then code; no session before the code. |
 | T-WAUTH-12 | AC-1, D-91 | SF-149 | unit | G-merge | An expired challenge returns to the password step; 5 wrong codes start over. |
-| T-WAUTH-13 | AC-14, D-87 | SF-150 | unit | G-merge | No money route answers without a consent row; resetStoredBytes keeps consent. |
+| T-WAUTH-13 | AC-14, D-87, D-145 | SF-150 | unit | G-merge | No money route answers without a consent row or with an older version; resetStoredBytes keeps consent. |
 | T-WAUTH-14 | AC-20, D-92 | SF-151 | unit | G-merge | After a reset, a session opened before it is refused and the authenticator is still asked. |
 | T-WAUTH-15 | AC-16 | SF-151 | unit | G-merge | Sign-out is a post that removes the row and revokes the refresh token. |
 | T-WAUTH-16 | AC-14, D-103 | SF-152 | e2e | G-merge | Privacy, terms and lost-authenticator pages render in both languages with one version id. |
