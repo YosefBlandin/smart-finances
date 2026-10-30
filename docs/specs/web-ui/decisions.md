@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: draft
+status: locked-v1
 ---
 # Web UI: design system and screens: decisions
 
@@ -153,6 +153,7 @@ status: draft
 | D-136 | Storybook runs locally and in CI only: CI builds it and runs the accessibility checks and interaction tests on every story; nothing is published. | 2-way | user, 2026-10-30 | accepted |
 | D-137 | Component boundaries: a server shell (layouts, rail, static text) with client islands for the interactive screens, driven by TanStack Query over hydrated data. | 2-way | user, 2026-10-30 | accepted |
 | D-138 | Code architecture: the web server's logic is hexagonal (domain, application use cases, ports, adapters, with in-memory adapters for tests and Storybook); Next.js app/ only delivers (pages, layouts, server actions, JSON routes) and calls use cases through one container; presentation (ui, screens, queries, i18n) follows Next.js conventions. ESLint import rules enforce the dependency direction. | 2-way | user, 2026-10-30 | accepted |
+| D-139 | The user accepted the five cold-read round 3 items (SF-108, SF-142, SF-145, SF-167, SF-169) as fixed without a fourth round, and asked to lock. Any remaining gap surfaces at the executors' stop points. | 2-way | user, 2026-10-30 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:

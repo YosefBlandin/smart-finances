@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: draft
+status: locked-v1
 ---
 # Web UI: design system and screens: review
 
