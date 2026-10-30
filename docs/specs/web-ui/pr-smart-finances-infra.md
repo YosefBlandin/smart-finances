@@ -65,7 +65,7 @@ status: draft
   - Metrics: namespace SmartFinances/<stage>; StuckDeletions (count), and security-event metrics per event name from the log's metric filters; alarm period 5 minutes unless the table says an hour, 1 evaluation; the dashboard has one widget per alarm.
   - Lambdas in infra/lambda/*.mjs are built with makeFunction (infra/lib/function.ts), like the API's.
   - amplify-release.mjs takes --stage, --branch, --sha and reads the app id from /smart-finances/<stage>/amplify-app-id; its tests are scripts/amplify-release.test.mjs (node --test).
-  - Code emails: subject en "Your Cuenta code" / es "Tu código de Cuenta"; body one sentence with {####}; reset uses the same with "to reset your password" / "para cambiar tu contraseña".
+  - Code emails: subject "Your Cuenta code" / "Tu código de Cuenta", one sentence with {####}.
   - Data spec follow-up rows: the next free D id there, source "web-ui spec, <date>", status proposed.
   - Region us-east-1 only. Stage parameters under /smart-finances/<stage>/: amplify-app-id (qa: set by the owner), web-client-id, web-client-secret-arn, api-url, support-address, signup-open, imports-paused, alarm-email, housekeeping-hmac-secret-arn, delete-function-name (written by data PR 3; may be missing).
   - Packages allowed: disposable-email-domains (trigger), @aws-sdk/client-amplify, @aws-sdk/client-cognito-identity-provider, @aws-sdk/client-ssm, @aws-sdk/client-lambda, @aws-sdk/client-dynamodb (same major as apps/api).
