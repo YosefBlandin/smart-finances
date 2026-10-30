@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "scripts": {
     "build": "tsc --noEmit",
+    "test": "node --require ts-node/register --test test/*.test.ts",
     "synth": "cdk synth",
     "bootstrap:personal": "cdk bootstrap --profile personal",
     "deploy:oidc:personal": "cdk deploy smart-finances-github-oidc --profile personal",

@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { GithubOidcStack } from '../lib/github-oidc-stack';
-import { ApiStack } from '../lib/api-stack';
+import { addStage } from '../lib/stage';
 
 const app = new cdk.App();
 
@@ -19,6 +19,6 @@ new GithubOidcStack(app, 'smart-finances-github-oidc', {
   allowedBranches: ['main', 'staging', 'qa'],
 });
 
-// Per-stage application stack: dev (local), qa, staging, prod.
+// Per-stage data and API stacks: dev (local), qa, staging, prod.
 const stage = app.node.tryGetContext('stage') ?? 'dev';
-new ApiStack(app, `smart-finances-api-${stage}`, { env, stage });
+addStage(app, stage, env);

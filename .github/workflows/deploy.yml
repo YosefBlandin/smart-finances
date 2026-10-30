@@ -31,6 +31,10 @@ jobs:
 
       - run: npm ci
 
+      # Api tests and infra synth tests, before any AWS credentials exist.
+      - name: Test
+        run: npm test
+
       - name: Type check
         run: npm run build --workspace @smart-finances/infra
 
@@ -40,6 +44,11 @@ jobs:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Deploy
+      # The data stack first: the API stack reads its values from SSM.
+      - name: Deploy data stack
+        working-directory: infra
+        run: npx cdk deploy "smart-finances-data-${STAGE}" -c stage="${STAGE}" --require-approval never
+
+      - name: Deploy API stack
         working-directory: infra
         run: npx cdk deploy "smart-finances-api-${STAGE}" -c stage="${STAGE}" --require-approval never
