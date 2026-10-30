@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v5
 ---
 # Web UI: design system and screens: decisions
 
@@ -161,6 +161,8 @@ status: executing
 | D-144 | The root layout and the Next config are wired in SF-111: app/layout.tsx imports tokens.css and base.css, puts the font class on html, sets html lang from next-intl and wraps the app in NextIntlClientProvider; next.config.ts is wrapped with the next-intl plugin. Closes the SF-105 and SF-106 gap. | 2-way | user, 2026-10-30 (after locked-v2, executor deviation) | accepted |
 | D-145 | Terms and privacy are accepted once, at sign-up. The privacy and terms pages are read-only full text; when either version changes, the consent screen asks the person to accept the new version before any money screen opens. Narrows D-87. | 2-way | user, 2026-10-30 (after locked-v3, executor surprise) | accepted |
 | D-146 | Red is also allowed for destructive actions: the buttons that erase data or delete the account. Narrows D-13 and D-63. | 2-way | user, 2026-10-30 (after locked-v3) | accepted |
+| D-147 | The confirm screen states no code lifetime; a code that fails offers "Send a new code". auth.confirm.lead becomes "We sent a 6-digit code to {email}. The account is created once you enter it." / "Enviamos un código de 6 dígitos a {email}. La cuenta se crea cuando lo ingresas." | 2-way | user, 2026-10-30 (after locked-v4) | accepted |
+| D-148 | The lost-authenticator page promises no reply time, only the 72-hour wait (D-115). auth.lost.wait becomes "Once we confirm it’s you, we wait 72 hours before the reset, so nobody else can do it quickly." / "Cuando confirmamos que eres tú, esperamos 72 horas antes de restablecerlo, para que nadie más pueda hacerlo rápido." Narrows D-103. | 2-way | user, 2026-10-30 (after locked-v4) | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:
