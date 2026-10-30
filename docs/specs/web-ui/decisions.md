@@ -48,6 +48,7 @@ status: draft
 | D-31 | Earned in the colour field shows pesos first, at the month's dollar rate, with the dollars actually received as a second line ("USD 1,922.00 at ARS 1,375.00 per dollar"). A month with no rate shows dollars only and says it has no rate yet. Earned and Spent can now be compared in pesos, which removes the cost accepted in D-29. | 2-way | user, 2026-10-29 | accepted |
 | D-32 | Amber leaves the category colours and means attention only. A purple takes its place, so all eleven coloured categories keep their own colour, and light blue gets slightly deeper in light mode. Every category colour now meets 3:1 against the page in both themes. The logo keeps its amber band. | 2-way | user, 2026-10-29 | accepted |
 | D-33 | The khaki category colour becomes a muted plum, so the eleventh category no longer looks like the grey of uncoloured categories and "Everything else" on the light page. It still meets 3:1 in both themes. | 2-way | user, 2026-10-29 | accepted |
+| D-34 | Lists mark a category with the same solid square as the overview's category rows, not a striped mark, so one category has one mark everywhere and its colour shows at list size. | 2-way | user, 2026-10-29 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:
