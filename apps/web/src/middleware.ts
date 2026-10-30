@@ -23,6 +23,18 @@ function decoded(path: string): string {
   }
 }
 
+// The sign-in redirect keeps the path as the browser sent it, so next names the same resource. A path whose
+// decoded form has dot segments, a double slash, a backslash, ? or # gets no next at all: a client resolving
+// it could land somewhere else (an open redirect). PR 3's sign-in still checks next before using it.
+const UNSAFE_NEXT = /(^|\/)\.\.?(\/|$)|\/\/|[\\?#]|[\u0000-\u001f\u007f]/;
+
+function signInTarget(req: NextRequest, path: string): URL {
+  const to = new URL('/sign-in', req.url);
+  const raw = req.nextUrl.pathname;
+  if (!UNSAFE_NEXT.test(path) && !UNSAFE_NEXT.test(raw)) to.searchParams.set('next', `${raw}${req.nextUrl.search}`);
+  return to;
+}
+
 function uploadHost(): string | undefined {
   const host = process.env.UPLOAD_HOST;
   if (host) return host;
@@ -68,16 +80,13 @@ function withHeaders(res: NextResponse, policy: string, path: string): NextRespo
 }
 
 export function middleware(req: NextRequest): NextResponse {
-  const { search } = req.nextUrl;
   const pathname = decoded(req.nextUrl.pathname);
   const nonce = newNonce();
   const policy = contentPolicy(nonce);
   const hasSession = req.cookies.has(SESSION_COOKIE);
 
   if (!hasSession && under(pathname, MONEY_ROUTES)) {
-    const to = new URL('/sign-in', req.url);
-    to.searchParams.set('next', `${pathname}${search}`);
-    return withHeaders(NextResponse.redirect(to), policy, pathname);
+    return withHeaders(NextResponse.redirect(signInTarget(req, pathname)), policy, pathname);
   }
   if (hasSession && under(pathname, AUTH_ROUTES)) {
     return withHeaders(NextResponse.redirect(new URL('/overview', req.url)), policy, pathname);

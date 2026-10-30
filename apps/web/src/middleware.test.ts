@@ -162,10 +162,34 @@ describe('T-WEB-7: redirects by cookie presence only', () => {
   it('T-WEB-7: percent-encoded paths are matched after decoding', () => {
     const to = new URL(run('/%6Fverview').headers.get('location') ?? '');
     expect(to.pathname).toBe('/sign-in');
-    expect(to.searchParams.get('next')).toBe('/overview');
+    expect(to.searchParams.get('next')).toBe('/%6Fverview');
     expect(new URL(run('/sign%2Din', '__Host-sid=x').headers.get('location') ?? '').pathname).toBe('/overview');
     expect(run('/%6Fverview', '__Host-sid=x').headers.get('cache-control')).toBe('no-store');
     expect(run('/%E0%A4%A').status).toBe(200);
+  });
+
+  it('T-WEB-7: next is the path as requested, never the decoded one', () => {
+    const next = (p: string) => new URL(run(p).headers.get('location') ?? '').searchParams.get('next');
+    expect(next('/overview/a%20b')).toBe('/overview/a%20b');
+    expect(next('/imports/caf%C3%A9?x=1')).toBe('/imports/caf%C3%A9?x=1');
+  });
+
+  it('T-WEB-7: a path that decodes to dot segments, a double slash, a backslash, ? or # gets a bare /sign-in', () => {
+    for (const p of [
+      '/overview/..%2f..%2f/evil.com',
+      '/overview/%2F%2Fevil.com',
+      '/overview/%5C%5Cevil.com',
+      '/overview/a%3Fb',
+      '/overview/a%23b',
+      '/overview//evil.com',
+    ]) {
+      const res = run(p);
+      expect(res.status, p).toBe(307);
+      const to = new URL(res.headers.get('location') ?? '');
+      expect(to.origin, p).toBe(ORIGIN);
+      expect(to.pathname, p).toBe('/sign-in');
+      expect(to.search, p).toBe('');
+    }
   });
 
   it('T-WEB-7: redirects carry the security headers too', () => {
