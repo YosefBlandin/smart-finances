@@ -1,9 +1,9 @@
 {
   "spec": "web-ui",
   "repo": "smart-finances",
-  "brief": "pr-smart-finances.md@locked-v2",
-  "tool": "Claude Code (desktop app)",
-  "model": "claude-sonnet-5-5",
+  "brief": "pr-smart-finances.md@locked-v5",
+  "tool": "Claude Code (cloud session, desktop app)",
+  "model": "claude-opus-5-5",
   "baseline": {
     "tests": "27 root tests pass (api) + 11 infra tests pass, 0 fail",
     "lint": "none before SF-104; from SF-104: eslint 0 errors 0 warnings, prettier clean",
@@ -171,7 +171,7 @@
       "from": "pr-smart-finances.md SF-111 Files (lists only the (app) layout)",
       "proposal": "Add apps/web/src/app/layout.tsx and apps/web/next.config.ts to SF-111's Files: import tokens.css and base.css, put fontVariables on <html>, set html lang from next-intl, wrap children in NextIntlClientProvider, and wrap the config with createNextIntlPlugin('./src/i18n/request.ts'). Needed so SF-105 and SF-106 take effect.",
       "decidedBy": "owner, in chat, 2026-10-30 (chose SF-111 over SF-107)",
-      "newDecision": "pending: the planning session writes it into the brief as a new version; SF-111 must not start until then"
+      "newDecision": "D-144"
     }
   ],
   "surprises": [
@@ -194,6 +194,7 @@
     "SF-105: tokens.css was reformatted by Prettier (required by the lint script); values are identical to the prototype. Tabler icons are not installed yet; the Icon primitive arrives in SF-109.",
     "SF-106 GAP: next-intl is not connected yet. It needs createNextIntlPlugin('./src/i18n/request.ts') in next.config.ts (SF-103 file) and a NextIntlClientProvider and html lang in the root layout; together with the SF-105 gap (tokens, base styles, fonts) the root layout.tsx and next.config.ts need an owner task. Neither file is in SF-106's Files.",
     "SF-106: messages exclude what the app does not build (prototype controls, design-system page, assistant screens per D-46); empty-state copy is stored as title, text and action instead of the prototype's arrays; prototype-only account-screen keys (pick, v, intro) are left out.",
-    "SF-106: the Ask nav entry and the assistant copy are not in the catalogues; they arrive with Epic 4."
+    "SF-106: the Ask nav entry and the assistant copy are not in the catalogues; they arrive with Epic 4.",
+    "Brief re-locked at locked-v5 (PR #7 merged; origin/feature/web-ui merged into the branch): D-144 gives SF-111 app/layout.tsx and next.config.ts and adds npm run build to its verify, closing the SF-105 and SF-106 gaps; D-146 adds a danger Button variant to SF-109 (T-WEB-9 changed); D-145, D-147, D-148 touch the auth copy, not this PR. From SF-107 the executor is Claude Code in a cloud session on claude-opus-5-5 (checked with get_session); SF-100 to SF-106 ran on the desktop app with claude-sonnet-5-5."
   ]
 }
