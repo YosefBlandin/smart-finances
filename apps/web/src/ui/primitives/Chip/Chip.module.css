@@ -1,0 +1,32 @@
+/* Chip, from the prototype's .chip: no box, just a coloured icon and label. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  font-size: var(--t-xs);
+  font-weight: var(--w-head);
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: var(--track-caps);
+}
+
+.chip[data-tone='ok'] {
+  color: var(--save);
+}
+
+.chip[data-tone='running'] {
+  color: var(--income);
+}
+
+.chip[data-tone='warn'] {
+  color: var(--warn);
+}
+
+/* A failed status (D-63). */
+.chip[data-tone='failed'] {
+  color: var(--bad);
+}
+
+.chip[data-tone='idle'] {
+  color: var(--muted);
+}

@@ -458,5 +458,8 @@
     "idle": {
       "banner": "Cerramos tu sesión tras 30 minutos sin actividad. Entra de nuevo para seguir donde lo dejaste."
     }
+  },
+  "ui": {
+    "typeToConfirm": "Escribe {word} para confirmar"
   }
 }

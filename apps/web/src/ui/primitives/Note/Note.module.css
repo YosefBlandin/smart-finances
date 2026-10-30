@@ -1,0 +1,44 @@
+/* Note, from the prototype's .note: a soft panel, the icon carries the tone, the text stays ink. */
+.note {
+  padding: var(--s3) var(--s4);
+  display: flex;
+  gap: var(--s3);
+  font-size: var(--t-s);
+  border-radius: var(--r-m);
+  background: var(--sunken);
+  color: var(--ink);
+}
+
+.icon {
+  margin-top: 1px;
+  color: var(--muted);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  min-width: 0;
+}
+
+.title {
+  font-weight: var(--w-head);
+  margin: 0;
+}
+
+.note[data-tone='warn'] {
+  background: var(--warn-soft);
+}
+
+.note[data-tone='warn'] .icon {
+  color: var(--warn);
+}
+
+/* Error notes (D-63). */
+.note[data-tone='error'] {
+  background: var(--bad-soft);
+}
+
+.note[data-tone='error'] .icon {
+  color: var(--bad);
+}

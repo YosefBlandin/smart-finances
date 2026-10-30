@@ -458,5 +458,8 @@
     "idle": {
       "banner": "You were signed out after 30 minutes without activity. Sign in to pick up where you left off."
     }
+  },
+  "ui": {
+    "typeToConfirm": "Type {word} to confirm"
   }
 }
