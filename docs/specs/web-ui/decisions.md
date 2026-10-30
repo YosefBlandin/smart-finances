@@ -1,7 +1,7 @@
 ---
 spec: web-ui
 ticket: none
-tier: M
+tier: L
 status: draft
 ---
 # Web UI: design system and screens: decisions
@@ -9,7 +9,7 @@ status: draft
 <!-- The single home for every decision. Other files cite the id; a brief may copy the one-line text verbatim. Row: id, decision, door (1-way or 2-way), source and date (intake, user, stakeholder:role or design), status (proposed, accepted, superseded-by plus the new id, or RETIRED → the new id). -->
 <!-- A late answer after lock never edits a row: add a new decision that supersedes the old one, then run spec-lint.mjs with --impact on the old id to find the tasks and tests that cite it. -->
 <!-- Example rows:
-| D-1 | Record page views as a new event type in the existing event log. | 2-way | stakeholder:security, 2026-10-29 | accepted |
+| D-1 | Record page views as a new event type in the existing event log. | 2-way | stakeholder:security, 2026-10-29 | superseded-by D-60 |
 | D-2 | Serve the page-view route from a new small service, not the main one. | 2-way | design, 2026-10-29 | accepted |
 -->
 
@@ -22,7 +22,7 @@ status: draft
 | D-5 | Agent access: local tests, builds and the dev server viewed in the browser pane, plus read-only AWS calls with the personal profile. No AWS writes and no real sign-ins; the user does those. | 2-way | intake, 2026-10-29 | accepted |
 | D-6 | Roles: the agent writes code, commits, pushes feature branches and opens draft PRs into qa; the user reviews, merges and promotes. Source: data-architecture spec D-4 (default). | 2-way | intake, 2026-10-29 | accepted |
 | D-7 | Stakeholders: only the user, no fixed date. Source: data-architecture spec D-5 (default). | 2-way | intake, 2026-10-29 | accepted |
-| D-8 | Audience: the brand speaks to future savers, not only the owner; screens need onboarding and plain words. Sign-up stays off for now, so strangers meet it through a demo account. | 2-way | user, 2026-10-29 | accepted |
+| D-8 | Audience: the brand speaks to future savers, not only the owner; screens need onboarding and plain words. Sign-up stays off for now, so strangers meet it through a demo account. | 2-way | user, 2026-10-29 | superseded-by D-61 |
 | D-9 | Name: Cuenta, pending a trademark check. The repo keeps its name. | 2-way | user, 2026-10-29 | accepted |
 | D-10 | Character: a straight-talking friend. It says the hard thing plainly, then helps. | 2-way | user, 2026-10-29 | accepted |
 | D-11 | Language: English and Spanish, switchable. Spanish addresses people with tú. | 2-way | user, 2026-10-29 | accepted |
@@ -63,17 +63,22 @@ status: draft
 | D-46 | Assistant screens: designed now in the prototype and the design system; their code is built in Epic 4 against its real answer format. | 2-way | user, 2026-10-30 (Q-2) | accepted |
 | D-47 | Sign-in on a device: the renewal pass is kept only until the tab closes, so a reload keeps you in and closing the tab signs you out. No money data or chat is stored in the browser. | 2-way | user, 2026-10-30 (Q-3) | accepted |
 | D-48 | DP2: the user approved AC-1 to AC-10 and the no-gos as written. | 2-way | user, 2026-10-30 | accepted |
-| D-49 | Framework: a Vite, React and TypeScript single-page app in apps/web, built to static files. Next.js is not used, so the content policy can forbid inline scripts. Packages: vite, @vitejs/plugin-react, react, react-dom, react-router, typescript. | 2-way | design, 2026-10-30 | proposed |
+| D-49 | Framework: a Vite, React and TypeScript single-page app in apps/web, built to static files. Next.js is not used, so the content policy can forbid inline scripts. Packages: vite, @vitejs/plugin-react, react, react-dom, react-router, typescript. | 2-way | design, 2026-10-30 | superseded-by D-62 |
 | D-50 | Hosting wiring: per stage, a web host stack makes the Amplify app and branch with no Git connection and publishes the web address; a web stack, deployed last, uploads the build and starts the Amplify deployment through one custom resource. CI stays the only deploy path. | 2-way | design, 2026-10-30 | proposed |
 | D-51 | One build for every stage: the web stack writes config.json (stage, region, API address, pool and client ids) into the bundle; the app reads it at start. | 2-way | design, 2026-10-30 | proposed |
-| D-52 | Sign-in uses only the sign-in part of the Amplify JavaScript library (package aws-amplify), with its token storage set to session storage (D-47). | 2-way | design, 2026-10-30 | proposed |
+| D-52 | Sign-in uses only the sign-in part of the Amplify JavaScript library (package aws-amplify), with its token storage set to session storage (D-47). | 2-way | design, 2026-10-30 | superseded-by D-62 |
 | D-53 | API calls send the access token as a bearer token. The API's audience check accepts it through the token's client id; a person confirms it on qa. | 2-way | design, 2026-10-30 | proposed |
 | D-54 | Reads go through one fetch wrapper and TanStack Query (package @tanstack/react-query), paging by the API's cursor. The web keeps its own typed copy of the HTTP routes; the field, kind and category lists come from browser-safe API modules exported by the API package. | 2-way | design, 2026-10-30 | proposed |
 | D-55 | Routes and words: client routes per screen with month, view and filters in the address; English and Spanish catalogues with the same keys, checked by a test; the language choice kept in local storage as a preference. | 2-way | design, 2026-10-30 | proposed |
-| D-56 | Demo mode: the same screens under /demo, fed by bundled synthetic data, with no sign-in and every change disabled with a plain note. It replaces a shared demo sign-in, which would mean publishing an authenticator key and letting anyone erase the data. | 2-way | design, 2026-10-30 | proposed |
+| D-56 | Demo mode: the same screens under /demo, fed by bundled synthetic data, with no sign-in and every change disabled with a plain note. It replaces a shared demo sign-in, which would mean publishing an authenticator key and letting anyone erase the data. | 2-way | design, 2026-10-30 | superseded-by D-61 |
 | D-57 | Styling and charts: the prototype's CSS custom properties copied as tokens, with CSS modules; no Tailwind and no shadcn. Charts are drawn by hand in SVG, each with a table alternative; no chart library. | 2-way | design, 2026-10-30 | proposed |
 | D-58 | Fonts and icons are bundled: Chivo and Chivo Mono from @fontsource packages, icons from @tabler/icons-react. No font or icon service is called at run time. | 2-way | design, 2026-10-30 | proposed |
 | D-59 | Tests: Vitest for logic and parts, Playwright browser tests on the fixtures for every screen, keyboard order and the content policy. Both run in CI before AWS credentials, and the root test command runs them. Packages: vitest, @playwright/test. | 2-way | design, 2026-10-30 | proposed |
+| D-60 | Tier L, superseding D-1: sign-up and server-held sessions change who may have an account and the sign-in pool, so the spec covers access control. | 2-way | user, 2026-10-30 | accepted |
+| D-61 | Sign-up is in this spec: anyone can create an account and store their own data, superseding the sign-up and demo-account parts of D-8. It replaces the demo mode in D-56. See D-61 options. | 1-way | user, 2026-10-30 | accepted |
+| D-62 | Next.js with server rendering, and the session held by the web server in cookies page scripts cannot read; the browser never holds a token. Supersedes D-49 and D-52. | 2-way | user, 2026-10-30 | accepted |
+| D-63 | Red is also allowed for errors and failed statuses (error notes, failed or expired imports, a wrong password). Among money figures it stays only on the one bad figure. Narrows D-13. | 2-way | user, 2026-10-30 | accepted |
+| D-64 | The web PR may merge into qa once it is green, before data PRs 2 and 3. Screens whose routes are missing show the failed state; their qa checks, and any promotion to staging, wait for those PRs. | 2-way | user, 2026-10-30 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:
@@ -87,3 +92,14 @@ status: draft
 **Cost / accepted risk**: events written before the release have no page type until they expire.
 **Confirm by**: a staging check that one page open writes exactly one new event.
 -->
+
+### D-61 options
+**Options**
+- A. Do nothing: owner only, sign-up stays off; visitors cannot try the app.
+- B. Demo mode with made-up data and no sign-in (D-56): visitors see the screens, nobody else stores data.
+- C. Self sign-up for anyone, each person seeing only their own data. ✓
+
+**Why**: the brand speaks to future savers (D-8), and the user wants them to use it with their own money, not only see it.
+**Cost / accepted risk**: strangers' financial data is stored, which brings privacy duties, abuse and cost limits, email delivery, and changes to the sign-in pool owned by the data-architecture spec. Closing sign-up later still leaves their accounts and data to keep or erase.
+**Confirm by**: a test that a new account sees no other account's data, and a qa check that sign-up, email check and authenticator setup work end to end.
+

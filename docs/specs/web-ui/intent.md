@@ -1,10 +1,10 @@
 ---
 spec: web-ui
 ticket: none
-tier: M
+tier: L
 status: draft
 refs: smart-finances@903321c
-door: 2-way   # the least reversible decision sets it
+door: 1-way   # D-61: open sign-up stores strangers' data
 appetite: 2 weeks; prototype and design system before app code; infra and web ship in one merge, a short window of failed requests is fine
 ---
 # Web UI: design system and screens
@@ -82,14 +82,3 @@ The owner signs in and sees, first, what they kept this month against their typi
 | to review | Imported rows flagged for a look, such as a possible duplicate. |
 | import | One file you bring in, from its upload until it is done or failed. |
 | demo account | A shared sign-in with made-up data, so a visitor can try the app. |
-
-## Open questions
-<!-- M tier only: at most 3 question cards here, in the questions.md card format, then one Send list line: owner role and question ids, no names. L tier: cards live in questions.md, so delete this section. -->
-None open.
-
-### Answered
-| Q | Decision | Date | Who |
-|---|---|---|---|
-| Q-1 | → D-45 | 2026-10-30 | owner |
-| Q-2 | → D-46 | 2026-10-30 | owner |
-| Q-3 | → D-47 | 2026-10-30 | owner |

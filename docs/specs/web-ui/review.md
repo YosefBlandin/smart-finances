@@ -1,7 +1,7 @@
 ---
 spec: web-ui
 ticket: none
-tier: M
+tier: L
 status: draft
 ---
 # Web UI: design system and screens: review
