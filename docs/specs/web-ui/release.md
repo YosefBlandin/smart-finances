@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: locked-v3
+status: executing
 ---
 # Web UI: design system and screens: release
 

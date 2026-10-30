@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: locked-v3
+status: executing
 refs: smart-finances@903321c
 door: 1-way   # D-61: open sign-up stores strangers' data
 appetite: about 5 weeks, one release (D-68); prototype and design system before app code; infra and web ship in one merge, a short window of failed requests is fine
