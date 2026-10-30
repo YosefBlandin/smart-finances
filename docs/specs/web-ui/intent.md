@@ -5,7 +5,7 @@ tier: L
 status: draft
 refs: smart-finances@903321c
 door: 1-way   # D-61: open sign-up stores strangers' data
-appetite: 2 weeks; prototype and design system before app code; infra and web ship in one merge, a short window of failed requests is fine
+appetite: about 5 weeks, one release (D-68); prototype and design system before app code; infra and web ship in one merge, a short window of failed requests is fine
 ---
 # Web UI: design system and screens
 
@@ -55,6 +55,8 @@ Anyone can create an account, check their email, set up an authenticator and sta
 | AC-16 | While a person is signed in, the system shall hold the session on the web server, and the browser shall keep nothing a page script can read to act as that person. | D-62 |
 | AC-17 | If one person or one address sends more requests than its limit, then the system shall refuse the extra ones with a plain message, and other people shall not be slowed. | D-61 |
 | AC-18 | When a person deletes their account, the system shall erase their data, end every session and confirm what was removed. | D-61 |
+| AC-19 | If sign-ups from one address pass its limit, or a sign-up fails the check for automated sign-ups, then the system shall refuse it with a plain message. | D-67 |
+| AC-20 | When a person forgets their password, the system shall let them set a new one after a code sent to their email, and still ask for their authenticator code. | D-66 |
 
 ## No-gos
 <!-- What this work will not do, each with a one-line reason or the decision that settled it. -->
@@ -64,6 +66,7 @@ Anyone can create an account, check their email, set up an authenticator and sta
 - Bank connections: people bring files; no account is linked to a bank.
 - Keeping money data or chats in the browser: a hostile page script could read them.
 - A demo with made-up data: real accounts replace it (D-61).
+- Resetting a lost authenticator on your own: the sign-in service has no such step, so the person writes to the contact address and the owner resets it.
 - The assistant's server side and its screen code: both come with Epic 4; its screens are only designed now (D-46).
 
 ## Constraints

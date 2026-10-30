@@ -82,13 +82,13 @@ Repo smart-finances at 903321c. Read-only subagents per area; the code facts beh
 <!-- What nobody knows yet. Every high-impact unknown points to a question, a task or a live check. Example row: | Whether page views from the mobile app are needed. | high | Q-1 | -->
 | Unknown | Impact | Goes to |
 |---|---|---|
-| Hosting for a server-rendered app: Git-connected Amplify or OpenNext on Lambda through CDK | high | Q-4 |
-| Our own sign-in and sign-up screens, or Cognito's managed pages | high | Q-5 |
-| Who may sign up at first: anyone, or by invitation | high | Q-6 |
-| Appetite and split for the larger scope | high | Q-7 |
+| Hosting for a server-rendered app: Git-connected Amplify or OpenNext on Lambda through CDK | high | D-65 (was Q-4) |
+| Our own sign-in and sign-up screens, or Cognito's managed pages | high | D-66 (was Q-5) |
+| Who may sign up at first: anyone, or by invitation | high | D-67 (was Q-6) |
+| Appetite and split for the larger scope | high | D-68 (was Q-7) |
 | Legal duties for strangers' financial data, safe wording, sanctions | high | Q-8 |
 | Per-person limits, cost and alarms in a data design built for one owner (F-30, F-31) | high | design, with a data-architecture follow-up |
-| Server timeout, region and run-time secrets on the chosen host | medium | design, after Q-4 |
+| Server timeout, region and run-time secrets on the chosen host | medium | design, after D-65 |
 | Web host for staging and prod, and so the allowed web addresses and the deploy path | high | D-45 (was Q-1) |
 | Whether the assistant screens are built now against a fake, or designed now and built with the Epic 4 contract | high | D-46 (was Q-2) |
 | Where sign-in tokens live in the browser, and whether any data or chat is kept there | high | D-47 (was Q-3) |
