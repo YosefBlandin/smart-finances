@@ -117,7 +117,12 @@
         "After: npm test --workspace @smart-finances/web -- src/middleware.test.ts -> Test Files 1 passed, Tests 19 passed (19): the policy equals architecture.md Contracts \"Response headers\" string for string (upload host from UPLOAD_HOST, uploads.test.invalid when STAGE=test, left out otherwise); HSTS, nosniff, no-referrer, Permissions-Policy on pages, API routes and redirects; 50 requests give 50 distinct 16-byte base64 nonces; x-nonce and the policy passed in the request headers, a browser-sent x-nonce replaced; no-store on money pages, /consent, /too-many and /api/data/*, not on /sign-in, /privacy, /terms; money routes without __Host-sid -> 307 /sign-in?next=<path and search>; any __Host-sid value passes, other cookies do not; auth routes with __Host-sid -> 307 /overview; lookalike and percent-encoded paths; matcher skips only _next/static, _next/image, favicon.ico; the only import is next/server",
         "After: npm run e2e --workspace @smart-finances/web -- e2e/headers.spec.ts -> 4 passed (run through a scratchpad config that only points Playwright at /opt/pw-browsers/chromium; repo config unchanged): fresh nonce per response, money redirect, under the app's real policy an inline script with the nonce runs while one without it, one with a guessed nonce and an onerror handler do not, and the app's own scripts all carry the nonce with no script-src violation",
         "npm run lint --workspace @smart-finances/web -> eslint clean, Prettier clean; tsc --noEmit -> exit 0; root npm test -> exit 0 (37 api+contracts, 87 web, 11 infra pass); npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0 (Middleware 35 kB)",
-        "Fresh-context review (subagent, claude-sonnet, read-only): 0 blocker, 1 major, 2 minor. Major: the browser test replayed every real header (content-encoding, content-length) onto a hand-made body -> now replays only the policy and adds a real-page check. Minor: percent-encoded money paths skipped the redirect -> paths are decoded first, test added (failed first: 2 failed, 17 passed). Minor: /api/data/* had no no-store -> added, same test. One fix round; all green after it."
+        "Fresh-context review (subagent, claude-sonnet, read-only): 0 blocker, 1 major, 2 minor. Major: the browser test replayed every real header (content-encoding, content-length) onto a hand-made body -> now replays only the policy and adds a real-page check. Minor: percent-encoded money paths skipped the redirect -> paths are decoded first, test added (failed first: 2 failed, 17 passed). Minor: /api/data/* had no no-store -> added, same test. One fix round; all green after it.",
+        "Conformance fix (2026-10-30, commit 5197445): the sign-in redirect built next from the percent-decoded path (/overview/..%2f..%2f/evil.com -> next=/overview/../..//evil.com). Routes are still matched on the decoded path; next is now the raw req.nextUrl.pathname plus search, and a path whose decoded form has dot segments, a double slash, a backslash, ?, # or a control character gets a bare /sign-in. PR 3's sign-in must still validate next.",
+        "Conformance fix fail first: npm test --workspace @smart-finances/web -- src/middleware.test.ts against the old middleware -> Tests 3 failed | 18 passed (21): 'percent-encoded paths are matched after decoding' (next now expected /%6Fverview), 'next is the path as requested, never the decoded one', 'a path that decodes to dot segments, a double slash, a backslash, ? or # gets a bare /sign-in' (received ?next=%2Foverview%2F..%2F..%2F%2Fevil.com)",
+        "Conformance fix after: npm test --workspace @smart-finances/web -- src/middleware.test.ts -> Tests 21 passed (21)",
+        "Conformance fix after: playwright e2e/headers.spec.ts (scratchpad config, Chromium at /opt/pw-browsers/chromium) -> 4 passed",
+        "Conformance fix after: npm run lint --workspace @smart-finances/web -> exit 0; cd apps/web && npx tsc --noEmit -> exit 0; npm run build --workspace @smart-finances/web -> exit 0; npm run build --workspace @smart-finances/infra -> exit 0"
       ],
       "review": "findings (1 major, 2 minor; all fixed in a66ca7f before commit)"
     },
@@ -166,22 +171,27 @@
         "Stopped before writing code: the task as written needs a file outside its Files (see deviations, SF-111, 2026-10-30).",
         "Probe (temporary page, deleted, nothing committed): a server component rendering <MenuPanel label=\"Overview\">{() => <a href=\"/transactions\">Transactions</a>}</MenuPanel> -> npm run build (next build) exit 1: \"Error: Functions cannot be passed directly to Client Components unless you explicitly expose it by marking it with \\\"use server\\\" ... {label: ..., children: function children}\". MenuPanel (SF-109) takes children: (close) => ReactNode, so a server Shell cannot fill it.",
         "Source check, next 15.5.28 dist/client/components/layout-router.js InnerScrollAndFocusHandler: after a client navigation Next calls domNode.focus() on the first element of the changed segment (skipping sticky and fixed ones). If the (app) layout renders the shell and each page starts with <h1 tabIndex={-1}>, focus reaches the h1 with no extra client code. But a shared layout is not re-rendered on navigation and gets no pathname, so the rail's aria-current needs either a client island (usePathname) or the shell rendered by each page (which then defeats Next's focus handling).",
-        "git status after the probe: clean except the already untracked apps/web/storybook-static/"
+        "git status after the probe: clean except the already untracked apps/web/storybook-static/",
+        "Conformance review (2026-10-30): still blocked. The findings (shell missing, D-144 root wiring not carried out, /api/lang Origin check and lang cookie missing, T-WEB-10 and T-WEB-11 untested) all wait for the owner's decision on the ShellNav deviation; no code written in the conformance round. The /api/lang route needs tests that an Origin equal to WEB_ORIGIN is accepted and that missing, 'null' and foreign Origins get 403 with no Set-Cookie, and a lang cookie (en or es only) with SameSite=Lax and a one-year Max-Age."
       ],
       "review": ""
     },
     {
       "id": "SF-112",
-      "status": "todo",
+      "status": "blocked",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "Blocked by SF-111 (After: SF-111): SF-111 is blocked on the undecided ShellNav deviation (deviations, SF-111, decidedBy empty). No code written; nothing to verify until the owner decides and SF-111 lands."
+      ],
       "review": ""
     },
     {
       "id": "SF-113",
-      "status": "todo",
+      "status": "blocked",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "Blocked by SF-111 (After: SF-111): SF-111 is blocked on the undecided ShellNav deviation (deviations, SF-111, decidedBy empty). No code written; nothing to verify until the owner decides and SF-111 lands."
+      ],
       "review": ""
     },
     {
@@ -196,7 +206,8 @@
         "npm run build --workspace @smart-finances/web -> exit 0",
         "npm run lint --workspace @smart-finances/web -> exit 0 (eslint clean, prettier: all matched files use Prettier code style)",
         "cd apps/web && npx tsc --noEmit -> exit 0",
-        "git status after commit: clean except the already untracked apps/web/storybook-static/"
+        "git status after commit: clean except the already untracked apps/web/storybook-static/",
+        "Correction (conformance review, 2026-10-30): the line 'npm test (root) -> 11 tests, 11 pass, 0 fail' showed only the infra part of the root run. Re-run of root npm test at 5197445 -> exit 0: api 37 tests 37 pass 0 fail; web lint clean; web vitest Test Files 23 passed (23), Tests 214 passed (214); infra 11 tests 11 pass 0 fail. The web suite was re-run 3 more times: 214 passed each time (the reviewer's one failed of 212 did not reproduce)."
       ],
       "review": ""
     }
@@ -270,6 +281,8 @@
     "SF-109: the brief named a storybook script under SF-103 but package.json had none; SF-109 added storybook, build-storybook and test-storybook. Stories set the language and scheme through Storybook globals (locale, theme); the preview decorator sets html lang and data-theme and wraps NextIntlClientProvider. Fonts in Storybook come from the @fontsource CSS files, not next/font.",
     "SF-109: one new message key, ui.typeToConfirm (\"Type {word} to confirm\" / \"Escribe {word} para confirmar\"), in both files; everything else reuses existing keys (shell.month, shell.noRateKey, shell.menu, states.loading, states.retry, auth.common.cancel).",
     "SF-111: the brief's 'MenuPanel as the only client island' cannot hold with SF-109's MenuPanel API (render-function children) under the React Server Components rules; and a server layout cannot mark the current screen because App Router layouts get no pathname and do not re-render between sibling pages. Recorded as a deviation; the task is blocked until the owner picks the extra client file (ui/ShellNav.tsx) or a MenuPanel change. Also seen: the Icon primitive has no nav icons (prototype uses Tabler layout-dashboard, arrows-exchange, list-check, upload, coin, database); Icon.tsx is SF-109's file, so the shell would import those Tabler icons directly or Icon.tsx needs adding to Files too.",
-    "SF-114: the repo markdown (README.md, docs/adr/*.md) does not follow prettier at HEAD (no blank line after headings), and markdown is outside the web lint glob; the new ADR follows the existing ADR house style instead of prettier formatting."
+    "SF-114: the repo markdown (README.md, docs/adr/*.md) does not follow prettier at HEAD (no blank line after headings), and markdown is outside the web lint glob; the new ADR follows the existing ADR house style instead of prettier formatting.",
+    "SF-114: conformance review reported 1 failed | 211 passed (212) in the web suite at f7ad6ff; at 5197445 (214 tests) four runs all passed, so the failure looks flaky under load and was not identified.",
+    "SF-107: the conformance fix changes next for percent-encoded paths: /%6Fverview now redirects with next=/%6Fverview (as requested) instead of /overview."
   ]
 }
