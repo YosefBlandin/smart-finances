@@ -71,6 +71,10 @@ status: draft
 <!-- At G-handoff, one run per brief and round: a fresh context on a cheaper or different model gets only intent.md, the brief and the sections it cites (tier S: spec.md). Model class is cheaper, different, or same in a fresh context; never a model name. Gate: zero cannot-start items. -->
 | Brief | Round | Date | Model class | Cannot start | Missing values | Assumptions | Fixed in |
 |---|---|---|---|---|---|---|---|
+| pr-smart-finances.md | 1 | 2026-10-30 | cheaper | 1 (SF-110 ADR number taken) | 9 | 9 | ADR 0008 and 0009; shared interfaces; stub pages; key names; packages; token names |
+| pr-smart-finances-infra.md | 1 | 2026-10-30 | cheaper | 0 | 16 | 14 | branch per stage, metrics, makeFunction, release script args and tests, email text, cited contracts |
+| pr-smart-finances-auth.md | 1 | 2026-10-30 | cheaper | 0 | 18 | 13 | aws.ts fakes, scope names, PoW row, versions, issuer, guard wiring, D-122 notice |
+| pr-smart-finances-screens.md | 1 | 2026-10-30 | cheaper | 0 | 18 | 14 | module and route names, rounding, data-tone selector, caps inputs, test limit, themes |
 
 ## Conformance review
 <!-- Before each draft PR: a fresh reviewer compares the diff with the brief and its test ids. A finding that needs a decision becomes a deviation, not an edit. -->
