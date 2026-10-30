@@ -1,0 +1,107 @@
+{
+  "spec": "web-ui",
+  "repo": "smart-finances-screens",
+  "brief": "",
+  "tool": "",
+  "model": "",
+  "baseline": {
+    "tests": "",
+    "lint": "",
+    "typecheck": ""
+  },
+  "tasks": [
+    {
+      "id": "SF-160",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-161",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-162",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-163",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-164",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-165",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-166",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-167",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-168",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-169",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-170",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-171",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-172",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    }
+  ],
+  "deviations": [],
+  "surprises": []
+}

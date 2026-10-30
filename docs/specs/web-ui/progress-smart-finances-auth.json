@@ -1,0 +1,114 @@
+{
+  "spec": "web-ui",
+  "repo": "smart-finances-auth",
+  "brief": "",
+  "tool": "",
+  "model": "",
+  "baseline": {
+    "tests": "",
+    "lint": "",
+    "typecheck": ""
+  },
+  "tasks": [
+    {
+      "id": "SF-140",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-141",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-142",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-143",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-144",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-145",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-146",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-147",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-148",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-149",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-150",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-151",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-152",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-153",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    }
+  ],
+  "deviations": [],
+  "surprises": []
+}

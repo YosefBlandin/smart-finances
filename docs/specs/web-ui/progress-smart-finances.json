@@ -4,9 +4,117 @@
   "brief": "",
   "tool": "",
   "model": "",
-  "baseline": { "tests": "", "lint": "", "typecheck": "" },
+  "baseline": {
+    "tests": "",
+    "lint": "",
+    "typecheck": ""
+  },
   "tasks": [
-    { "id": "SF-0", "status": "todo", "commit": "", "evidence": [], "review": "" }
+    {
+      "id": "SF-100",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-101",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-102",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-103",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-104",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-105",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-106",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-107",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-108",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-109",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-110",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-111",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-112",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-113",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
+      "id": "SF-114",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    }
   ],
   "deviations": [],
   "surprises": []
