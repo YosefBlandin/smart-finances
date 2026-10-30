@@ -109,7 +109,7 @@
     },
     {
       "id": "SF-107",
-      "status": "blocked",
+      "status": "done",
       "commit": "a66ca7f",
       "evidence": [
         "T-WEB-7 fail first: npm test --workspace @smart-finances/web -- src/middleware.test.ts -> FAIL: Error: Cannot find module './middleware', Tests: no tests",
@@ -126,7 +126,8 @@
         "Conformance fix (2026-10-30, commit ccf614e): the T-WEB-8 test \"the app's own scripts run under the policy without a script violation\" passed for the wrong reason: it heard only console errors, while a blocked eval is a thrown EvalError, and it ran on Next's default 404 at /sign-in. It now visits the real sign-in placeholder (SF-112) and /overview with the dummy __Host-sid, and collects console errors, pageerror and securitypolicyviolation events.",
         "Conformance fix result under next dev (pw.local.config.ts, the brief's verify): npm run e2e -- e2e/headers.spec.ts -> 1 failed, 3 passed: the strengthened test now reports \"Evaluating a string as JavaScript violates ... 'unsafe-eval' is not an allowed source of script: script-src 'self' 'nonce-...' 'strict-dynamic'\" on both pages. This is the real defect behind the SF-111 next dev deviation, not a test fault.",
         "Conformance fix result against a production build (pw.prod.config.ts): e2e/headers.spec.ts -> 4 passed",
-        "Status set to blocked: SF-107's verify as the brief states it (npm run e2e with next dev) is red until the owner decides the next dev deviation (deviations: SF-111, Verify, and the SF-107 entry of 2026-10-30)."
+        "Status set to blocked: SF-107's verify as the brief states it (npm run e2e with next dev) is red until the owner decides the next dev deviation (deviations: SF-111, Verify, and the SF-107 entry of 2026-10-30).",
+        "Owner decision (option 2) applied in c1f4fb9: playwright.config.ts webServer runs next build && next start -p 3000 with STAGE=test, never reuses a running server, timeout 300 s; .gitignore also ignores apps/web/.lighthouseci/. npm run e2e --workspace @smart-finances/web (all specs, through the scratchpad config that only sets the Chromium path) -> 22 passed (36.1s): headers 4 (T-WEB-7/8), shell 12 (T-WEB-10/11), states 6 (T-WEB-12). tsc --noEmit exit 0; lint clean; root npm test exit 0 (37 api+contracts, 214 web in 23 files, 11 infra); npm run build infra and web exit 0."
       ],
       "review": "findings (1 major, 2 minor; all fixed in a66ca7f before commit)"
     },
@@ -169,7 +170,7 @@
     },
     {
       "id": "SF-111",
-      "status": "blocked",
+      "status": "done",
       "commit": "f155497",
       "evidence": [
         "[superseded] First attempt, before the owner chose ShellNav.tsx: stopped before writing code because the task as written needed a file outside its Files. The code landed later in f155497 (second attempt below).",
@@ -186,7 +187,8 @@
         "root npm test -> exit 0 (api+contracts 37 pass, web lint clean, web vitest Test Files 23 passed, Tests 214 passed, infra 11 pass); npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0 (/overview, /transactions, ... and /api/lang dynamic; Middleware 35.1 kB)",
         "git status after the code commit: clean except ignored build output (.next, storybook-static, next-env.d.ts, tsconfig.tsbuildinfo)",
         "Conformance round 2 (2026-10-30): still blocked. The fix the findings ask for (Option A: a production webServer in playwright.config.ts; Option B: 'unsafe-eval' in script-src only when NODE_ENV is development, in middleware.ts) touches files outside SF-111 Files and needs the owner's decision on the open deviation (deviations: SF-111, Verify; decidedBy empty). Not applied.",
-        "Re-run under next dev (pw.local.config.ts, the brief's verify), whole suite after the SF-112 and SF-113 fixes: 9 failed, 13 passed. The 8 SF-111 failures are unchanged (shell.spec.ts:34, 96, 132, 152, 175, 192, 234, 261, all from the blocked eval), plus the strengthened SF-107 test. Against a production build (pw.prod.config.ts) the whole suite passes: 22 passed (headers 4, shell 12, states 6)."
+        "Re-run under next dev (pw.local.config.ts, the brief's verify), whole suite after the SF-112 and SF-113 fixes: 9 failed, 13 passed. The 8 SF-111 failures are unchanged (shell.spec.ts:34, 96, 132, 152, 175, 192, 234, 261, all from the blocked eval), plus the strengthened SF-107 test. Against a production build (pw.prod.config.ts) the whole suite passes: 22 passed (headers 4, shell 12, states 6).",
+        "Owner decision (option 2) applied in c1f4fb9: playwright.config.ts webServer runs next build && next start -p 3000 with STAGE=test, never reuses a running server, timeout 300 s; .gitignore also ignores apps/web/.lighthouseci/. npm run e2e --workspace @smart-finances/web (all specs, through the scratchpad config that only sets the Chromium path) -> 22 passed (36.1s): headers 4 (T-WEB-7/8), shell 12 (T-WEB-10/11), states 6 (T-WEB-12). tsc --noEmit exit 0; lint clean; root npm test exit 0 (37 api+contracts, 214 web in 23 files, 11 infra); npm run build infra and web exit 0."
       ],
       "review": ""
     },
@@ -268,7 +270,7 @@
       "date": "2026-10-30",
       "task": "SF-109",
       "from": "no task lists .gitignore",
-      "proposal": "Add apps/web/storybook-static/, apps/web/test-results/ and apps/web/playwright-report/ to .gitignore so build and test output cannot be committed.",
+      "proposal": "Add apps/web/storybook-static/, apps/web/test-results/ and apps/web/playwright-report/ to .gitignore so build and test output cannot be committed. Also apps/web/.lighthouseci/ (Lighthouse CI output, SF-113), under the same owner approval.",
       "decidedBy": "owner, in chat, 2026-10-30",
       "newDecision": "pending: the planning session records it"
     },
@@ -277,16 +279,16 @@
       "task": "SF-111",
       "from": "pr-smart-finances.md SF-111 Verify (npm run e2e runs Playwright against next dev, SF-103 playwright.config.ts) with the SF-107 content policy (Contracts \"Response headers\": script-src 'self' 'nonce-<n>' 'strict-dynamic', no 'unsafe-eval')",
       "proposal": "next dev cannot run client code under the contract's policy: it evaluates strings, so pages never hydrate in dev and the shell e2e (menu panel, focus after client navigation, language form) fails, while it passes 12/12 against next build + next start. Option A (recommended): apps/web/playwright.config.ts webServer runs a production server (next build && next start -p 3000, STAGE=test), so the e2e and its policy checks test what ships; slower e2e start. Option B: apps/web/src/middleware.ts adds 'unsafe-eval' to script-src only when NODE_ENV === 'development' (Next's documented pattern), production unchanged; also needed for local next dev to work at all. Both touch a file outside SF-111 Files; A and B can be combined.",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "owner, in chat, 2026-10-30 (option 2: browser tests run against a production build, next build + next start; no 'unsafe-eval' in development)",
+      "newDecision": "pending: the planning session records it; apps/web/playwright.config.ts webServer changed"
     },
     {
       "date": "2026-10-30",
       "task": "SF-107",
       "from": "pr-smart-finances.md SF-107 Verify (npm run e2e against next dev, SF-103 playwright.config.ts) with the contract's script-src (no 'unsafe-eval')",
       "proposal": "Same decision as the SF-111 next dev deviation: the conformance fix made T-WEB-8's own-scripts test collect thrown errors and policy events on real pages, and under next dev it now fails on the blocked eval (as the shell tests do). Option A (production webServer in playwright.config.ts) or Option B ('unsafe-eval' only when NODE_ENV is development, in middleware.ts, with a middleware test that production policies never contain it) turns both green; both touch files outside SF-107 and SF-111 Files.",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "owner, in chat, 2026-10-30 (option 2: browser tests run against a production build, next build + next start; no 'unsafe-eval' in development)",
+      "newDecision": "pending: the planning session records it; apps/web/playwright.config.ts webServer changed"
     }
   ],
   "surprises": [
