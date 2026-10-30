@@ -186,9 +186,18 @@
     },
     {
       "id": "SF-114",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "9b665fe",
+      "evidence": [
+        "Tests first: none (brief lists none for SF-114; docs-only task).",
+        "Wrote docs/adr/0008-web-framework-and-host.md summarising D-62, D-65, D-89, D-93, D-102, D-138 (context, decisions, options, decision, consequences, revisit when), added its row to docs/adr/README.md, README \"Layout\" (apps/web as the Next.js app, new packages/contracts row) and \"Status\" (Amplify host, Vercel project stays off) only.",
+        "npm test (root) -> 11 tests, 11 pass, 0 fail",
+        "npm run build --workspace @smart-finances/infra -> exit 0",
+        "npm run build --workspace @smart-finances/web -> exit 0",
+        "npm run lint --workspace @smart-finances/web -> exit 0 (eslint clean, prettier: all matched files use Prettier code style)",
+        "cd apps/web && npx tsc --noEmit -> exit 0",
+        "git status after commit: clean except the already untracked apps/web/storybook-static/"
+      ],
       "review": ""
     }
   ],
@@ -260,6 +269,7 @@
     "SF-109: apps/web/storybook-static/ (the test-storybook build) is not git-ignored and .gitignore is outside SF-109 Files, so it is left untracked and uncommitted; it needs a .gitignore line. The test runner here uses /opt/pw-browsers/chromium through CHROME_PATH, read by the committed .storybook/test-runner-jest.config.mjs only when set; CI leaves it unset and needs playwright install chromium.",
     "SF-109: the brief named a storybook script under SF-103 but package.json had none; SF-109 added storybook, build-storybook and test-storybook. Stories set the language and scheme through Storybook globals (locale, theme); the preview decorator sets html lang and data-theme and wraps NextIntlClientProvider. Fonts in Storybook come from the @fontsource CSS files, not next/font.",
     "SF-109: one new message key, ui.typeToConfirm (\"Type {word} to confirm\" / \"Escribe {word} para confirmar\"), in both files; everything else reuses existing keys (shell.month, shell.noRateKey, shell.menu, states.loading, states.retry, auth.common.cancel).",
-    "SF-111: the brief's 'MenuPanel as the only client island' cannot hold with SF-109's MenuPanel API (render-function children) under the React Server Components rules; and a server layout cannot mark the current screen because App Router layouts get no pathname and do not re-render between sibling pages. Recorded as a deviation; the task is blocked until the owner picks the extra client file (ui/ShellNav.tsx) or a MenuPanel change. Also seen: the Icon primitive has no nav icons (prototype uses Tabler layout-dashboard, arrows-exchange, list-check, upload, coin, database); Icon.tsx is SF-109's file, so the shell would import those Tabler icons directly or Icon.tsx needs adding to Files too."
+    "SF-111: the brief's 'MenuPanel as the only client island' cannot hold with SF-109's MenuPanel API (render-function children) under the React Server Components rules; and a server layout cannot mark the current screen because App Router layouts get no pathname and do not re-render between sibling pages. Recorded as a deviation; the task is blocked until the owner picks the extra client file (ui/ShellNav.tsx) or a MenuPanel change. Also seen: the Icon primitive has no nav icons (prototype uses Tabler layout-dashboard, arrows-exchange, list-check, upload, coin, database); Icon.tsx is SF-109's file, so the shell would import those Tabler icons directly or Icon.tsx needs adding to Files too.",
+    "SF-114: the repo markdown (README.md, docs/adr/*.md) does not follow prettier at HEAD (no blank line after headings), and markdown is outside the web lint glob; the new ADR follows the existing ADR house style instead of prettier formatting."
   ]
 }
