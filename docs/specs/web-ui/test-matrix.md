@@ -45,7 +45,7 @@ status: draft
 | T-WAUTH-4 | AC-15, D-91 | SF-142 | unit | G-merge | Pre-auth rows expire after 15 minutes and are deleted at sign-in; a new session id each time. |
 | T-WAUTH-5 | AC-17, D-120 | SF-143 | unit | G-merge | Counters refuse at each limit and reset at the window edge; keys hold no raw email or IP. |
 | T-WAUTH-6 | AC-19, D-120 | SF-144 | unit | G-merge | A proof-of-work answer is accepted once, refused when reused, wrong or older than 10 minutes. |
-| T-WAUTH-7 | AC-17, AC-19, D-115 | SF-145 | unit | G-merge | A post with a missing, null or foreign Origin gets 403; an auth post without proof of work is refused. |
+| T-WAUTH-7 | AC-17, AC-19, D-115 | SF-145 | unit | G-merge | An action with a missing, null or foreign Origin gets auth.forbidden; an auth action without proof of work is refused. |
 | T-WAUTH-8 | AC-12, AC-20, D-117 | SF-146 | unit | G-merge | A breached password is refused; only 5 hash characters are sent; an API error accepts and logs. |
 | T-WAUTH-9 | AC-12, D-106 | SF-148 | unit | G-merge | Sign-up again with an unconfirmed email replaces it, so only the new password works. |
 | T-WAUTH-10 | AC-12, D-75 | SF-148 | unit | G-merge | Known and unknown emails get the same reply and timing; code emails stop at the cap. |

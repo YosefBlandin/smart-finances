@@ -23,7 +23,7 @@ status: draft
 ## Read first
 1. This file, all of it.
 2. intent.md: Acceptance criteria, No-gos, Glossary.
-3. architecture.md: Components "Code structure", "Auth flows (web server)", "Sessions and accounts"; Contracts "Interfaces between the PRs", "Cookies", "Sessions table", "Accounts table", "Limits", "Password and code rules", "Security events", "Web server settings"; "States and exits" rows sign-up to reset confirm.
+3. architecture.md: Components "Code structure", "Auth flows (web server)", "Sessions and accounts"; Contracts "Ports", "Interfaces between the PRs", "Cookies", "Sessions table", "Accounts table", "Limits", "Password and code rules", "Security events", "Web server settings"; "States and exits" rows sign-up to reset confirm.
 4. CLAUDE.md in the worktree, if present.
 5. test-matrix.md rows whose task is SF-141 to SF-153.
 
@@ -98,8 +98,8 @@ status: draft
 - Verify: `npm test --workspace @smart-finances/web -- src/adapters/adapters.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
 ### SF-142 · Sessions and pre-auth: policy, port and DynamoDB adapter
-- Implements: AC-15, AC-16, D-72, D-91 · After: SF-141 · Judgment: high
-- Files: apps/web/src/domain/session-policy.ts (new), apps/web/src/ports/{SessionStore,PreAuthStore}.ts, apps/web/src/adapters/dynamodb/sessions.ts (new), apps/web/src/application/session.ts (new), apps/web/src/domain/session-policy.test.ts (new), apps/web/src/adapters/dynamodb/sessions.test.ts (new)
+- Implements: AC-15, AC-16, D-72, D-91 · After: SF-147 · Judgment: high
+- Files: apps/web/src/domain/session-policy.ts (new), apps/web/src/adapters/dynamodb/sessions.ts (new), apps/web/src/application/session.ts (new), apps/web/src/app/cookies.ts (new: sets and reads __Host-sid and __Host-pre with next/headers), apps/web/src/domain/session-policy.test.ts (new), apps/web/src/adapters/dynamodb/sessions.test.ts (new)
 - Tests first: T-WAUTH-3, T-WAUTH-4
 - Do:
   - Policy: idle 30 minutes, absolute 12 hours, refresh when under 5 minutes left; reads check both themselves.
@@ -108,7 +108,7 @@ status: draft
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
 ### SF-143 · Limits: window math, counter port and adapter
 - Implements: AC-17, D-120, D-115 · After: SF-142 · Judgment: high
-- Files: apps/web/src/domain/limits.ts (new), apps/web/src/ports/Counter.ts, apps/web/src/adapters/dynamodb/counters.ts (new), apps/web/src/domain/limits.test.ts (new)
+- Files: apps/web/src/domain/limits.ts (new), apps/web/src/application/limits.ts (new: hit(scope, value)), apps/web/src/adapters/dynamodb/counters.ts (new), apps/web/src/domain/limits.test.ts (new)
 - Tests first: T-WAUTH-5
 - Do:
   - Window start = floor(now / window) * window; scopes and values per Contracts "Limits"; keys HMAC-SHA256 base64url of email|address prefix (IPv4 /24, IPv6 /48) or the sub; client IP is the right-most X-Forwarded-For entry. STAGE=test person limit 5 a minute.
@@ -128,7 +128,7 @@ status: draft
 - Files: apps/web/src/app/guarded.ts (new), apps/web/src/app/guarded.test.ts (new)
 - Tests first: T-WAUTH-7
 - Do:
-  - guarded(schema, opts, fn): exact Origin = WEB_ORIGIN (missing or null refused); auth actions need proof of work, then the counters; money actions need the session and consent (allowDeleting for the finish step); input parsed by the Zod schema.
+  - guarded(schema, { kind: "auth" }, fn) for now: exact Origin = WEB_ORIGIN from headers() (missing or null → messageKey auth.forbidden), then proof of work, then the counters, then the Zod input. SF-150 adds kind "money".
   - Returns { ok: true, data } or { ok: false, messageKey, retryAfterSeconds? }; never throws to the client.
 - Verify: `npm test --workspace @smart-finances/web -- src/app/guarded.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
@@ -141,11 +141,11 @@ status: draft
 - Verify: `npm test --workspace @smart-finances/web -- src/adapters/pwned.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
 ### SF-147 · Identity provider port and Cognito adapter
-- Implements: AC-1, AC-12, AC-13, AC-20, D-73 · After: SF-141 · Judgment: high
+- Implements: AC-1, AC-12, AC-13, AC-20, D-73 · After: SF-141 (runs before SF-142) · Judgment: high
 - Files: apps/web/src/ports/IdentityProvider.ts, apps/web/src/adapters/cognito.ts (new), apps/web/src/adapters/memory/identity.ts, apps/web/src/adapters/cognito.test.ts (new)
 - Tests first: T-WAUTH-18
 - Do:
-  - Methods: signUp, confirm, resend, passwordAuth, respondSetup (associate + verify), respondCode, forgotPassword, confirmForgot, adminGet, adminDelete, adminGlobalSignOut, refresh; secret hash base64(HMAC-SHA256(secret, username + client id)); clientMetadata.lang on sign-up and reset.
+  - The IdentityProvider methods in architecture.md Contracts "Ports"; secret hash base64(HMAC-SHA256(secret, username + client id)); clientMetadata.lang on sign-up and reset. Tests use a hand-written fake SDK client.
   - Memory fake: email code 123456, authenticator code 000000, deterministic subs.
 - Verify: `npm test --workspace @smart-finances/web -- src/adapters/cognito.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
@@ -168,16 +168,16 @@ status: draft
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
 ### SF-150 · Consent, the account store and the money guard
 - Implements: AC-14, D-87, D-108 · After: SF-149 · Judgment: high
-- Files: apps/web/src/ports/AccountStore.ts, apps/web/src/adapters/dynamodb/accounts.ts (new), apps/web/src/application/guard.ts (new), apps/web/src/app/consent/ (new), apps/web/src/app/(app)/layout.tsx, apps/web/src/application/guard.test.ts (new)
+- Files: apps/web/src/adapters/dynamodb/accounts.ts (new), apps/web/src/application/guard.ts (new), apps/web/src/app/guarded.ts (adds kind "money"), apps/web/src/app/consent/ (new), apps/web/src/app/(app)/layout.tsx, apps/web/src/application/auth/signIn.ts (writes consent), apps/web/src/application/guard.test.ts (new)
 - Tests first: T-WAUTH-13
 - Do:
-  - AccountStore: getAccount, putConsent, markDeleting, reserveImport, releaseImport, resetStoredBytes, deleteAccountRow (conditional updates).
+  - AccountStore per Contracts "Ports", with conditional updates; guarded kind "money" (opts allowDeleting) runs requireMoneyAccess before the input.
   - Consent from the pre-auth row at the first completed sign-in; requireMoneyAccess needs session, consent and status active; /consent asks for the current versions; refusing signs out.
 - Verify: `npm test --workspace @smart-finances/web -- src/application/guard.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
 ### SF-151 · Reset the password and sign out
 - Implements: AC-16, AC-20, D-92, D-122 · After: SF-149 · Judgment: high
-- Files: apps/web/src/application/auth/{reset,signOut}.ts (new), apps/web/src/app/(auth)/reset/ (new), apps/web/src/application/auth/reset.test.ts (new)
+- Files: apps/web/src/application/auth/{reset,signOut}.ts (new), apps/web/src/app/(auth)/reset/ (new), apps/web/src/app/(auth)/sign-in/page.tsx (shows the notice), apps/web/src/application/auth/reset.test.ts (new)
 - Tests first: T-WAUTH-14, T-WAUTH-15
 - Do:
   - Forgot (same reply for any email, capped), confirm with the breached check, adminGet for the sub, signOutEverywhere, then a 10-minute HttpOnly notice cookie so sign-in says "your password was changed" (D-122).

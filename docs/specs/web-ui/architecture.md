@@ -44,8 +44,8 @@ apps/web/src/
                 requestImport, erase), guard (requireMoneyAccess), pow. Import domain/ and ports/ only.
   ports/        IdentityProvider, SessionStore, PreAuthStore, AccountStore, Counter, PowStore, DataApi,
                 BreachChecker, SecretStore, Settings, Clock, Logger, ParameterStore.
-  adapters/     cognito/, dynamodb/ (sessions, pre-auth, accounts, counters, pow), data-api/ (fetch + contracts),
-                pwned/, secrets/, ssm/, memory/ (every port, for STAGE=test and Storybook), container.ts.
+  adapters/     cognito.ts, dynamodb/ (sessions, pre-auth, accounts, counters, pow), data-api.ts (fetch + contracts),
+                pwned.ts, secrets.ts, ssm.ts, env-settings.ts, log.ts, memory/ (every port, for STAGE=test and Storybook), container.ts.
   app/          Next.js delivery: pages, layouts, actions.ts files (server actions through guarded()),
                 api/ JSON routes; calls application/ through container.ts only.
   ui/ screens/ queries/ i18n/ styles/   presentation: parts, screen components, TanStack hooks, next-intl, tokens.
@@ -66,27 +66,27 @@ apps/web/src/
 - Serves: AC-4, AC-5, AC-8, AC-14; D-10, D-11, D-19, D-23, D-30, D-42, D-83, D-86, D-126.
 
 ### Auth flows (web server)
-- Where: apps/web/src/server/auth/ (new): signUp.ts, confirm.ts, signIn.ts, challenges.ts, reset.ts, signOut.ts, deleteAccount.ts, preauth.ts; apps/web/src/app/(auth)/ (new) screens.
+- Where: apps/web/src/application/auth/ (new): signUp.ts, confirm.ts, signIn.ts, reset.ts, signOut.ts; apps/web/src/application/account/deleteAccount.ts (new); apps/web/src/app/(auth)/ (new) screens with actions.ts.
 - Calls the pool with the confidential client (secret hash) (D-73). Before sign-up and reset it checks the new password against the Pwned Passwords range API (D-117). The client IP for the counters is the right-most X-Forwarded-For entry added by Amplify's CDN, never the left-most; a qa check confirms the header.
 - Between steps the state lives in the pre-auth row (D-91); a completed sign-in deletes it and issues a new __Host-sid.
 - At the first completed sign-in the consent from the pre-auth row is written to the accounts table before any money screen (D-87); a person without a consent row sees the consent screen.
-- Every auth post is a route handler that checks the Origin against the stage's web address (D-115), then the proof-of-work answer, then the window counters (D-120); a refusal shows the "too many tries" message with the wait.
+- Every auth form is a server action through guarded() (D-125): the Origin against the stage's web address (D-115), then the proof-of-work answer, then the window counters (D-120); a refusal shows the "too many tries" message with the wait.
 - Sign-up, reset and sign-in give the same message and timing for known and unknown emails. A sign-up for an existing unconfirmed email replaces it with the new password (D-106); code emails are capped per email (Limits).
 - After a reset: global sign-out, session rows removed and a notice email (D-92, D-115). Delete account: D-104, after a full re-sign-in. Lost authenticator: the owner's runbook in Docs (D-115).
 - Logs: one security event per outcome (Contracts); the logger refuses fields named password, code, secret or token.
 - Serves: AC-1, AC-12, AC-13, AC-14, AC-17, AC-18, AC-19, AC-20; D-66, D-73, D-75, D-87, D-91, D-92, D-103, D-104, D-106, D-115, D-117, D-120.
 
 ### Sessions and accounts
-- Where: apps/web/src/server/session.ts (new), apps/web/src/server/accounts.ts (new); tables in smart-finances:infra/lib/web-stack.ts#WebStack (new).
+- Where: apps/web/src/application/session.ts (new), apps/web/src/adapters/dynamodb/{sessions,accounts}.ts (new); tables in smart-finances:infra/lib/web-stack.ts#WebStack (new).
 - Sessions: D-72. The key is the SHA-256 of the cookie id, so a table read cannot be replayed as a cookie. Every read checks expires_at and last_seen_at itself; the TTL only cleans up. Refresh on the server when the access token has under 5 minutes left. Sign out removes the row and revokes the refresh token.
 - Accounts: one row per person with consent, status (active or deleting) and the per-person caps, reserved by one conditional update (D-87, D-104, D-114).
 - Serves: AC-14, AC-15, AC-16, AC-17, AC-18; D-72, D-87, D-91, D-104, D-114.
 
 ### Data access (web server)
-- Where: apps/web/src/server/api.ts (new), apps/web/src/app/api/data/ (new), apps/web/src/queries/ (new), apps/web/src/actions/ (new).
-- Server reads: api.ts adds the access token, times out at 5 seconds (D-101), parses every reply with the shared Zod schema (D-133), keys errors on HTTP status (401: one refresh, then signed out; 403 and 404: not found; 409, 429 and 5xx: failed state with retry) and counts the request against the person's limit.
-- Browser reads: /api/data/* JSON routes (one per data read: transactions, totals, rates, review, imports, import) check the session and consent, call api.ts and return the parsed JSON; TanStack Query hooks in queries/ use them, with infinite queries for cursor paging and a stale time of 30 seconds (D-127, D-130).
-- Changes: server actions in actions/ (review choice, rate, import request, erase, delete account), each through guarded() (D-125); review and rate mutations are optimistic and roll back on error, then invalidate totals (D-131); the others wait for the answer.
+- Where: apps/web/src/adapters/data-api.ts (new), apps/web/src/application/data/ (new), apps/web/src/app/api/data/ (new), apps/web/src/queries/ (new), server actions in apps/web/src/app/(app)/*/actions.ts.
+- Server reads: the data-api adapter adds the access token, times out at 5 seconds (D-101), parses every reply with the shared Zod schema (D-133), keys errors on HTTP status (401: one refresh, then signed out; 403 and 404: not found; 409, 429 and 5xx: failed state with retry) and counts the request against the person's limit.
+- Browser reads: /api/data/* JSON routes (one per data read: transactions, totals, rates, review, imports, import) check the session and consent, call a read use case and return the parsed JSON; TanStack Query hooks in queries/ use them, with infinite queries for cursor paging and a stale time of 30 seconds (D-127, D-130).
+- Changes: server actions (review choice, rate, import request, erase, delete account), each through guarded() (D-125); review and rate mutations are optimistic and roll back on error, then invalidate totals (D-131); the others wait for the answer.
 - Imports: the action reserves a cap slot and checks the pause switch (D-114), asks POST /imports and returns the presigned form; the browser sends the file with fetch and FormData; the import query polls until a final status.
 - Serves: AC-5, AC-6, AC-7, AC-9, AC-15, AC-17; D-53, D-82, D-96, D-101, D-114, D-124, D-125, D-127, D-130, D-131.
 
@@ -138,7 +138,7 @@ apps/web/src/
 - Serves: AC-15 to AC-19; D-72, D-87, D-88, D-89, D-91 to D-93, D-102, D-104, D-106, D-107, D-110 to D-112, D-135.
 
 ### Alarms
-- Where: smart-finances:infra/lib/alarms-stack.ts#AlarmsStack (new); apps/web/src/server/log.ts (new).
+- Where: smart-finances:infra/lib/alarms-stack.ts#AlarmsStack (new); apps/web/src/adapters/log.ts (new).
 - What: one SNS topic per stage with the owner's email, the alarms in Contracts, one dashboard (D-80). Metric filters on /aws/amplify/<app id>; the hourly job calls /api/health (D-107), and a missing health line for an hour breaches, so a silent log pipe alarms.
 - Serves: AC-17, AC-19; D-80.
 
@@ -160,6 +160,25 @@ apps/web/src/
 ### Data API
 The routes, shapes, error codes and paging are the data-architecture spec's: docs/specs/data-architecture/architecture.md, Contracts, "HTTP routes". This spec adds none. The web server sends authorization: Bearer <access token>; the API's audience check takes the web-server client id, which the access token carries as client_id (D-53).
 
+### Ports (D-138)
+Every port is a TypeScript interface in apps/web/src/ports/; results never throw for expected failures, they return { ok: false, reason }. Times are epoch milliseconds from Clock.
+| Port | Methods |
+|---|---|
+| Clock | now(): number |
+| Settings | get(): Settings (the Web server settings, Zod-parsed) |
+| SecretStore | get(arn): Promise<string> |
+| ParameterStore | get(name): Promise<string \| undefined> (60-second cache) |
+| Logger | event(name, outcome, { sub?, requestId }): void |
+| SessionStore | create(row): Promise<void>; get(idHash); touch(idHash, now); delete(idHash); listBySub(sub); deleteBySub(sub) |
+| PreAuthStore | create(row); get(idHash); update(idHash, patch); delete(idHash) |
+| Counter | incr(key, windowStart, ttl): Promise<number> |
+| PowStore | claim(saltHash, ttl): Promise<boolean> (true only the first time) |
+| AccountStore | getAccount(sub); putConsent(sub, consent); markDeleting(sub, now); reserveImport(sub, { day, bytes, importId }): Promise<{ ok } \| { ok: false, reason: 'daily' \| 'bytes' \| 'running' }>; releaseImport(sub, importId, finalBytes); resetStoredBytes(sub); deleteAccountRow(sub) |
+| BreachChecker | isBreached(password): Promise<boolean \| 'unavailable'> |
+| IdentityProvider | signUp(email, password, lang); confirm(email, code); resend(email, lang); passwordAuth(email, password) → { tokens } \| { challenge: 'MFA_SETUP' \| 'SOFTWARE_TOKEN_MFA', session }; associate(session) → { secret, session }; verifySetup(session, code); respondCode(email, session, code) → { tokens }; forgot(email, lang); confirmForgot(email, code, password); refresh(sub, refreshToken) → tokens; revoke(refreshToken); adminGet(email) → { sub, status }; adminDelete(sub); adminGlobalSignOut(sub) |
+| DataApi | one method per route in @smart-finances/contracts (listTransactions, totals, rates, putRate, review, putReview, listImports, getImport, requestImport, exportCsv, erase), each (token, input) → { ok, data } \| { ok: false, kind: 'unauthorized' \| 'not_found' \| 'conflict' \| 'limited' \| 'failed', code?, retryAfter? } |
+Tokens = { access, id, refresh, expiresAt }. The Cognito username is the email for sign-in calls and the sub for refresh (secret hash).
+
 ### Interfaces between the PRs
 What each PR (pr-smart-finances*.md) provides to the later ones. A later PR imports these names; it never redefines them. Paths are under apps/web/src unless stated.
 - PR 1: packages/contracts (@smart-finances/contracts: FIELDS, KINDS, CATEGORIES, Zod schemas per data route); apps/web scripts test, e2e (STAGE=test, port 3000), lint, storybook, test-storybook, lhci; messages/en.json and es.json with next-intl; ui/ parts with stories; queries/provider.tsx and prefetch(); ports/ interfaces and adapters/memory/; adapters/container.ts; (app) layout and (auth) group; fixtures in apps/web/fixtures/sample.json. Until PR 3, code reads process.env (STAGE, COMMIT_SHA, UPLOAD_HOST, WEB_ORIGIN) with test defaults.
@@ -178,6 +197,8 @@ What each PR (pr-smart-finances*.md) provides to the later ones. A later PR impo
 | /api/data/export | signed in with consent, GET | the CSV download |
 | /api/lang | anyone, POST | sets the lang cookie |
 | /api/health | anyone | { sha, stage } for the deploy check and the heartbeat |
+| /goodbye | anyone | after delete account: the counts from a 5-minute signed, HttpOnly goodbye cookie |
+| /too-many | signed in | the person limit page with the wait |
 
 Every change is a server action through guarded() (D-125), not a route.
 
@@ -194,7 +215,8 @@ Nothing else is written to browser storage.
 | Item | Key | Fields |
 |---|---|---|
 | session | pk SID#<sha256 of id> | sub, access_token, id_token, refresh_token, created_at, last_seen_at, expires_at (+12 h) |
-| pre-auth | pk PRE#<sha256 of id> | step, email_hash, challenge_session, totp_secret?, accepted_versions, lang, attempts, expires_at (+15 min) |
+| pre-auth | pk PRE#<sha256 of id> | step, email (needed for confirm and code; never logged), email_hash, challenge_session, totp_secret?, accepted_versions, lang, attempts, expires_at (+15 min) |
+| pow | pk POW#<sha256 of salt> | expires_at (+10 min) |
 | counter | pk RL#<scope>#<value>#<window start> | n, expires_at (window end + 1 min); value is an HMAC of the email or address prefix, or the sub (D-115) |
 | GSI | sub | every session of a person |
 Idle 30 minutes; absolute 12 hours; a new id at every sign-in.
@@ -226,7 +248,7 @@ Length 12 to 128, any characters, no composition rules or expiry; breached passw
 | Name | Source | Written by | Read by |
 |---|---|---|---|
 | STAGE, AWS_REGION | stage | WebStack, branch variables | server |
-| API_URL | api-url parameter | WebStack | api.ts |
+| API_URL | api-url parameter | WebStack | the data-api adapter |
 | USER_POOL_ID, WEB_CLIENT_ID | DataStack parameters | WebStack | auth flows |
 | WEB_CLIENT_SECRET_ARN, HMAC_SECRET_ARN | parameters | WebStack | server, read at run time through the compute role |
 | SESSIONS_TABLE, ACCOUNTS_TABLE | WebStack | WebStack | session.ts, accounts.ts |

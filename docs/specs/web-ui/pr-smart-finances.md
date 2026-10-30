@@ -23,7 +23,7 @@ status: draft
 ## Read first
 1. This file, all of it.
 2. intent.md: Acceptance criteria, No-gos, Glossary.
-3. architecture.md: Components "Web app (Next.js)", "Code structure", "Design tokens and parts", "Words and formats", "Shared contracts package"; Contracts "Interfaces between the PRs", "Web routes", "Cookies", "Response headers", "Web server settings".
+3. architecture.md: Components "Web app (Next.js)", "Code structure", "Design tokens and parts", "Words and formats", "Shared contracts package"; Contracts "Ports", "Interfaces between the PRs", "Web routes", "Cookies", "Response headers", "Web server settings".
 4. docs/specs/data-architecture/architecture.md: Contracts "HTTP routes" (for SF-102).
 5. test-matrix.md rows whose task is SF-101 to SF-114.
 
@@ -52,15 +52,13 @@ status: draft
 - D-58: Fonts (Chivo, Chivo Mono) and Tabler icons are bundled; no font or icon service at run time.
 - D-63: Red is also allowed for errors and failed statuses (error notes, failed or expired imports, a wrong password). Among money figures it stays only on the one bad figure. Narrows D-13.
 - D-86: Skipped-row reasons: a translated lead, then the importer's own words as raw text in English. Narrows AC-4 for that text.
-- D-100: The prototype gains every auth and account screen (sign-up, confirm, setup, sign-in, code, reset, lost authenticator, delete account, too many tries, not found) in both languages, and fixes its sign-in copy, before any screen is coded.
 - D-108: Middleware does only the nonce, the content policy and a cookie-presence redirect; the session, consent and deleting checks run in a server-only helper called by the money layout and every route handler.
 - D-121: Integration branch: the four PRs (foundation, infra, auth, screens) each open as a draft into feature/web-ui, in order; once all are merged there, one PR from feature/web-ui into qa ships infra and web in one merge. The agent commits, pushes its feature branches and opens draft PRs; the user reviews, merges and promotes. Narrows D-6.
 - D-128: Loading: skeletons for content that is loading, and a spinner only inside the button whose action runs; nothing else spins. Narrows D-101.
 - Values:
   - Prototype: https://claude.ai/code/artifact/10e1188c-9601-4133-9a2d-3502b0bc2ac6 (synthetic data only).
-  - Packages allowed: next 15, react 19, typescript, zod, next-intl, @tanstack/react-query (+ devtools), vitest, jsdom, @testing-library/react, @playwright/test, @axe-core/playwright, storybook (@storybook/nextjs, -addon-a11y, -test-runner), eslint (eslint-config-next, -plugin-jsx-a11y, -plugin-import), prettier, @lhci/cli, @tabler/icons-react, @fontsource/chivo, @fontsource/chivo-mono.
+  - Packages allowed: next 15, react 19, typescript, zod, next-intl, @tanstack/react-query (+ devtools), vitest, jsdom, @testing-library/react, @playwright/test, @axe-core/playwright, storybook (@storybook/nextjs, -addon-a11y, -test-runner, http-server, wait-on), eslint (eslint-config-next, -plugin-jsx-a11y, -plugin-import), prettier, @lhci/cli, @tabler/icons-react, @fontsource/chivo, @fontsource/chivo-mono.
   - Web tests: `npm test --workspace @smart-finances/web -- <file>`; browser tests: `npm run e2e --workspace @smart-finances/web -- <file>`.
-  - Breakpoints: top bar under 960px; touch targets 44px; click targets 32px.
 - Rules: README.md "Layout" (only data/synthetic is committed); .gitignore block "Real financial data stays local"; docs/adr/README.md (one ADR per decision, NNNN-short-title.md); docs/threat-model.md (update when a trust boundary or data store changes); public repo: no personal data or account ids in anything committed.
 
 ## ALWAYS / ASK FIRST / NEVER
@@ -95,10 +93,10 @@ status: draft
 - Files: the prototype artifact (read and republish with the Artifact tool; link in Values), apps/web/design/prototype-screens.md (new), apps/web/fixtures/sample.json (new)
 - Tests first: T-WEB-1
 - Do:
-  - Use the account skill smart-finances-ui (anthropic-skills:smart-finances-ui) and its checks: calm-ui css_audit.py and contrast.py, prototype-check syntax_check.py, class_check.py and shoot.py; without the skill, the prototype file and decisions.md are the sources.
+  - Use the account skill smart-finances-ui and its checks (calm-ui css_audit.py, contrast.py; prototype-check syntax_check.py, class_check.py, shoot.py); without it, the prototype and decisions.md are the sources.
   - Add, in English and Spanish: sign-up with terms and privacy acceptance and the proof-of-work note; confirm (resend, expired); setup with QR and key text; code; reset and reset confirm; lost authenticator; consent; delete account (re-sign-in, warning, partial failure, signed-out result with counts); too many tries; not found; signed out after idle.
-  - Copy fixes: "Sign out when you’re done; the session also ends after 30 idle minutes"; no temporary-password screen.
-  - Republish; list every new screen and state in prototype-screens.md with proposed message keys (screen.part).
+  - Copy: "Sign out when you’re done; the session also ends after 30 idle minutes"; no temporary-password screen.
+  - Republish; list each new screen and state in prototype-screens.md with message keys (screen.part).
   - Export the prototype’s synthetic sample (months, rates, imports in every state, review rows, mercadopago rows) to apps/web/fixtures/sample.json; 2026-03 stays a bad month and 2026-10 has no rate.
 - Verify: the skill’s scripts on the saved prototype → syntax, class and smoke checks pass; screenshots in both languages and themes saved under apps/web/design/shots/ (git-ignored)
 - Done when: verify is green, evidence is in progress-smart-finances.json
@@ -108,7 +106,7 @@ status: draft
 - Tests first: T-WEB-2
 - Do:
   - Root workspaces gain "packages/*". FIELDS, KINDS and CATEGORIES (rule categories in rule order, then Uncategorized) live in the package; schema.mjs and categories.mjs import them and keep their exports.
-  - routes.mjs: one Zod schema per request and reply in docs/specs/data-architecture/architecture.md, Contracts "HTTP routes", plus the error shape { error: { code, message } }.
+  - routes.mjs: one Zod schema per request and reply in docs/specs/data-architecture/architecture.md, Contracts "HTTP routes", plus the error shape { error: { code, message } }; SOURCES with file-name rules and caps: mercadopago and csv end in .csv (5 MiB), notion in .md (5 MiB), excel matches name_Mon_YYYY.xlsx (20 MiB).
 - Verify: `node --test packages/contracts/test/contracts.test.mjs` and the root `npm test` → all pass
 - Done when: verify is green, evidence is in progress-smart-finances.json
 ### SF-103 · Scaffold the Next.js app with a health route
@@ -166,7 +164,7 @@ status: draft
 - Files: apps/web/src/domain/ (new), apps/web/src/application/ (new), apps/web/src/ports/ (new: one interface file per port in architecture.md "Code structure"), apps/web/src/adapters/memory/ (new), apps/web/src/adapters/container.ts (new), apps/web/src/adapters/container.test.ts (new)
 - Tests first: T-WEB-14
 - Do:
-  - Port interfaces only (signatures from architecture.md Contracts "Interfaces between the PRs"); memory adapters implement each with Maps, conditional updates and a controllable Clock.
+  - Port interfaces exactly as architecture.md Contracts "Ports"; memory adapters implement each with Maps, conditional updates and a controllable Clock.
   - container.ts returns the memory adapters when STAGE=test; real adapters are added by later PRs.
 - Verify: `npm test --workspace @smart-finances/web -- src/adapters/container.test.ts` and the lint → pass
 - Done when: verify is green, evidence is in progress-smart-finances.json
@@ -176,7 +174,7 @@ status: draft
 - Tests first: T-WEB-9, T-WEB-15
 - Do:
   - Parts use tokens only; Button shows a spinner only while busy; Field ties its error with aria-describedby; form messages role=alert; red only for errors and failed statuses (D-63).
-  - Storybook (Next.js framework) with the a11y add-on and the test runner; a story per part in both languages and both colour schemes; script test-storybook.
+  - Storybook (Next.js framework) with the a11y add-on and the test runner; a story per part in both languages and both colour schemes; script test-storybook builds Storybook, serves it with http-server, waits with wait-on, and runs the test runner.
 - Verify: `npm test --workspace @smart-finances/web -- src/ui/ui.test.tsx` and `npm run test-storybook --workspace @smart-finances/web` → pass
 - Done when: verify is green, evidence is in progress-smart-finances.json
 ### SF-110 · Add the TanStack Query provider and hydration helper

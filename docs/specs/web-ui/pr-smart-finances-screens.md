@@ -23,7 +23,7 @@ status: draft
 ## Read first
 1. This file, all of it.
 2. intent.md: Acceptance criteria, No-gos, Glossary.
-3. architecture.md: Components "Code structure", "Data access (web server)", "Screens", "Screen states"; Contracts "Interfaces between the PRs", "Data API", "Accounts table", "Limits"; "States and exits" rows import, erasing, deleting account.
+3. architecture.md: Components "Code structure", "Data access (web server)", "Screens", "Screen states"; Contracts "Ports", "Interfaces between the PRs", "Data API", "Accounts table", "Limits"; "States and exits" rows import, erasing, deleting account.
 4. docs/specs/data-architecture/architecture.md: Contracts "HTTP routes".
 5. test-matrix.md rows whose task is SF-161 to SF-172.
 
@@ -63,6 +63,7 @@ status: draft
 - D-138: Code architecture: the web server's logic is hexagonal (domain, application use cases, ports, adapters, with in-memory adapters for tests and Storybook); Next.js app/ only delivers (pages, layouts, server actions, JSON routes) and calls use cases through one container; presentation (ui, screens, queries, i18n) follows Next.js conventions. ESLint import rules enforce the dependency direction.
 - Values:
   - Packages allowed: aws-rum-web, plus those of PRs 1 and 3.
+  - Copy and visuals: the prototype https://claude.ai/code/artifact/10e1188c-9601-4133-9a2d-3502b0bc2ac6 and apps/web/design/prototype-screens.md (keys).
   - Caps: 10 imports a day, 200 MiB stored, one running; source maximum 20 MiB for excel, 5 MiB for the others.
   - Web tests: `npm test --workspace @smart-finances/web -- <file>`; browser tests: `npm run e2e --workspace @smart-finances/web -- <file>`.
 - Rules: README.md "Layout" (only data/synthetic is committed); .gitignore block "Real financial data stays local"; docs/adr/README.md (one ADR per decision, NNNN-short-title.md); docs/threat-model.md (update when a trust boundary or data store changes); public repo: no personal data or account ids in anything committed.
@@ -100,7 +101,7 @@ status: draft
 - Tests first: T-WSCR-1
 - Do:
   - One method per route; bearer access token; 5-second timeout; replies parsed with @smart-finances/contracts; 401 refresh once then sign out, 403 and 404 not found, 409, 429 and 5xx failed with retry; counts the person’s requests.
-  - Memory adapter: apps/web/fixtures/sample.json plus the hostile rows of data/synthetic/generate.mjs; payments-report rows are source mercadopago.
+  - Memory adapter: apps/web/fixtures/sample.json plus the adversarial rows of data/synthetic/transactions.csv copied into apps/web/fixtures/hostile.json; payments-report rows are source mercadopago. A limited result redirects server renders to /too-many and makes JSON routes answer 429.
 - Verify: `npm test --workspace @smart-finances/web -- src/adapters/data-api.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
 ### SF-162 · Overview domain: kept, typical month, bad month
@@ -108,7 +109,7 @@ status: draft
 - Files: apps/web/src/domain/money.ts (new), apps/web/src/domain/money.test.ts (new)
 - Tests first: T-WSCR-2, T-WSCR-3
 - Do:
-  - overviewModel(month, totals, rates) from GET /totals (native and usd) and GET /rates: kept in pesos at the month’s rate (cents half away from zero); typical month from 3 to 6 earlier rated months, none below 3; bad when spending exceeds earnings.
+  - overviewModel(month, totals, rates) → { earnedArs, spentArs, keptArs, keptPct, typicalPct?, typicalMonths, bad, overArs?, noRate }: dollars convert at the month’s rate (cents half away from zero); typicalPct is the average keptPct of 3 to 6 earlier rated months, absent below 3; months without a rate are skipped; bad when spending exceeds earnings.
 - Verify: `npm test --workspace @smart-finances/web -- src/domain/money.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-163 · JSON read routes and query hooks
@@ -151,7 +152,7 @@ status: draft
 - Files: apps/web/src/application/data/requestImport.ts (new), apps/web/src/app/(app)/imports/, apps/web/src/screens/imports/ (new), apps/web/src/application/data/requestImport.test.ts (new), apps/web/e2e/imports.spec.ts (new)
 - Tests first: T-WSCR-8, T-WSCR-9
 - Do:
-  - requestImport reserves a slot with AccountStore.reserveImport (D-114; imports_today resets when the UTC day changes) and checks imports-paused through ParameterStore (60-second cache); useImport releases or corrects it at the final status.
+  - requestImport checks the name and size with SOURCES from @smart-finances/contracts, reserves a slot with AccountStore.reserveImport (D-114; the day is UTC) and checks imports-paused ("true" pauses) through ParameterStore (adapters/ssm.ts, new); the getImport use case behind /api/data/imports/[id] releases or corrects it at the final status.
   - Upload with fetch and FormData to the presigned URL; skipped rows per D-86; source names and file-name rules from the data spec’s POST /imports.
 - Verify: `npm test --workspace @smart-finances/web -- src/application/data/requestImport.test.ts` and `npm run e2e --workspace @smart-finances/web -- e2e/imports.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
@@ -168,7 +169,7 @@ status: draft
 - Files: apps/web/src/application/account/deleteAccount.ts (new), apps/web/src/domain/deletion.ts (new), apps/web/src/app/(app)/data/delete/ (new), apps/web/src/app/goodbye/ (new), apps/web/src/application/account/deleteAccount.test.ts (new), apps/web/e2e/delete-account.spec.ts (new)
 - Tests first: T-WSCR-11, T-WSCR-12
 - Do:
-  - Action 1 with { email, password, code }: signIn reauth plus the code, no running_import_id, then markDeleting. Action 2 (allowDeleting): erase until 202, signOutEverywhere, adminDelete (not found is done), deleteAccountRow; then /goodbye with counts.
+  - Action 1 with { email, password, code }: signIn reauth plus the code, no running_import_id, then markDeleting. Action 2 (allowDeleting): erase until 202, signOutEverywhere, adminDelete (not found is done), deleteAccountRow; set a 5-minute signed HttpOnly goodbye cookie with the counts and go to /goodbye, a public route that reads it.
   - domain/deletion.ts holds the step order; a test fails each step and finishes it.
 - Verify: `npm test --workspace @smart-finances/web -- src/application/account/deleteAccount.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
@@ -191,7 +192,7 @@ status: draft
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-172 · Limit page and browser monitoring
 - Implements: AC-17, D-120, D-135 · After: SF-163 · Judgment: normal
-- Files: apps/web/src/app/(app)/too-many/ (new), apps/web/src/app/rum.tsx (new client component), apps/web/e2e/limit.spec.ts (new), apps/web/src/app/rum.test.ts (new)
+- Files: apps/web/src/app/(app)/too-many/ (new), apps/web/src/app/rum.tsx (new client component, mounted in app/layout.tsx), apps/web/e2e/limit.spec.ts (new), apps/web/src/app/rum.test.ts (new)
 - Tests first: T-WSCR-17, T-WSCR-20
 - Do:
   - Past the person limit (5 a minute under STAGE=test) the 429 page shows with the wait; a second signed-in test person is still served.

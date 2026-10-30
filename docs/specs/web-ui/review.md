@@ -79,6 +79,10 @@ status: draft
 | pr-smart-finances-infra.md | 2 | 2026-10-30 | cheaper | 0 | 11 | 11 | account budget in the qa alarms stack; files and grants; Lambda-backed variable merge; D-95 deferred |
 | pr-smart-finances-auth.md | 2 | 2026-10-30 | cheaper | 0 | 19 | 18 | interfaces moved to architecture.md Contracts; refresh hash uses the sub; reset looks up the sub; route names; fixed fake codes |
 | pr-smart-finances-screens.md | 2 | 2026-10-30 | cheaper | 1 (SF-163 bad month absent from the CSV) | 16 | 9 | fixtures from the prototype's sample (SF-101); route, field and limit names; constraints copied |
+| pr-smart-finances.md | 3 | 2026-10-30 | cheaper | 1 (SF-108 port signatures) | 12 | 9 | Contracts "Ports" in architecture.md; source rules in contracts; test-storybook serving |
+| pr-smart-finances-infra.md | 3 | 2026-10-30 | cheaper | 0 | 12 | 10 | advisory; values left to the executor within the contracts |
+| pr-smart-finances-auth.md | 3 | 2026-10-30 | cheaper | 2 (SF-142 order, SF-145 money mode) | 13 | 12 | SF-147 before SF-142; money mode in SF-150; pre-auth keeps the email; cookie and hit files named |
+| pr-smart-finances-screens.md | 3 | 2026-10-30 | cheaper | 2 (SF-167 name rules, SF-169 goodbye counts) | 15 | 10 | SOURCES in contracts; goodbye cookie and public route; overview model shape; release in getImport |
 
 ## Conformance review
 <!-- Before each draft PR: a fresh reviewer compares the diff with the brief and its test ids. A finding that needs a decision becomes a deviation, not an edit. -->
