@@ -23,7 +23,8 @@
     "asRecorded": "Pesos y dólares",
     "inDollars": "Todo en dólares",
     "noRateKey": "Sin cotización todavía",
-    "waiting": "Te está esperando"
+    "waiting": "Te está esperando",
+    "screens": "Pantallas"
   },
   "overview": {
     "sub": "En qué se fue la plata y con cuánto te quedaste.",

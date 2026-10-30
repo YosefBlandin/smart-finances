@@ -23,7 +23,8 @@
     "asRecorded": "Pesos and dollars",
     "inDollars": "All in dollars",
     "noRateKey": "No dollar rate yet",
-    "waiting": "Waiting for you"
+    "waiting": "Waiting for you",
+    "screens": "Screens"
   },
   "overview": {
     "sub": "Where the money went, and what you kept.",
