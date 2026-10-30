@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v2
 ---
 # Web UI: design system and screens: architecture
 
@@ -54,8 +54,23 @@ apps/web/src/
 - container.ts picks real adapters, or memory/ when STAGE=test; nothing else reads STAGE to choose behaviour.
 - Serves: D-124, D-125, D-127, D-133, D-137, D-138.
 
+### Component architecture (D-140 to D-143)
+```
+ui/primitives/   Button, Field, Chip, Note, Skeleton, CategorySquare, Icon        (no data, no app imports)
+ui/patterns/     MonthPicker, DataTable, KeptBar, BandStrip, StateBlock, CategoryRow, MenuPanel, ConfirmDialog
+                 (compose primitives; React Aria Components for interactive behaviour)
+screens/<screen>/<Section>/  View.tsx (props only) · Container.tsx (client: hooks, actions) · *.stories.tsx · *.test.tsx
+app/             pages and layouts assemble sections; server components prefetch for Containers
+```
+- Imports flow down only: app → screens → patterns → primitives; ui never imports screens, queries, application or adapters (lint, D-132, D-138).
+- Views render from props and are what Storybook and most unit tests use; Containers are thin and hold no markup beyond the View.
+- Variants are typed props rendered as data-* attributes (data-variant, data-size, data-tone); CSS modules select on them; tokens only; no className from callers.
+- Interactive behaviour (focus, keyboard, ARIA, popovers, dialogs, the month grid) comes from React Aria Components, styled through their data attributes (data-focused, data-selected, data-open).
+- Each component folder holds Component.tsx, Component.module.css, Component.stories.tsx and Component.test.tsx.
+- Serves: AC-8, AC-10; D-57, D-129, D-137, D-140 to D-143.
+
 ### Design tokens and parts
-- Where: apps/web/src/styles/tokens.css (new), apps/web/src/styles/base.css (new), apps/web/src/ui/ (new).
+- Where: apps/web/src/styles/tokens.css (new), apps/web/src/styles/base.css (new), apps/web/src/ui/primitives/ and ui/patterns/ (new, D-140).
 - What: the prototype's custom properties copied as they are, light and dark, theme from the system setting; parts use only tokens, through CSS modules (D-57). Fonts through next/font from local files (D-58); Tabler outline icons at 2px (D-17). Red: the bad money figure (AC-11) and error notes or failed statuses (D-63), never a second money figure.
 - The prototype is extended first with every auth and account screen and its states (D-100).
 - Serves: AC-10, AC-11; D-12, D-13, D-15 to D-17, D-21, D-22, D-25, D-27, D-32 to D-34, D-57, D-58, D-63, D-100.

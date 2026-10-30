@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v2
 ---
 # Web UI: design system and screens: test matrix
 
@@ -21,7 +21,7 @@ status: executing
 | T-WEB-6 | D-23, D-30, D-83 | SF-106 | unit | G-merge | Amount formats per D-23 and D-30; lang from the cookie, else Accept-Language. |
 | T-WEB-7 | AC-16, AC-9, D-108 | SF-107 | unit | G-merge | Every response carries the contract headers with a fresh nonce; redirects use cookie presence only. |
 | T-WEB-8 | AC-9, AC-16 | SF-107 | e2e | G-merge | In a browser, an inline script without the nonce does not run. |
-| T-WEB-9 | AC-8, AC-10, D-63 | SF-109 | unit | G-merge | Field errors are tied by aria-describedby; Button shows busy; error notes use red, others never. |
+| T-WEB-9 | AC-8, AC-10, D-63, D-141, D-143 | SF-109 | unit | G-merge | Field errors are tied by aria-describedby; Button shows busy; error notes use red, others never. |
 | T-WEB-10 | AC-10, D-24, D-43, D-44 | SF-111 | e2e | G-merge | The rail and the top bar under 960px follow the decisions; focus moves to the main heading after navigation. |
 | T-WEB-11 | AC-4 | SF-111 | e2e | G-merge | Switching language keeps the address and sets html lang. |
 | T-WEB-12 | AC-8, AC-15 | SF-112 | e2e | G-merge | 403 and 404 show the same not-found screen; the idle sign-out notice shows on sign-in. |
@@ -73,7 +73,7 @@ status: executing
 | T-WSCR-15 | AC-10, D-22 | SF-171 | e2e | G-merge | axe finds no violation on any screen in both languages and themes. |
 | T-WSCR-16 | AC-10, AC-4 | SF-171 | e2e | G-merge | Every action is reachable by keyboard with visible focus; a language switch keeps the screen. |
 | T-WSCR-17 | AC-17 | SF-172 | e2e | G-merge | Past the person limit (120 a minute; 5 under STAGE=test) the 429 page shows; a second person is still served. |
-| T-WEB-13 | D-132, D-138 | SF-104 | unit | G-merge | Lint fails on a domain file importing an adapter and on an a11y violation; Prettier check passes. |
+| T-WEB-13 | D-132, D-138, D-140 | SF-104 | unit | G-merge | Lint fails on a domain file importing an adapter and on an a11y violation; Prettier check passes. |
 | T-WEB-14 | D-138 | SF-108 | unit | G-merge | container.ts returns the memory adapters under STAGE=test, one per port. |
 | T-WEB-15 | AC-10, D-129, D-136 | SF-109 | int | G-merge | Every part has stories in both languages and schemes; the Storybook a11y and interaction tests pass. |
 | T-WEB-16 | D-127, D-130 | SF-110 | unit | G-merge | prefetch() dehydrates a query that the client provider reads without a request. |

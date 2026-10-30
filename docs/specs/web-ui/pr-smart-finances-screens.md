@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v2
 ---
 # Web UI: design system and screens: brief for smart-finances (PR 4 of 4, screens)
 
@@ -23,7 +23,7 @@ status: executing
 ## Read first
 1. This file, all of it.
 2. intent.md: Acceptance criteria, No-gos, Glossary.
-3. architecture.md: Components "Code structure", "Data access (web server)", "Screens", "Screen states"; Contracts "Ports", "Interfaces between the PRs", "Data API", "Accounts table", "Limits"; "States and exits" rows import, erasing, deleting account.
+3. architecture.md: Components "Code structure", "Component architecture", "Data access (web server)", "Screens", "Screen states"; Contracts "Ports", "Interfaces between the PRs", "Data API", "Accounts table", "Limits"; "States and exits" rows import, erasing, deleting account.
 4. docs/specs/data-architecture/architecture.md: Contracts "HTTP routes".
 5. test-matrix.md rows whose task is SF-161 to SF-172.
 
@@ -62,6 +62,7 @@ status: executing
 - D-135: Browser monitoring with CloudWatch RUM: page loads, web vitals and JavaScript errors, client bundled from npm, no cookies, addresses stripped of search values, no person ids; a guest identity pool may only put RUM events; about 1 dollar per 100,000 events.
 - D-138: Code architecture: the web server's logic is hexagonal (domain, application use cases, ports, adapters, with in-memory adapters for tests and Storybook); Next.js app/ only delivers (pages, layouts, server actions, JSON routes) and calls use cases through one container; presentation (ui, screens, queries, i18n) follows Next.js conventions. ESLint import rules enforce the dependency direction.
 - Values:
+  - Each screen section: View.tsx (props only) and Container.tsx (hooks, actions), built from ui/patterns and ui/primitives.
   - Packages allowed: aws-rum-web, plus those of PRs 1 and 3.
   - Copy and visuals: the prototype https://claude.ai/code/artifact/10e1188c-9601-4133-9a2d-3502b0bc2ac6 and apps/web/design/prototype-screens.md (keys).
   - Caps: 10 imports a day, 200 MiB stored, one running; source maximum 20 MiB for excel, 5 MiB for the others.
