@@ -83,6 +83,7 @@ status: draft
 | D-66 | Sign-up and sign-in use our own screens from the prototype; the web server runs each step with the sign-in service itself (password, email code, authenticator setup, code). The user accepted the extra code and its security review. | 2-way | user, 2026-10-30 (Q-5) | accepted |
 | D-67 | Sign-up is open to anyone from the start, with no invitation step. The user accepted fake accounts, their cost and load, so abuse limits must ship with sign-up. | 2-way | user, 2026-10-30 (Q-6) | accepted |
 | D-68 | One release of about five weeks; sign-up, privacy pages and limits ship with the web app. Replaces the two-week appetite. | 2-way | user, 2026-10-30 (Q-7) | accepted |
+| D-69 | DP2 again, after the move to tier L: the user approved AC-1, AC-2, AC-4 to AC-20 and the revised no-gos as written. | 2-way | user, 2026-10-30 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:
