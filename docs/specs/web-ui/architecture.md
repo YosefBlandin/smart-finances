@@ -57,7 +57,7 @@ browser ─https─▶ Amplify (CDN) ─▶ Next.js web server ─────�
 - Where: apps/web/src/server/session.ts (new), apps/web/src/server/accounts.ts (new); tables in smart-finances:infra/lib/web-stack.ts#WebStack (new).
 - Sessions: D-72. The key is the SHA-256 of the cookie id, so a table read cannot be replayed as a cookie. Every read checks expires_at and last_seen_at itself; the TTL only cleans up. Refresh on the server when the access token has under 5 minutes left. Sign out removes the row and revokes the refresh token.
 - Accounts: one row per person with consent, status (active or deleting) and the per-person caps, reserved by one conditional update (D-87, D-104, D-114).
-- Serves: AC-14, AC-15, AC-16, AC-17, AC-18; D-72, D-87, D-91, D-96, D-97.
+- Serves: AC-14, AC-15, AC-16, AC-17, AC-18; D-72, D-87, D-91, D-104, D-114.
 
 ### Data access (web server)
 - Where: apps/web/src/server/api.ts (new), apps/web/src/server/types.ts (new), apps/web/src/app/(app)/ (new) screens and route handlers.
@@ -72,7 +72,7 @@ browser ─https─▶ Amplify (CDN) ─▶ Next.js web server ─────�
 - Transactions: every filter, sort and page is a request (AC-6). Review: category or approve for payments-report rows; other sources show the fix-in-source note (F-11). Imports: source, name check, upload, status, skipped rows (AC-5).
 - Your data: export; "Erase my data" with the typed word DELETE, the 35-day note and counts (AC-7); "Delete my account" after a full re-sign-in, its own warning (data, sign-in and consent removed; backups kept 35 days) and a signed-out result with counts (AC-18).
 - Imported text renders only as text nodes; no raw HTML insertion, no markdown renderer (AC-9; its assistant half moves to Epic 4 with D-46).
-- Serves: AC-2, AC-5 to AC-9, AC-11, AC-18; D-18 to D-21, D-23, D-26 to D-31, D-34, D-85, D-97, D-101.
+- Serves: AC-2, AC-5 to AC-9, AC-11, AC-18; D-18 to D-21, D-23, D-26 to D-31, D-34, D-85, D-101, D-104.
 
 ### Screen states
 | Screen | Loading | Empty | Failed | Partial or blocked | No access or signed out | Next step |
@@ -124,7 +124,7 @@ browser ─https─▶ Amplify (CDN) ─▶ Next.js web server ─────�
 - Serves: D-59, D-93.
 
 ### Docs
-- docs/adr/0004-web-framework-and-host.md (new): D-62, D-65, D-89, D-93, D-102. docs/adr/0005-sessions-and-sign-up.md (new): D-72, D-73, D-87, D-90 to D-94, D-97, D-98.
+- docs/adr/0004-web-framework-and-host.md (new): D-62, D-65, D-89, D-93, D-102. docs/adr/0005-sessions-and-sign-up.md (new): D-72, D-73, D-87, D-91 to D-93, D-98, D-104, D-115, D-117, D-120.
 - smart-finances:docs/threat-model.md: open sign-up, the web server, the sessions and accounts tables and the secret as trust boundaries; B1 updated; "single user" leaves the out-of-scope list.
 - docs/runbooks/lost-authenticator.md (new): identity proof, 72-hour wait, admin MFA reset, global sign-out, session rows removed, notice email (D-115).
 - README.md, "Layout" and "Status"; the data-architecture spec's decisions get the follow-up rows for D-81 and D-95.
