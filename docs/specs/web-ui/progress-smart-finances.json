@@ -160,9 +160,14 @@
     },
     {
       "id": "SF-111",
-      "status": "todo",
+      "status": "blocked",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "Stopped before writing code: the task as written needs a file outside its Files (see deviations, SF-111, 2026-10-30).",
+        "Probe (temporary page, deleted, nothing committed): a server component rendering <MenuPanel label=\"Overview\">{() => <a href=\"/transactions\">Transactions</a>}</MenuPanel> -> npm run build (next build) exit 1: \"Error: Functions cannot be passed directly to Client Components unless you explicitly expose it by marking it with \\\"use server\\\" ... {label: ..., children: function children}\". MenuPanel (SF-109) takes children: (close) => ReactNode, so a server Shell cannot fill it.",
+        "Source check, next 15.5.28 dist/client/components/layout-router.js InnerScrollAndFocusHandler: after a client navigation Next calls domNode.focus() on the first element of the changed segment (skipping sticky and fixed ones). If the (app) layout renders the shell and each page starts with <h1 tabIndex={-1}>, focus reaches the h1 with no extra client code. But a shared layout is not re-rendered on navigation and gets no pathname, so the rail's aria-current needs either a client island (usePathname) or the shell rendered by each page (which then defeats Next's focus handling).",
+        "git status after the probe: clean except the already untracked apps/web/storybook-static/"
+      ],
       "review": ""
     },
     {
@@ -203,6 +208,14 @@
       "proposal": "Add oxc: { jsx: { runtime: 'automatic' } } to apps/web/vitest.config.ts so unit tests can compile JSX while tsconfig keeps jsx as preserve for Next.js. SF-109's component tests need it too.",
       "decidedBy": "owner, in chat, 2026-10-30 (allowed the one-line change in SF-110)",
       "newDecision": "pending: the planning session records it in the brief or decisions"
+    },
+    {
+      "date": "2026-10-30",
+      "task": "SF-111",
+      "from": "pr-smart-finances.md SF-111 Files and Do (\"Server shell with MenuPanel (from ui/patterns) as the only client island\"), D-137",
+      "proposal": "MenuPanel's API (children: (close) => ReactNode, from SF-109) cannot be filled by a server component: Next refuses to pass a function to a client component (build error recorded in SF-111 evidence). Also a shared (app) layout never learns the current path, so it cannot set aria-current on the rail or name the screen on the menu button. Proposed: add one new client file, apps/web/src/ui/ShellNav.tsx ('use client'), to SF-111's Files. It takes only serializable props (the nav items with href, label and icon name, the account rows, the review count and its words), reads usePathname(), and renders (1) the rail nav links with aria-current and (2) MenuPanel with a render function that shows the same links and account rows and calls close() when a link is chosen. The (app) layout keeps the server Shell (brand, env tag, account area with the /api/lang form post and Sign out, <main>), wrapped in QueryProvider; pages start with <h1 tabIndex={-1}> so Next's own focus handling moves focus to it after navigation. Alternative: change MenuPanel (SF-109 file) to accept plain children and close itself on a pathname change; that touches T-WEB-9 tests and is the larger change.",
+      "decidedBy": "",
+      "newDecision": ""
     }
   ],
   "surprises": [
@@ -246,6 +259,7 @@
     "SF-109: KeptBar and BandStrip are SVG with percentage x and width attributes, because data-driven widths cannot be inline styles under the policy (D-57 already asks for hand-drawn SVG).",
     "SF-109: apps/web/storybook-static/ (the test-storybook build) is not git-ignored and .gitignore is outside SF-109 Files, so it is left untracked and uncommitted; it needs a .gitignore line. The test runner here uses /opt/pw-browsers/chromium through CHROME_PATH, read by the committed .storybook/test-runner-jest.config.mjs only when set; CI leaves it unset and needs playwright install chromium.",
     "SF-109: the brief named a storybook script under SF-103 but package.json had none; SF-109 added storybook, build-storybook and test-storybook. Stories set the language and scheme through Storybook globals (locale, theme); the preview decorator sets html lang and data-theme and wraps NextIntlClientProvider. Fonts in Storybook come from the @fontsource CSS files, not next/font.",
-    "SF-109: one new message key, ui.typeToConfirm (\"Type {word} to confirm\" / \"Escribe {word} para confirmar\"), in both files; everything else reuses existing keys (shell.month, shell.noRateKey, shell.menu, states.loading, states.retry, auth.common.cancel)."
+    "SF-109: one new message key, ui.typeToConfirm (\"Type {word} to confirm\" / \"Escribe {word} para confirmar\"), in both files; everything else reuses existing keys (shell.month, shell.noRateKey, shell.menu, states.loading, states.retry, auth.common.cancel).",
+    "SF-111: the brief's 'MenuPanel as the only client island' cannot hold with SF-109's MenuPanel API (render-function children) under the React Server Components rules; and a server layout cannot mark the current screen because App Router layouts get no pathname and do not re-render between sibling pages. Recorded as a deviation; the task is blocked until the owner picks the extra client file (ui/ShellNav.tsx) or a MenuPanel change. Also seen: the Icon primitive has no nav icons (prototype uses Tabler layout-dashboard, arrows-exchange, list-check, upload, coin, database); Icon.tsx is SF-109's file, so the shell would import those Tabler icons directly or Icon.tsx needs adding to Files too."
   ]
 }
