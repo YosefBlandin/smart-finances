@@ -59,6 +59,10 @@ status: draft
 | D-42 | The Spanish nav label for dollar rates is "Cotizaciones", which fits on one line; the screen title keeps "Cotización del dólar". | 2-way | user, 2026-10-29 | accepted |
 | D-43 | The top bar from D-24 applies up to 960px, not 720px, so tablets get it too. Its menu opens as a panel over the page, under the bar, without moving the page; the button shows a close mark while open and is 44px tall. Narrows D-24. | 2-way | user, 2026-10-29 | accepted |
 | D-44 | The top bar's menu button carries the amber "To review" count beside the screen name, so it shows from every screen. The user accepted one more mark in the bar than D-24 allowed. | 2-way | user, 2026-10-29 | accepted |
+| D-45 | Hosting for staging and prod: AWS Amplify Hosting, the plan's default, in the same AWS account. The user chose it over static files on S3 and CloudFront, accepting a server-rendering host the app does not need. An ADR records the framework and host at design. | 2-way | user, 2026-10-30 (Q-1) | accepted |
+| D-46 | Assistant screens: designed now in the prototype and the design system; their code is built in Epic 4 against its real answer format. | 2-way | user, 2026-10-30 (Q-2) | accepted |
+| D-47 | Sign-in on a device: the renewal pass is kept only until the tab closes, so a reload keeps you in and closing the tab signs you out. No money data or chat is stored in the browser. | 2-way | user, 2026-10-30 (Q-3) | accepted |
+| D-48 | DP2: the user approved AC-1 to AC-10 and the no-gos as written. | 2-way | user, 2026-10-30 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:

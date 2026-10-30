@@ -74,14 +74,14 @@ status: draft
 <!-- Where each high-impact unknown from research goes. -->
 | Unknown | Impact | Goes to |
 |---|---|---|
-| Web host for staging and prod, and so the allowed web addresses and the deploy path | high | Q-1 |
-| Whether the assistant screens are built now against a fake, or designed now and built with the Epic 4 contract | high | Q-2 |
-| Where sign-in tokens live in the browser, and whether any data or chat is kept there | high | Q-3 |
+| Web host for staging and prod, and so the allowed web addresses and the deploy path | high | D-45 (was Q-1) |
+| Whether the assistant screens are built now against a fake, or designed now and built with the Epic 4 contract | high | D-46 (was Q-2) |
+| Where sign-in tokens live in the browser, and whether any data or chat is kept there | high | D-47 (was Q-3) |
 | How the app learns the API address, pool id and client id per stage | high | design: a two-way decision at DP3 |
 | Where the browser-safe schema and category list live (the data spec left this to this one) | high | design decision, then a task that splits a browser-safe module out |
 | Whether CI gains web build, lint and test steps | high | design decision, then a task |
-| Net worth on the dashboard with no balance source (F-24) | medium | intent: a no-go or a placeholder at DP2 |
-| Whether the delete-all screen states the 35-day recovery window (F-12) | medium | intent: an AC at DP2 |
+| Net worth on the dashboard with no balance source (F-24) | medium | no-go in intent.md, settled by D-18 and D-48 |
+| Whether the delete-all screen states the 35-day recovery window (F-12) | medium | AC-7 |
 | Which token the API accepts (ID or access) and the first sign-in steps (new password, authenticator setup) | high | live check on qa with a test user, a HUMAN need |
 | Whether the hosting project still deploys the old app from main or staging | high | live check, a HUMAN need |
 | When the data PRs merge into qa | high | live check before handoff; re-pin refs then |

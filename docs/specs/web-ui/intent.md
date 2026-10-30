@@ -23,17 +23,38 @@ Intake answer on scope, word for word:
 
 ## Outcome
 <!-- What a named user can do or see after this ships, in 2 to 4 plain sentences. -->
+The owner signs in and sees, first, what they kept this month against their typical month. They can bring in new files, fix the rows in to review, look through their transactions and erase their data, in English or Spanish. A visitor on the demo account sees the same screens with made-up data. The look is settled first in the prototype and the design system, and the web app is built from them.
 
 ## Why
 <!-- The problem today and why it matters now: cost, risk, noise or a request. 2 to 4 bullets, with numbers where you have them. -->
+- The data service will soon hold every import, but nothing shows that money to a person yet.
+- Today each source is read on its own: the payments report, the notes log and the monthly budget files.
+- The brand speaks to future savers, so every screen must explain itself in plain words (D-8).
+- Changing a look in the prototype is cheaper than changing built screens (D-4).
 
 ## Acceptance criteria
 <!-- Turn the Request into testable rows. One behaviour per row: "When <trigger>, the system shall <response>." (or While, or If ... then). From: ticket, a decision id or user. Ids are append-only; to retire one, start its statement cell with RETIRED. Example row: | AC-1 | When a user opens a page, the system shall write exactly one page-view event for that page. | ticket | -->
 | AC | Statement | From |
 |---|---|---|
+| AC-1 | When a person enters a valid email, password and authenticator code, the system shall sign them in and open the overview. | user |
+| AC-2 | When a person opens the overview, the system shall show first what they kept this month against their typical month, as one headline sentence. | D-18 |
+| AC-3 | If a month's spending is more than its earnings, then the system shall show the overspend in red with one plain sentence, and nothing else on the screen in red. | D-13 |
+| AC-4 | When a person picks the other language, the system shall show every screen in it without signing them out or losing the current screen. | D-11 |
+| AC-5 | When a person sends a file on the imports screen, the system shall show the import's status until it ends, and list each row that failed with its reason. | D-3 |
+| AC-6 | When a person filters, sorts or pages the transactions, the system shall ask the data service for that page and show only what it returns. | D-3 |
+| AC-7 | When a person asks to erase all their data, the system shall require the typed word DELETE, say it can be restored for 35 days, and show the counts erased. | D-3 |
+| AC-8 | While a screen is loading, empty, failed or only partly imported, the system shall say so in plain words and offer the next step, never a blank screen. | D-8 |
+| AC-9 | When the system shows imported text or an assistant answer, it shall show it as plain text, so no link, image or script inside it runs. | D-3 |
+| AC-10 | When a person uses only the keyboard, the system shall reach every action in order and show where the focus is. | D-22 |
 
 ## No-gos
 <!-- What this work will not do, each with a one-line reason or the decision that settled it. -->
+- Sign-up for strangers: it stays off; visitors use the demo account (D-8).
+- Net worth: hidden until a source sends balances (D-18).
+- Replacing or updating the old app on main: it is retired and its hosting is off (D-2).
+- New server data or access rules: the only contract change is the allowed list (D-1).
+- Keeping money data or chats in the browser: a hostile page script could read them.
+- The assistant's server side and its screen code: both come with Epic 4; its screens are only designed now (D-46).
 
 ## Constraints
 <!-- Project rules this change must honour, as pointers (file and section), and hard limits from intake. Never copy the rules here; the brief copies the values it needs. -->
@@ -56,31 +77,19 @@ Intake answer on scope, word for word:
 | allowed list | The web addresses the data service accepts browser calls from. |
 | renewal pass | What the browser keeps so it can get a new short pass without asking for your password. |
 | assistant | The chat screen that answers questions about your money. |
+| overview | The first screen after sign-in: what you kept, what is waiting, where it went. |
+| typical month | The average of your previous six months. |
+| to review | Imported rows flagged for a look, such as a possible duplicate. |
+| import | One file you bring in, from its upload until it is done or failed. |
+| demo account | A shared sign-in with made-up data, so a visitor can try the app. |
 
 ## Open questions
 <!-- M tier only: at most 3 question cards here, in the questions.md card format, then one Send list line: owner role and question ids, no names. L tier: cards live in questions.md, so delete this section. -->
-### Q-1 · Where should the web app be hosted for staging and prod?
-Blocks: G-design · Default: C · Door: 2-way · Owner: owner · Answer-by: 2026-11-05
-Context: The app needs a home online. Its address must be on the allowed list before the browser can reach the data. The plan and the repo point different ways.
-A. The existing Vercel project: quick preview links per branch, but a second account outside AWS and a second deploy path.
-B. AWS Amplify Hosting, the plan's default: stays in your AWS account and supports server rendering, which this app does not need.
-C. Static files on S3 behind CloudFront, built by the same pipeline: one account, one deploy, strict security headers. No server rendering.  We recommend C because every data call goes from the browser with your sign-in, so no server is needed.
-If no answer by 2026-11-05, we design C.
+None open.
 
-### Q-2 · When are the assistant screens built?
-Blocks: G-design · Default: B · Door: 2-way · Owner: owner · Answer-by: 2026-11-05
-Context: The assistant has no server side until Epic 4, and its answer format is not decided. The screens can be designed now either way.
-A. Build them now against a fake assistant: everything is clickable soon, but the code guesses an answer format that may change.
-B. Design them now in the prototype and the design system; build the code with the Epic 4 contract.  We recommend B because the code would follow a real answer format.
-C. Define the assistant's answer format in this spec and build to it: more design work now, and Epic 4 must follow it.
-If no answer by 2026-11-05, we plan B.
-
-### Q-3 · How long should the app keep you signed in on a device?
-Blocks: G-design · Default: B · Door: 2-way · Owner: owner · Answer-by: 2026-11-05
-Context: Sign-in gives the browser a short pass and a renewal pass. Where the renewal pass is kept decides convenience and what a malicious page script could steal.
-A. Keep nothing: every reload asks for your password and code. Safest, and tiring.
-B. Keep the renewal pass until the tab closes: a reload keeps you in; closing the tab signs you out. No money data is stored in the browser.  We recommend B as the balance for one owner on a personal device.
-C. Keep it for 30 days: you rarely sign in, but a stolen pass works for weeks.
-If no answer by 2026-11-05, we design B.
-
-Send list: owner · Q-1, Q-2, Q-3
+### Answered
+| Q | Decision | Date | Who |
+|---|---|---|---|
+| Q-1 | → D-45 | 2026-10-30 | owner |
+| Q-2 | → D-46 | 2026-10-30 | owner |
+| Q-3 | → D-47 | 2026-10-30 | owner |
