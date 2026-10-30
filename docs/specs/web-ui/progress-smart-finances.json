@@ -25,9 +25,19 @@
     },
     {
       "id": "SF-101",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "2ea667b",
+      "evidence": [
+        "T-WEB-1 fail first: smoke.py on the unmodified prototype -> \"ERROR AX_PAGES/AX_VARIANTS missing: the prototype has no auth and account screens\", exit 1",
+        "After: smoke.py -> \"screens rendered: 66  failing: 0  with unlabeled inputs: 0\", exit 0 (13 screens, 33 states, en and es; checks en/es key parity, no leftover {placeholders}, no temporary-password copy)",
+        "Regression: every existing screen x 4 states x 3 months x 2 languages = 216 combinations render, 0 failures (same as the original)",
+        "prototype-check syntax_check.py ok; class_check.py \"no class has two separate top-level rules (91 classes checked)\"",
+        "calm-ui contrast.py: all listed pairs pass in light and dark; css_audit.py: only new flag is .ax-check input height 20px (its label is the 32px click target); other flags exist in the original",
+        "Screenshots, en and es, light and dark, 1400 and 400 wide, saved under apps/web/design/shots/ (130 files, not staged)",
+        "Prototype republished: https://claude.ai/code/artifact/10e1188c-9601-4133-9a2d-3502b0bc2ac6 version 21",
+        "apps/web/fixtures/sample.json: 12 months, 11 rates (2026-03 present as a bad month, 2026-10 has none), 553 rows, 11 imports in all 9 states, 64 review rows, 174 mercadopago rows; no emails or names",
+        "Owner review of T-WEB-1 is the manual gate: pending"
+      ],
       "review": ""
     },
     {
@@ -125,6 +135,11 @@
   "deviations": [],
   "surprises": [
     "feature/web-foundation was cut from origin/feature/web-ui, which held only the draft spec; locked-v1 was merged in from origin/claude/intent-web-ui-spec-ssm5mn at the owner's request (commit 923c1f8).",
-    "Owner merged spec PR #6 mid-session: brief re-locked at locked-v2 (adds D-140 to D-143; SF-104, SF-109, SF-111 text changed; SF-101 unchanged; D-17 dropped from the brief copy but still accepted in decisions.md, so followed). SF-100 baseline was taken under locked-v1; origin/feature/web-ui merged into the branch."
+    "Owner merged spec PR #6 mid-session: brief re-locked at locked-v2 (adds D-140 to D-143; SF-104, SF-109, SF-111 text changed; SF-101 unchanged; D-17 dropped from the brief copy but still accepted in decisions.md, so followed). SF-100 baseline was taken under locked-v1; origin/feature/web-ui merged into the branch.",
+    "apps/web/design/shots/ is not git-ignored and .gitignore is outside SF-101 Files, so the shots are left untracked and unstaged. Needs a .gitignore line (a person or a later task).",
+    "The prototype already had a red \"Delete everything\" button on Your data (.btn.danger), which reads against D-13/D-63 (red only for errors and failed statuses). The new delete-account screen uses an ink button instead. Owner to decide on the old one.",
+    "The prototype had imports in 7 of the 9 import states; two synthetic imports (waiting for file, replaced) were added so the sample covers every state.",
+    "Prototype values to confirm before build: confirm-code lifetime \"15 minutes\" and lost-authenticator reply time \"a day or two\" are copy guesses, not settings.",
+    "Brief said \"npm run dev\" cannot show this work: apps/web has no dev script until SF-103; the owner asked to see progress, so the working copy was served locally at 127.0.0.1:8765 for the browser pane."
   ]
 }
