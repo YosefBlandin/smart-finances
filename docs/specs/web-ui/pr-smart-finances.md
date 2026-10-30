@@ -23,15 +23,9 @@ status: draft
 ## Read first
 1. This file, all of it.
 2. intent.md: Acceptance criteria, No-gos, Glossary.
-3. architecture.md: Components "Web app (Next.js)", "Design tokens and parts", "Words and formats", "Shared field and category lists"; Contracts "Web routes", "Cookies", "Response headers", "Web server settings".
+3. architecture.md: Components "Web app (Next.js)", "Design tokens and parts", "Words and formats", "Shared field and category lists"; Contracts "Interfaces between the PRs", "Web routes", "Cookies", "Response headers", "Web server settings".
 4. CLAUDE.md in the worktree.
 5. test-matrix.md rows whose task is SF-101 to SF-110.
-
-## Interfaces between the PRs
-- PR 1: apps/web scripts test (vitest run) and e2e (playwright test); playwright.config.ts starts `next dev` on port 3000 with STAGE=test; (app) and (auth) route groups; i18n t(key, lang); ui parts; CATEGORIES from "@smart-finances/api/categories".
-- PR 3: src/server/settings.ts getSettings(); src/server/aws.ts clients() returns real AWS clients, or in-memory fakes (src/server/fakes/) when STAGE=test; src/server/log.ts securityEvent(event, outcome, sub?); src/server/session.ts getSession(), createSession(sub, tokens), refreshIfNeeded(session), signOutEverywhere(sub), plus the pre-auth helpers; src/server/limits.ts hit(scope, value) with scopes person, ip-auth, email-fail, email-code-hour, email-code-day; src/server/post.ts handlePost(req, { auth?: boolean }, fn); src/server/guard.ts requireMoneyAccess({ allowDeleting?: boolean }); src/server/auth/signIn.ts signIn(email, password, { reauth?: boolean }); src/legal/versions.ts TERMS_VERSION and PRIVACY_VERSION ("2026-11-01").
-- PR 4: src/server/api.ts api(session) with one method per route in types.ts; routes POST /api/data/erase, POST /api/account/delete, POST /api/account/delete/finish.
-
 
 ## HUMAN needs
 - <HUMAN: review the extended prototype and say go before SF-108> · Blocks: SF-108
@@ -42,6 +36,7 @@ status: draft
 - D-11: Language: English and Spanish, switchable. Spanish addresses people with tú.
 - D-17: Icons: Tabler outline icons at a 2px line, which matches the stem of Chivo 400. They mark the current screen, statuses, review reasons, notes and assistant answers, always next to a word. Narrows D-15: bands now appear only where they carry a number (the spending strip, bars and the category key) plus the logo.
 - D-19: Wording: each overview section opens with its finding as a short headline sentence, not a neutral label.
+- D-59: Tests: Vitest for logic and parts, Playwright on fixtures for every screen, the keyboard and the content policy; both run in CI and the root test command.
 - D-22: Type and spacing rules: sizes 12, 14, 16, 20, 24, 32, 48 plus one display size; body 16, tables and data 14, uppercase labels 12 with one letter-spacing. Weights 400, 500 and 700, with 800 only for the display figure. Spacing uses only the 4px-based tokens. Text meets 4.5:1 contrast and input borders 3:1. Click targets are at least 32px, and 44px on touch screens.
 - D-23: Amounts: summaries (the overview's colour field, category rows and places) show pesos as whole numbers and dollars with cents. Lists of single transactions keep exact cents in both currencies.
 - D-24: Phones: under 720px the side rail folds into a top bar with the brand and a menu button that names the current screen. Nothing else sits above the overview's answer, so it shows in the first screen.
@@ -108,13 +103,14 @@ status: draft
 - Done when: verify is green, evidence is in progress-smart-finances.json
 ### SF-101 · Add every auth and account screen to the prototype
 - Implements: AC-12, AC-13, AC-14, AC-18, AC-19, AC-20, D-100 · After: SF-100 · Judgment: normal
-- Files: the prototype artifact (read and republish it with the Artifact tool; its link is in Values), apps/web/design/prototype-screens.md (new)
+- Files: the prototype artifact (read and republish it with the Artifact tool; its link is in Values), apps/web/design/prototype-screens.md (new), apps/web/src/server/fixtures/sample.json (new)
 - Tests first: T-WEB-1
 - Do:
   - Load the account skill smart-finances-ui (anthropic-skills:smart-finances-ui) and its checks: calm-ui css_audit.py and contrast.py, prototype-check syntax_check.py, class_check.py and shoot.py. If the skill is missing, the prototype file and decisions.md are the sources.
   - Add screens in English and Spanish: sign-up with terms and privacy acceptance and the proof-of-work note; confirm (resend, expired); setup with QR and key text; code; reset and reset confirm; lost authenticator; consent; delete account (re-sign-in, warning, partial failure, signed-out result with counts); too many tries; not found; signed out after idle.
   - Fix the copy: "Close the tab when you’re done" becomes "Sign out when you’re done; the session also ends after 30 idle minutes"; remove the temporary-password screen.
   - Republish, then list every new screen and state in prototype-screens.md with proposed keys named screen.part (for example signUp.title); SF-105 adopts them.
+  - Export the prototype's synthetic sample (months, rates, imports in every state, review rows, mercadopago rows) to apps/web/src/server/fixtures/sample.json (new); keep 2026-03 a bad month and 2026-10 without a rate.
   - Stop for the owner's review of the prototype (HUMAN need) before SF-108.
 - Verify: the prototype-check scripts named in the skill, on the saved file → syntax, class and smoke checks pass; screenshots in both languages and themes exist
 - Done when: verify is green, evidence is in progress-smart-finances.json
@@ -179,13 +175,13 @@ status: draft
 - Verify: `npm test --workspace @smart-finances/web -- src/ui/ui.test.tsx` → pass
 - Done when: verify is green, evidence is in progress-smart-finances.json
 ### SF-108 · Build the shell: rail, top bar and account area
-- Implements: AC-4, AC-10, D-24, D-35 to D-44, D-36, D-46 · After: SF-107, SF-101 · Judgment: normal
-- Files: apps/web/src/app/(app)/layout.tsx (new), apps/web/src/ui/Shell.tsx (new), placeholder pages apps/web/src/app/(app)/{overview,transactions,review,imports,rates,data}/page.tsx (new) each with one h1, apps/web/e2e/shell.spec.ts (new)
+- Implements: AC-4, AC-10, D-24, D-35 to D-44, D-36, D-46 · After: SF-105, SF-107, SF-101 · Judgment: normal
+- Files: apps/web/src/app/(app)/layout.tsx (new), apps/web/src/ui/Shell.tsx (new), apps/web/src/app/api/lang/route.ts (new, a POST that checks Origin against WEB_ORIGIN and sets the lang cookie), placeholder pages apps/web/src/app/(app)/{overview,transactions,review,imports,rates,data}/page.tsx (new) each with one h1, apps/web/e2e/shell.spec.ts (new)
 - Tests first: T-WEB-10, T-WEB-11
 - Do:
   - Rail per D-35 to D-42 with groups Money (no Ask) and Account; no Prototype group. The account area shows a placeholder address until PR 3 supplies the session.
   - Top bar under 960px with the menu panel (D-43, D-44).
-  - Language row switches the lang cookie and keeps the address; html lang follows; focus moves to the main heading after navigation.
+  - Language row posts to /api/lang and keeps the address; html lang follows; focus moves to the main heading after navigation. The e2e adds a dummy __Host-sid cookie to pass the middleware.
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/shell.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances.json
 ### SF-109 · Add the not-found, error and signed-out notices

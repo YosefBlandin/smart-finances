@@ -75,6 +75,10 @@ status: draft
 | pr-smart-finances-infra.md | 1 | 2026-10-30 | cheaper | 0 | 16 | 14 | branch per stage, metrics, makeFunction, release script args and tests, email text, cited contracts |
 | pr-smart-finances-auth.md | 1 | 2026-10-30 | cheaper | 0 | 18 | 13 | aws.ts fakes, scope names, PoW row, versions, issuer, guard wiring, D-122 notice |
 | pr-smart-finances-screens.md | 1 | 2026-10-30 | cheaper | 0 | 18 | 14 | module and route names, rounding, data-tone selector, caps inputs, test limit, themes |
+| pr-smart-finances.md | 2 | 2026-10-30 | cheaper | 1 (SF-108 needs SF-105 and a language route) | 13 | 9 | SF-108 after SF-105 with /api/lang; env reads before PR 3; sample fixtures exported in SF-101 |
+| pr-smart-finances-infra.md | 2 | 2026-10-30 | cheaper | 0 | 11 | 11 | account budget in the qa alarms stack; files and grants; Lambda-backed variable merge; D-95 deferred |
+| pr-smart-finances-auth.md | 2 | 2026-10-30 | cheaper | 0 | 19 | 18 | interfaces moved to architecture.md Contracts; refresh hash uses the sub; reset looks up the sub; route names; fixed fake codes |
+| pr-smart-finances-screens.md | 2 | 2026-10-30 | cheaper | 1 (SF-163 bad month absent from the CSV) | 16 | 9 | fixtures from the prototype's sample (SF-101); route, field and limit names; constraints copied |
 
 ## Conformance review
 <!-- Before each draft PR: a fresh reviewer compares the diff with the brief and its test ids. A finding that needs a decision becomes a deviation, not an edit. -->

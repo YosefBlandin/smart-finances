@@ -23,15 +23,9 @@ status: draft
 ## Read first
 1. This file, all of it.
 2. intent.md: Acceptance criteria, No-gos, Glossary.
-3. architecture.md: Components "Auth flows (web server)", "Sessions and accounts"; Contracts "Cookies", "Sessions table", "Accounts table", "Limits", "Password and code rules", "Security events", "Web server settings"; "States and exits" rows sign-up to reset confirm.
+3. architecture.md: Components "Auth flows (web server)", "Sessions and accounts"; Contracts "Interfaces between the PRs", "Cookies", "Sessions table", "Accounts table", "Limits", "Password and code rules", "Security events", "Web server settings"; "States and exits" rows sign-up to reset confirm.
 4. CLAUDE.md in the worktree.
 5. test-matrix.md rows whose task is SF-141 to SF-153.
-
-## Interfaces between the PRs
-- PR 1: apps/web scripts test (vitest run) and e2e (playwright test); playwright.config.ts starts `next dev` on port 3000 with STAGE=test; (app) and (auth) route groups; i18n t(key, lang); ui parts; CATEGORIES from "@smart-finances/api/categories".
-- PR 3: src/server/settings.ts getSettings(); src/server/aws.ts clients() returns real AWS clients, or in-memory fakes (src/server/fakes/) when STAGE=test; src/server/log.ts securityEvent(event, outcome, sub?); src/server/session.ts getSession(), createSession(sub, tokens), refreshIfNeeded(session), signOutEverywhere(sub), plus the pre-auth helpers; src/server/limits.ts hit(scope, value) with scopes person, ip-auth, email-fail, email-code-hour, email-code-day; src/server/post.ts handlePost(req, { auth?: boolean }, fn); src/server/guard.ts requireMoneyAccess({ allowDeleting?: boolean }); src/server/auth/signIn.ts signIn(email, password, { reauth?: boolean }); src/legal/versions.ts TERMS_VERSION and PRIVACY_VERSION ("2026-11-01").
-- PR 4: src/server/api.ts api(session) with one method per route in types.ts; routes POST /api/data/erase, POST /api/account/delete, POST /api/account/delete/finish.
-
 
 ## HUMAN needs
 - <HUMAN: support-address and signup-open (true on qa) stage parameters> · Blocks: the qa check after merge
@@ -172,7 +166,7 @@ status: draft
 - Files: apps/web/src/server/accounts.ts (new), apps/web/src/server/guard.ts (new), apps/web/src/app/consent/ (new), apps/web/src/app/(app)/layout.tsx, apps/web/src/server/guard.test.ts (new)
 - Tests first: T-WAUTH-13
 - Do:
-  - At the first completed sign-in write consent from the pre-auth row; guard.ts (used by the money layout and every route handler) needs a session, a consent row and status active.
+  - At the first completed sign-in write consent from the pre-auth row with putConsent; guard.ts (used by the money layout and every route handler) needs a session, a consent row and status active. resetStoredBytes leaves consent in place.
   - No consent row → /consent, which asks for the current TERMS_VERSION and PRIVACY_VERSION (the pre-auth row may have expired); refusing consent signs out.
 - Verify: `npm test --workspace @smart-finances/web -- src/server/guard.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
@@ -181,7 +175,7 @@ status: draft
 - Files: apps/web/src/server/auth/reset.ts (new), apps/web/src/app/(auth)/reset/ (new), apps/web/src/server/auth/reset.test.ts (new)
 - Tests first: T-WAUTH-14
 - Do:
-  - ForgotPassword (same reply for any email, capped), ConfirmForgotPassword with the breached check, then signOutEverywhere; the next sign-in screen shows "your password was changed" and a reset event is logged (D-122).
+  - ForgotPassword (same reply for any email, capped), ConfirmForgotPassword with the breached check, AdminGetUser for the sub, then signOutEverywhere; a notice cookie (HttpOnly, 10 minutes) makes the sign-in screen say "your password was changed"; a reset event is logged (D-122).
   - The next sign-in still asks for the authenticator.
 - Verify: `npm test --workspace @smart-finances/web -- src/server/auth/reset.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
@@ -205,10 +199,10 @@ status: draft
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json
 ### SF-153 · Browser tests of the auth flows on fixtures
 - Implements: AC-1, AC-12, AC-13, AC-17, AC-19, AC-20 · After: SF-150, SF-152 · Judgment: normal
-- Files: apps/web/e2e/auth.spec.ts (new), apps/web/src/server/fakes/
+- Files: apps/web/e2e/auth.spec.ts (new), apps/web/e2e/helpers/signIn.ts (new), apps/web/src/server/fakes/
 - Tests first: T-WAUTH-17
 - Do:
-  - Extend the sign-in fake from SF-141 (selected by aws.ts when STAGE=test); walk sign-up, confirm, setup, code, consent, reset, sign out and a limit refusal in both languages.
+  - Extend the sign-in fake from SF-141 (selected by aws.ts when STAGE=test; email code 123456, authenticator code 000000); walk sign-up, confirm, setup, code, consent, reset, sign out and an ip-auth limit refusal in both languages. Add e2e/helpers/signIn.ts for PR 4.
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/auth.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json
 

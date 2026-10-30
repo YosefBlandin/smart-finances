@@ -23,15 +23,9 @@ status: draft
 ## Read first
 1. This file, all of it.
 2. intent.md: Acceptance criteria, No-gos, Glossary.
-3. architecture.md: Components "Data access (web server)", "Screens", "Screen states"; Contracts "Data API", "Accounts table", "Limits"; "States and exits" rows import, erasing, deleting account.
+3. architecture.md: Components "Data access (web server)", "Screens", "Screen states"; Contracts "Interfaces between the PRs", "Data API", "Accounts table", "Limits"; "States and exits" rows import, erasing, deleting account.
 4. docs/specs/data-architecture/architecture.md: Contracts "HTTP routes" (the contract types.ts mirrors).
 5. test-matrix.md rows whose task is SF-161 to SF-171.
-
-## Interfaces between the PRs
-- PR 1: apps/web scripts test (vitest run) and e2e (playwright test); playwright.config.ts starts `next dev` on port 3000 with STAGE=test; (app) and (auth) route groups; i18n t(key, lang); ui parts; CATEGORIES from "@smart-finances/api/categories".
-- PR 3: src/server/settings.ts getSettings(); src/server/aws.ts clients() returns real AWS clients, or in-memory fakes (src/server/fakes/) when STAGE=test; src/server/log.ts securityEvent(event, outcome, sub?); src/server/session.ts getSession(), createSession(sub, tokens), refreshIfNeeded(session), signOutEverywhere(sub), plus the pre-auth helpers; src/server/limits.ts hit(scope, value) with scopes person, ip-auth, email-fail, email-code-hour, email-code-day; src/server/post.ts handlePost(req, { auth?: boolean }, fn); src/server/guard.ts requireMoneyAccess({ allowDeleting?: boolean }); src/server/auth/signIn.ts signIn(email, password, { reauth?: boolean }); src/legal/versions.ts TERMS_VERSION and PRIVACY_VERSION ("2026-11-01").
-- PR 4: src/server/api.ts api(session) with one method per route in types.ts; routes POST /api/data/erase, POST /api/account/delete, POST /api/account/delete/finish.
-
 
 ## HUMAN needs
 - <HUMAN: data PRs 2 and 3 merged into qa before the qa checks of imports, transactions, erase and delete account (D-64)> · Blocks: the qa checks, not the tasks
@@ -42,10 +36,15 @@ status: draft
 - D-19: Wording: each overview section opens with its finding as a short headline sentence, not a neutral label.
 - D-20: Typical month means the average of the previous six months. The user chose the average knowing one unusual month moves it: with the sample data, a month with a large one-off purchase pulls it from about 34% to about 20%.
 - D-21: Light-mode ground: one colour field. The answer sits on a solid savings-green field, and in a bad month on an ink field, so red stays on the one bad figure (D-13). Below the field the page is white with no cards; sections are told apart by space and fine rules. The dark version is still to be designed.
+- D-22: Type and spacing rules: sizes 12, 14, 16, 20, 24, 32, 48 plus one display size; body 16, tables and data 14, uppercase labels 12 with one letter-spacing. Weights 400, 500 and 700, with 800 only for the display figure. Spacing uses only the 4px-based tokens. Text meets 4.5:1 contrast and input borders 3:1. Click targets are at least 32px, and 44px on touch screens.
 - D-23: Amounts: summaries (the overview's colour field, category rows and places) show pesos as whole numbers and dollars with cents. Lists of single transactions keep exact cents in both currencies.
 - D-26: The kept bar in the overview's colour field labels its parts: what you spent and what you kept, each with its share, plus a marker for what a typical month keeps. In a bad month it labels where earnings ran out and how much you went over. Its texture is still open.
 - D-30: Percentages in the colour field are whole numbers (32%, not 31.7%); the comparison sentence keeps its exact points.
 - D-31: Earned in the colour field shows pesos first, at the month's dollar rate, with the dollars actually received as a second line ("USD 1,922.00 at ARS 1,375.00 per dollar"). A month with no rate shows dollars only and says it has no rate yet. Earned and Spent can now be compared in pesos, which removes the cost accepted in D-29.
+- D-44: The top bar's menu button carries the amber "To review" count beside the screen name, so it shows from every screen. The user accepted one more mark in the bar than D-24 allowed.
+- D-46: Assistant screens: designed now in the prototype and the design system; their code is built in Epic 4 against its real answer format.
+- D-53: The web server sends the access token as a bearer token; the API's audience check takes the client id from it. A person confirms it on qa.
+- D-57: Styling: the prototype's CSS custom properties as tokens with CSS modules; no Tailwind or shadcn. Charts in hand-drawn SVG, each with a table alternative.
 - D-63: Red is also allowed for errors and failed statuses (error notes, failed or expired imports, a wrong password). Among money figures it stays only on the one bad figure. Narrows D-13.
 - D-64: The web PR may merge into qa once it is green, before data PRs 2 and 3. Screens whose routes are missing show the failed state; their qa checks, and any promotion to staging, wait for those PRs.
 - D-82: Data access on the server: server components read through one client that adds the token and counts requests; changes are Origin-checked route handlers; free-text search stays out of the address. Supersedes D-54.
@@ -97,7 +96,7 @@ status: draft
 - Do:
   - types.ts mirrors the data-architecture spec, Contracts "HTTP routes", route by route.
   - api.ts: bearer access token, 5-second timeout, errors keyed on status (401 refresh once then sign out; 403 and 404 not found; 409, 429, 5xx failed with retry), counts the person's requests.
-  - fixtures.ts answers every route from data/synthetic/transactions.csv for STAGE=test, the hostile rows from data/synthetic/generate.mjs included; payments-report rows are source mercadopago.
+  - fixtures.ts answers every route for STAGE=test from fixtures/sample.json (PR 1) plus the hostile rows of data/synthetic/generate.mjs; payments-report rows are source mercadopago.
 - Verify: `npm test --workspace @smart-finances/web -- src/server/api.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
 ### SF-162 · Work out kept, typical month and the bad month
@@ -105,7 +104,7 @@ status: draft
 - Files: apps/web/src/screens/overview/model.ts (new), apps/web/src/screens/overview/model.test.ts (new)
 - Tests first: T-WSCR-2, T-WSCR-3
 - Do:
-  - Inputs: GET /totals (view native and usd) and GET /rates. Kept in pesos at the month's rate, cents rounded half away from zero; typical month from 3 to 6 earlier rated months, none below 3; the bad month when spending exceeds earnings.
+  - Signature: overviewModel(month, totals, rates) → { kept, typical?, bad?, … }. Inputs: GET /totals (view native and usd) and GET /rates. Kept in pesos at the month's rate, cents rounded half away from zero; typical month from 3 to 6 earlier rated months, none below 3; the bad month when spending exceeds earnings.
 - Verify: `npm test --workspace @smart-finances/web -- src/screens/overview/model.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-163 · Build the overview
@@ -122,7 +121,7 @@ status: draft
 - Files: apps/web/src/app/(app)/transactions/ (new), apps/web/e2e/transactions.spec.ts (new)
 - Tests first: T-WSCR-6
 - Do:
-  - Filters, sort and paging are requests; month, view, kind, category and sort in the address; free text in the form only.
+  - Filters, sort and paging are requests (kinds from KINDS, categories from CATEGORIES, page size 50, default sort date descending); month, view, kind, category and sort in the address; free text in the form only.
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/transactions.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-165 · Build review and rates
@@ -138,7 +137,7 @@ status: draft
 - Files: apps/web/src/app/(app)/imports/ (new), apps/web/src/server/caps.ts (new), apps/web/src/server/caps.test.ts (new), apps/web/e2e/imports.spec.ts (new)
 - Tests first: T-WSCR-8, T-WSCR-9
 - Do:
-  - caps.ts: one conditional update on ACCT#<sub> in ACCOUNTS_TABLE reserves the slot (D-114); release or correct it at the final status; imports-paused read through SSM (cached 60 seconds). Source names and file-name rules are the data spec's POST /imports.
+  - caps.ts wraps accounts.ts reserveImport and releaseImport: one conditional update on ACCT#<sub> reserves the slot (D-114; imports_today resets when the UTC day changes); the poll releases or corrects it at the final status; imports-paused read through SSM (cached 60 seconds). Source names and file-name rules are the data spec's POST /imports.
   - Upload with fetch and FormData to the presigned URL; poll the import through the server; skipped rows per D-86.
 - Verify: `npm test --workspace @smart-finances/web -- src/server/caps.test.ts` and `npm run e2e --workspace @smart-finances/web -- e2e/imports.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
@@ -155,7 +154,7 @@ status: draft
 - Files: apps/web/src/server/auth/deleteAccount.ts (new), apps/web/src/server/auth/deleteAccount.test.ts (new), apps/web/e2e/delete-account.spec.ts (new)
 - Tests first: T-WSCR-11, T-WSCR-12
 - Do:
-  - POST /api/account/delete: signIn(email, password, { reauth: true }) plus the code, and no running import, then mark deleting; POST /api/account/delete/finish (requireMoneyAccess({ allowDeleting: true })): erase until 202, signOutEverywhere, AdminDeleteUser (not found is done), remove the account row; signed-out page with counts.
+  - POST /api/account/delete with { email, password, code }: signIn(email, password, { reauth: true }) plus the code, no running_import_id, and no running import, then mark deleting; POST /api/account/delete/finish (requireMoneyAccess({ allowDeleting: true })): erase until 202, signOutEverywhere, AdminDeleteUser (not found is done), remove the account row; signed-out page with counts.
   - Only the deleting session may reach the finish route; a test fails at each step and finishes it.
 - Verify: `npm test --workspace @smart-finances/web -- src/server/auth/deleteAccount.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
@@ -169,7 +168,7 @@ status: draft
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/hostile.spec.ts` and `node scripts/check-no-raw-html.mjs` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-170 · Keyboard, contrast and language checks
-- Implements: AC-4, AC-10, D-22 · After: SF-163, SF-168 · Judgment: normal
+- Implements: AC-4, AC-10, D-22 · After: SF-163 to SF-169, SF-171 · Judgment: normal
 - Files: apps/web/e2e/a11y.spec.ts (new)
 - Tests first: T-WSCR-15, T-WSCR-16
 - Do:
@@ -181,7 +180,7 @@ status: draft
 - Files: apps/web/src/app/(app)/too-many/ (new), apps/web/e2e/limit.spec.ts (new)
 - Tests first: T-WSCR-17
 - Do:
-  - Past the person limit (5 a minute under STAGE=test) the next page is the plain 429 page with the wait; another session's person is not counted.
+  - Past the person limit (5 a minute under STAGE=test) the next page is the plain 429 page with the wait; a second signed-in test person is still served.
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/limit.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 

@@ -28,14 +28,13 @@ status: draft
 5. test-matrix.md rows whose task is SF-121 to SF-131.
 
 ## HUMAN needs
-- <HUMAN: alarm-email stage parameter (/smart-finances/<stage>/alarm-email) before the first deploy of the alarms stack> · Blocks: SF-129 qa check
+- <HUMAN: alarm-email and, on qa, monthly-budget-usd stage parameters before the first deploy of the alarms stack> · Blocks: SF-129 qa check
 - <HUMAN: redeploy the OIDC stack with the new rights after this PR merges> · Blocks: the first CI release (SF-131)
 - <HUMAN: read-only check that /aws/amplify/<app id> exists in us-east-1> · Blocks: SF-125 qa check
 
 ## Global constraints
 - D-6: Roles: the agent writes code, commits, pushes feature branches and opens draft PRs into qa; the user reviews, merges and promotes. Source: data-architecture spec D-4 (default).
 - D-5: Agent access: local tests, builds and the dev server viewed in the browser pane, plus read-only AWS calls with the personal profile. No AWS writes and no real sign-ins; the user does those.
-- D-15: Leading strand: Cruz-Diez bands. Colour arrives as thin vertical bands; spending is plain ink, income blue, savings green, attention amber; category colours exclude red, so red stays only for the bad figure (D-13).
 - D-53: The web server sends the access token as a bearer token; the API's audience check takes the client id from it. A person confirms it on qa.
 - D-72: Sessions: an opaque id in a __Host- cookie keys a server-side row holding the tokens; idle 30 minutes, absolute 12 hours, new id at sign-in; sign out revokes. A reload keeps you in; the session ends with the browser, not the tab. Supersedes D-47. Details: architecture.md, Contracts.
 - D-73: Sign-in from the web server with a new confidential client (secret, password flow, context data); the server answers each challenge; the secret is read at run time by the compute role; the public client goes once this works on qa. Packages: AWS SDK clients for Cognito, DynamoDB and Secrets Manager, and qrcode.
@@ -45,7 +44,6 @@ status: draft
 - D-88: The upload bucket's browser rule is set by the web stack (a custom resource puts the rule with the Amplify branch address); the data stack stops managing it.
 - D-89: Everything runs in us-east-1, where the stacks already are, so the web ACL lives in the web stack and no stage value is read across regions. Supersedes D-84.
 - D-93: Amplify auto-build is off; after the web stack deploys, CI starts the Amplify job for the commit and waits for /api/health to report it. The CI role gets start and read job rights on this app only. Narrows D-65.
-- D-95: Before sign-up opens on any stage, the owner raises the account's Lambda concurrency quota; then the read handler gets reserved concurrency and the parser a cap below it.
 - D-98: Sign-up gate: the pre-sign-up trigger accepts only the web server's client, refuses disposable domains, and on qa accepts only an allow-list of test addresses until Q-8 is answered; staging and prod keep sign-up off until then. The public client is removed before any stage opens sign-up.
 - D-102: The Amplify app was created in the console with Amplify's GitHub App (app smart-finances, branch qa, us-east-1); the web stack adopts it by the id in a stage parameter and sets its platform, roles, firewall and branch settings through custom resources. No GitHub token is stored. Narrows D-71.
 - D-104: Delete account, final: first a full re-sign-in (password and code) and no running import; then mark deleting; that session alone may reach the finish route; erase, global sign-out, delete the pool user, remove rows. The hourly job finishes a stuck deletion by invoking the data service's delete function with the sub (one function, one grant; a follow-up row in the data-architecture spec) and alarms after 6 hours. Supersedes D-97.
@@ -57,7 +55,6 @@ status: draft
 - D-112: The console-created app already has its log group, so the web stack references /aws/amplify/<app id> by name and sets its one-month retention through a custom resource instead of creating it.
 - D-113: CI: the owner redeploys the OIDC stack with Amplify start, get and list job rights on each stage's app and read of the amplify-app-id parameters; the poll waits at most 15 minutes and fails on a failed or cancelled job; the deploy job's limit rises to 45 minutes.
 - D-117: No paid Cognito plan: the pool stays on Lite with no threat protection; the web server refuses breached passwords at sign-up and reset through the free Pwned Passwords range API (only the first 5 characters of the password's SHA-1 leave the server; if the API is down, the password is accepted and the miss logged); no context data is sent. Supersedes D-94 and narrows D-73.
-- D-118: qa is open to anyone: signup-open is true on qa, with no allow-list. The user accepts strangers' data on qa before the legal answer, on a stage whose data may be wiped; the privacy notice says qa is a test stage. Staging and prod stay closed until Q-8. Narrows D-98 and D-109.
 - D-120: No WAF for now, on any stage. Limits live in the web server's window counters: auth posts per IP 20 per 5 minutes, sign-in or reset failures per email and address prefix 5 per 15 minutes, code emails per email 3 an hour and 10 a day, data requests per person 120 a minute. A self-hosted proof-of-work check (served from the site, no third party) guards sign-up and the auth posts instead of the WAF challenge. The user accepts that floods reach the web server's compute. Supersedes D-90 and D-105.
 - D-121: Integration branch: the four PRs (foundation, infra, auth, screens) each open as a draft into feature/web-ui, in order; once all are merged there, one PR from feature/web-ui into qa ships infra and web in one merge. The agent commits, pushes its feature branches and opens draft PRs; the user reviews, merges and promotes. Narrows D-6.
 - Values:
@@ -68,6 +65,7 @@ status: draft
   - Code emails: subject "Your Cuenta code" / "Tu código de Cuenta", one sentence with {####}.
   - Data spec follow-up rows: the next free D id there, source "web-ui spec, <date>", status proposed.
   - Region us-east-1 only. Stage parameters under /smart-finances/<stage>/: amplify-app-id (qa: set by the owner), web-client-id, web-client-secret-arn, api-url, support-address, signup-open, imports-paused, alarm-email, housekeeping-hmac-secret-arn, delete-function-name (written by data PR 3; may be missing).
+  - Reserved concurrency (D-95) waits for the data PRs' functions; none here. Infra packages go in infra/package.json.
   - Packages allowed: disposable-email-domains (trigger), @aws-sdk/client-amplify, @aws-sdk/client-cognito-identity-provider, @aws-sdk/client-ssm, @aws-sdk/client-lambda, @aws-sdk/client-dynamodb (same major as apps/api).
   - Stage values are read with readStageValues, never valueForStringParameter. Log groups one month. No managed policies.
   - Infra tests: `npm test --workspace @smart-finances/infra`; Lambda unit tests: `node --test <file>`.
@@ -113,11 +111,11 @@ status: draft
 - Done when: verify is green, evidence is in progress-smart-finances-infra.json, and the reviewer has no blocker
 ### SF-122 · Add the pre-sign-up trigger
 - Implements: AC-19, D-98, D-109, D-118 · After: SF-121 · Judgment: high
-- Files: infra/lambda/pre-sign-up.mjs (new), infra/lambda/pre-sign-up.test.mjs (new), smart-finances:infra/lib/data-stack.ts#DataStack
+- Files: infra/lambda/pre-sign-up.mjs (new), infra/lambda/pre-sign-up.test.mjs (new), smart-finances:infra/lib/data-stack.ts#DataStack, infra/test/data-stack.test.ts
 - Tests first: T-WINF-3, T-WINF-4
 - Do:
   - Refuse when callerContext.clientId is not the web-client-id, when signup-open is not "true", or when the email domain is on the disposable-email-domains list.
-  - Read web-client-id and signup-open from SSM at run time with a 60-second cache; no pool or client id in the environment (no cycle).
+  - Read web-client-id and signup-open from SSM at run time with a 60-second cache, granted on those two parameters; no pool or client id in the environment (no cycle). A refusal throws an Error whose message is the plain reason key.
 - Verify: `node --test infra/lambda/pre-sign-up.test.mjs` and `npm test --workspace @smart-finances/infra` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-infra.json, and the reviewer has no blocker
 ### SF-123 · Add the custom message trigger for the email language
@@ -150,7 +148,7 @@ status: draft
 - Done when: verify is green, evidence is in progress-smart-finances-infra.json, and the reviewer has no blocker
 ### SF-126 · Adopt the Amplify app and set its roles, platform and variables
 - Implements: D-102, D-93, D-110, D-111 · After: SF-125 · Judgment: high
-- Files: smart-finances:infra/lib/web-stack.ts#WebStack, infra/test/web-stack.test.ts
+- Files: smart-finances:infra/lib/web-stack.ts#WebStack, infra/lambda/amplify-vars.mjs (new, the Lambda-backed resource that merges variables), infra/test/web-stack.test.ts
 - Tests first: T-WINF-8
 - Do:
   - Read amplify-app-id from SSM; custom resources: UpdateApp (platform WEB_COMPUTE, service role, compute role) and UpdateBranch (enableAutoBuild false, compute role).
@@ -168,13 +166,13 @@ status: draft
 - Done when: verify is green, evidence is in progress-smart-finances-infra.json
 ### SF-128 · Add the hourly housekeeping function
 - Implements: AC-12, AC-18, D-104, D-106, D-107 · After: SF-125 · Judgment: high
-- Files: infra/lambda/housekeeping.mjs (new), infra/lambda/housekeeping.test.mjs (new), smart-finances:infra/lib/web-stack.ts#WebStack
+- Files: infra/lambda/housekeeping.mjs (new), infra/lambda/housekeeping.test.mjs (new), smart-finances:infra/lib/web-stack.ts#WebStack, infra/test/web-stack.test.ts
 - Tests first: T-WINF-10, T-WINF-11
 - Do:
   - Hourly: ListUsers filter cognito:user_status = "UNCONFIRMED", delete those older than 24 hours.
   - Finish deletions with status deleting: invoke the data service's delete function with the sub when its name parameter exists (it arrives with data PR 3; skip and count otherwise), global sign-out, delete user (not found is done), remove rows; publish a metric for rows deleting over 6 hours.
   - GET the branch's /api/health once.
-  - Grants: ListUsers and the admin calls on this pool, lambda:InvokeFunction on that one function, the tables.
+  - Grants: ListUsers and the admin calls on this pool, lambda:InvokeFunction on that one function, ssm:GetParameter on its stage parameters, the tables. Payload to the delete function: { sub }.
 - Verify: `node --test infra/lambda/housekeeping.test.mjs` and `npm test --workspace @smart-finances/infra` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-infra.json, and the reviewer has no blocker
 ### SF-129 · Add the alarms stack and dashboard
@@ -183,6 +181,7 @@ status: draft
 - Tests first: T-WINF-12
 - Do:
   - One SNS topic smart-finances-<stage>-alarms with an email subscription to the alarm-email stage parameter.
+  - Cost: the qa alarms stack alone creates the account-wide AWS Budgets budget (limit from monthly-budget-usd; 50, 80 and 100% to the topic). The rollup alarm arrives with data PR 3 and stays there.
   - Metric filters on /aws/amplify/<app id> and every alarm in architecture.md Contracts "Alarms"; the heartbeat treats missing data as breaching.
   - One dashboard with those metrics.
 - Verify: `npm test --workspace @smart-finances/infra` → pass

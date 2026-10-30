@@ -51,7 +51,7 @@ status: draft
 | T-WAUTH-10 | AC-12, D-75 | SF-147 | unit | G-merge | Known and unknown emails get the same reply and timing; code emails stop at the cap. |
 | T-WAUTH-11 | AC-1, AC-13 | SF-148 | unit | G-merge | First sign-in walks setup then code; no session before the code. |
 | T-WAUTH-12 | AC-1, D-91 | SF-148 | unit | G-merge | An expired challenge returns to the password step; 5 wrong codes start over. |
-| T-WAUTH-13 | AC-14, D-87 | SF-149 | unit | G-merge | No money route answers without a consent row; consent survives erase-all. |
+| T-WAUTH-13 | AC-14, D-87 | SF-149 | unit | G-merge | No money route answers without a consent row; resetStoredBytes keeps consent. |
 | T-WAUTH-14 | AC-20, D-92 | SF-150 | unit | G-merge | After a reset, a session opened before it is refused and the authenticator is still asked. |
 | T-WAUTH-15 | AC-16 | SF-151 | unit | G-merge | Sign-out is a post that removes the row and revokes the refresh token. |
 | T-WAUTH-16 | AC-14, D-103 | SF-152 | e2e | G-merge | Privacy, terms and lost-authenticator pages render in both languages with one version id. |
@@ -72,7 +72,7 @@ status: draft
 | T-WSCR-14 | AC-9 | SF-169 | unit | G-merge | No raw HTML insertion or markdown renderer exists in apps/web/src. |
 | T-WSCR-15 | AC-10, D-22 | SF-170 | e2e | G-merge | axe finds no violation on any screen in both languages and themes. |
 | T-WSCR-16 | AC-10, AC-4 | SF-170 | e2e | G-merge | Every action is reachable by keyboard with visible focus; a language switch keeps the screen. |
-| T-WSCR-17 | AC-17 | SF-171 | e2e | G-merge | Past 120 requests a minute the person sees the 429 page; another person is not affected. |
+| T-WSCR-17 | AC-17 | SF-171 | e2e | G-merge | Past the person limit (120 a minute; 5 under STAGE=test) the 429 page shows; a second person is still served. |
 
 ## End-to-end and manual
 <!-- e2e rows and checks a person runs, in Given/When/Then. Fixtures use internal ids only; credentials never go in this folder. release.md says who runs each manual row and when. Example row: | T-E2E-1 | AC-1, D-1 | manual | manual | G-promote | Given a signed-in user, when they open a page that makes several calls, then exactly one page-view event appears. | -->
