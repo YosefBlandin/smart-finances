@@ -10,10 +10,10 @@ status: draft
 
 ## Overview
 <!-- 3 to 6 lines: the shape of the change and the data flow. -->
-A Next.js 15 app in apps/web, built and served by the Amplify app the owner created in the console (D-102), in us-east-1 like every other stack (D-89). CI deploys the stacks, then starts the Amplify build (D-93). The web server is the only thing the browser talks to apart from file uploads: it runs sign-up and sign-in with the sign-in service itself (D-66, D-73), keeps pre-auth and session state in server-side rows behind opaque cookies (D-72, D-91), and calls the data API with the person's access token (D-53, D-82). A firewall limits automated traffic (D-90); the web server refuses breached passwords (D-117); alarms watch the whole path (D-80).
+A Next.js 15 app in apps/web, built and served by the Amplify app the owner created in the console (D-102), in us-east-1 like every other stack (D-89). CI deploys the stacks, then starts the Amplify build (D-93). The web server is the only thing the browser talks to apart from file uploads: it runs sign-up and sign-in with the sign-in service itself (D-66, D-73), keeps pre-auth and session state in server-side rows behind opaque cookies (D-72, D-91), and calls the data API with the person's access token (D-53, D-82). Window counters and a proof-of-work check limit automated traffic (D-120); the web server refuses breached passwords (D-117); alarms watch the whole path (D-80).
 
 ```
-browser ─https─▶ WAF (CloudFront scope) ─▶ Amplify: Next.js web server ──▶ sign-in pool (confidential client)
+browser ─https─▶ Amplify (CDN) ─▶ Next.js web server ───────── ──▶ sign-in pool (confidential client)
    │  __Host-pre / __Host-sid cookies only        │  sessions table, accounts table
    │                                              └─ Bearer access token ─▶ HTTP API ─▶ handlers
    └─ fetch FormData (presigned) ─────────────────────────────────────────▶ upload bucket
@@ -47,11 +47,11 @@ browser ─https─▶ WAF (CloudFront scope) ─▶ Amplify: Next.js web server
 - Calls the pool with the confidential client (secret hash) (D-73). Before sign-up and reset it checks the new password against the Pwned Passwords range API (D-117). The client IP for the counters is the right-most X-Forwarded-For entry added by Amplify's CDN, never the left-most; a qa check confirms the header.
 - Between steps the state lives in the pre-auth row (D-91); a completed sign-in deletes it and issues a new __Host-sid.
 - At the first completed sign-in the consent from the pre-auth row is written to the accounts table before any money screen (D-87); a person without a consent row sees the consent screen.
-- Every auth post is a route handler that checks the Origin against the stage's web address (D-115), then the window counters (D-90); a WAF 429 or a counter refusal shows the "too many tries" message with the wait; a WAF challenge reply shows "reload and try again" (D-105).
+- Every auth post is a route handler that checks the Origin against the stage's web address (D-115), then the proof-of-work answer, then the window counters (D-120); a refusal shows the "too many tries" message with the wait.
 - Sign-up, reset and sign-in give the same message and timing for known and unknown emails. A sign-up for an existing unconfirmed email replaces it with the new password (D-106); code emails are capped per email (Limits).
 - After a reset: global sign-out, session rows removed and a notice email (D-92, D-115). Delete account: D-104, after a full re-sign-in. Lost authenticator: the owner's runbook in Docs (D-115).
 - Logs: one security event per outcome (Contracts); the logger refuses fields named password, code, secret or token.
-- Serves: AC-1, AC-12, AC-13, AC-14, AC-17, AC-18, AC-19, AC-20; D-66, D-73, D-75, D-87, D-90 to D-92, D-103 to D-106, D-115, D-117.
+- Serves: AC-1, AC-12, AC-13, AC-14, AC-17, AC-18, AC-19, AC-20; D-66, D-73, D-75, D-87, D-91, D-92, D-103, D-104, D-106, D-115, D-117, D-120.
 
 ### Sessions and accounts
 - Where: apps/web/src/server/session.ts (new), apps/web/src/server/accounts.ts (new); tables in smart-finances:infra/lib/web-stack.ts#WebStack (new).
@@ -108,9 +108,9 @@ browser ─https─▶ WAF (CloudFront scope) ─▶ Amplify: Next.js web server
 ### Web stack
 - Where: smart-finances:infra/lib/web-stack.ts#WebStack (new), smart-finances:infra/lib/stage.ts#addStage, smart-finances:infra/lib/stage-values.ts#readStageValues.
 - Adopts the Amplify app by the amplify-app-id stage parameter (D-102). Custom resources set the app's platform to web compute and its service and compute roles, set the branch's auto-build off, its compute role and its variables (merged, D-110), and put the upload bucket's browser rule (D-88, D-93). They may pass only those two roles and clear them on delete (D-111).
-- Owns: the CloudFront-scoped web ACL and its association with the app (D-89, D-90, D-105), the WAF log group (30 days, blocked and challenged requests, cookie redacted), the Amplify service role (write to /aws/amplify/<app id>, which it references and sets to one month, D-112), the compute role, the sessions table, the accounts table (retained, point-in-time recovery and deletion protection on staging and prod, D-111), and the hourly housekeeping function (D-104, D-106, D-107).
+- Owns: the Amplify service role (write to /aws/amplify/<app id>, which it references and sets to one month, D-112), the compute role, the sessions table, the accounts table (retained, point-in-time recovery and deletion protection on staging and prod, D-111), and the hourly housekeeping function (D-104, D-106, D-107). No WAF (D-120).
 - The compute role may: read the client secret and the stage parameters; read and write both tables; admin get, delete and global sign-out on this pool only (D-92, D-104). The housekeeping function may also list users on this pool and invoke the data service's delete function (D-104, D-106).
-- Serves: AC-15 to AC-19; D-72, D-87 to D-93, D-97 to D-99, D-102.
+- Serves: AC-15 to AC-19; D-72, D-87, D-88, D-89, D-91 to D-93, D-102, D-104, D-106, D-107, D-110 to D-112.
 
 ### Alarms
 - Where: smart-finances:infra/lib/alarms-stack.ts#AlarmsStack (new); apps/web/src/server/log.ts (new).
@@ -166,12 +166,11 @@ Idle 30 minutes; absolute 12 hours; a new id at every sign-in.
 ### Accounts table (DynamoDB, on demand, no TTL)
 pk ACCT#<sub>: consent { terms_version, privacy_version, lang, accepted_at }, status (active or deleting), deleting_since?, imports_today { day, n }, running_import_id?, stored_bytes. Erase-all resets stored_bytes and keeps the row; delete account removes it last.
 
-### Limits (D-90, D-96)
+### Limits (D-96, D-114, D-120)
 | Scope | Limit | Where | On excess |
 |---|---|---|---|
-| requests per IP, excluding /_next/static | 1,000 per 5 minutes | WAF rate rule | block 429 |
-| GET of auth pages and auth posts | every request | WAF challenge, token 30 minutes (D-105) | silent check; a post without a token gets "reload and try again" |
-| auth posts per IP | 20 per 5 minutes | WAF rate rule | block with custom 429 body |
+| sign-up and auth posts | a proof-of-work answer issued by the server, valid 10 minutes, one use | web server | "reload and try again" |
+| auth posts per IP | 20 per 5-minute window | counter | same message, wait shown |
 | sign-in or reset failures per email and address prefix | 5 per 15-minute window | counter | same message, wait shown |
 | code emails per email | 3 an hour, 10 a day | counter | same reply, no email sent (D-106) |
 | data requests per person | 120 per 1-minute window | counter | 429 page (AC-17) |
@@ -209,7 +208,7 @@ amplify.yml writes these into apps/web/.env.production before next build; no sec
 |---|---|---|
 | sign-up spike | security events, signup | over 50 in 1 hour |
 | sign-in failures | security events, signin_fail | over 100 in 15 minutes |
-| WAF blocks | web ACL metrics | over 500 in 5 minutes |
+| rate-limit refusals | security events, rate_limited | over 500 in 5 minutes |
 | web server errors | Amplify 5xx | over 2% for 10 minutes |
 | API errors and throttles | HTTP API 5xx and 429 | over 2%, or any 429 for 5 minutes |
 | function errors and throttles | Lambda, including housekeeping | any for 5 minutes |
@@ -240,12 +239,13 @@ amplify.yml writes these into apps/web/.env.production before next build; no sec
 | A. Encrypted cookie holding the tokens | tokens over 4 KB need several cookies; a session cannot be ended from the server | a key in Secrets Manager | rejected |
 | B. Opaque id in the cookie, tokens in a table | one read per request; sessions can be listed and ended | sessions table | chosen |
 
-### Fork: per-person and per-address limits (D-90)
+### Fork: per-person and per-address limits (D-120)
 | Option | Cost | Wiring | Verdict |
 |---|---|---|---|
 | A. WAF on the API | not possible on an HTTP API (F-44) | none | rejected |
 | B. Limits at the pool | every call comes from the web server, so all people share its addresses (F-47) | none | rejected |
-| C. WAF at the app's edge for addresses, window counters for people and emails | two places to read | web ACL plus counters | chosen |
+| C. WAF at the app's edge plus counters | about 8 to 12 dollars a month per stage | web ACL plus counters | rejected for now by the user (D-120) |
+| D. Window counters and a proof-of-work check in the web server | floods reach compute; weaker against rotating addresses | counters, one small check | chosen |
 
 ### Fork: sign-in flow (D-73)
 | Option | Cost | Wiring | Verdict |
@@ -279,8 +279,8 @@ amplify.yml writes these into apps/web/.env.production before next build; no sec
 
 ## Cross-cutting
 - **Security and permissions:** OWASP ASVS 5.0 V6, V7, V3 and V14 and the OWASP Authentication, Session Management and CSRF cheat sheets are the checklist (D-75). The browser holds only opaque cookies (AC-16). CSRF: SameSite plus an Origin check on every post. The person comes only from the session; the API checks the token's sub (AC-15). Admin rights on the pool are limited to get, delete and global sign-out for the compute role and the housekeeping function.
-- **Personal data and logs:** security events carry no email, IP or token. WAF logs keep IPs 30 days, for abuse review. Amplify logs one month. Pre-auth rows hold an email hash, never the email. Fixtures and screenshots use data/synthetic only.
-- **Performance and cost:** pages render per request (nonces, no streaming, D-101): one session read and up to four API reads on the overview. New costs per stage: no Cognito plan cost (Lite, D-117); WAF web ACL, rules and requests, Amplify builds and compute, two on-demand tables, SES per email, one hourly function. Budgets alarm at 50, 80 and 100%.
+- **Personal data and logs:** security events carry no email, IP or token. Amplify logs one month. Pre-auth rows hold an email hash, never the email. Fixtures and screenshots use data/synthetic only.
+- **Performance and cost:** pages render per request (nonces, no streaming, D-101): one session read and up to four API reads on the overview. New costs per stage: no Cognito plan cost (Lite, D-117), no WAF (D-120); Amplify builds and compute, two on-demand tables, SES per email, one hourly function. Budgets alarm at 50, 80 and 100%.
 - **Deploy and infrastructure:** release.md, "Rollout order" and "HUMAN needs".
 - **Observability:** the alarms table, the heartbeat, one dashboard per stage, and the post-deploy health check.
 - **Old clients:** none (D-2). The public SRP client goes before any stage opens sign-up (D-98).
@@ -295,12 +295,13 @@ amplify.yml writes these into apps/web/.env.production before next build; no sec
 | RK-4 | The compute role gives the server no credentials (F-45). | medium | high | A qa check in the first web task; any fallback becomes a new decision. | owner |
 | RK-5 | A pool change replaces the pool and orphans the data. | low | high | A synth test asserts the pool's logical id and no replacement. | owner |
 | RK-6 | The password crosses the web server and could be logged. | low | high | A logger test that refuses secret field names; a fresh review of every auth handler. | owner |
-| RK-7 | Fake sign-ups run up cost or email reputation. | medium | medium | D-90, D-96, D-106 and the sign-up and SES alarms; accepted in D-67 and, on qa, D-118. | owner |
-| RK-15 | Without threat protection, credential stuffing is caught only by the firewall and counters. | medium | medium | Accepted in D-117; the sign-in failure alarm and TOTP on every sign-in limit the damage. | owner |
+| RK-7 | Fake sign-ups run up cost or email reputation. | medium | medium | D-120, D-96, D-106 and the sign-up and SES alarms; accepted in D-67 and, on qa, D-118. | owner |
+| RK-15 | Without threat protection, credential stuffing is caught only by the counters and the proof-of-work check. | medium | medium | Accepted in D-117; the sign-in failure alarm and TOTP on every sign-in limit the damage. | owner |
 | RK-8 | Cognito's default sender caps emails per day before SES is ready. | high | medium | Only qa uses it (D-77); the per-email cap (D-106) and the sign-up spike alarm watch it. | owner |
 | RK-9 | The data service was built for one owner (F-31). | high | medium | D-81, D-95, D-96 and the follow-up rows in the data-architecture spec. | owner |
 | RK-10 | Legal duties are unmet when sign-up opens. | medium | high | Q-8 gates every stage's public sign-up (D-98). | legal |
 | RK-11 | Chivo is wide, so Spanish wraps in tables, chips and the rail. | medium | low | Screenshots in Spanish at 400 and 1400 pixels, checked by a person. | owner |
 | RK-12 | A few heavy imports use the account's Lambda concurrency and every read fails. | medium | high | The quota raise and reservations (D-95) before sign-up opens; a load check on qa. | owner |
 | RK-13 | The log pipe breaks and the security alarms go silent. | low | medium | The hourly job's health call and the missing-data alarm (D-107). | owner |
+| RK-16 | Without a firewall, a request flood runs the web server and costs compute. | medium | medium | Accepted in D-120; budget and web server error alarms; adding WAF later is one stack change. | owner |
 | RK-14 | Node middleware or the SDK does not run as expected on Amplify. | medium | high | Middleware needs no SDK (D-108); a qa check in the first web task. | owner |

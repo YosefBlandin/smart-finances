@@ -43,7 +43,7 @@ status: draft
 | Check | Tests | Where | Owner | Pass when |
 |---|---|---|---|---|
 | Sign-up, confirm, setup, sign-in, reset and delete account work end to end | manual | qa | HUMAN | each step ends where States and exits says |
-| Over-limit sign-in shows the plain wait message, not a raw error | manual | qa | HUMAN | message in both languages |
+| Over-limit sign-in shows the plain wait message, not a raw error; a scripted post without a proof-of-work answer is refused | manual | qa | HUMAN | message in both languages; script refused |
 | A session opened before a reset is refused after it | manual | qa | HUMAN | the old browser lands on sign-in |
 | The served commit and headers match the contract | CI check | qa, staging | EXECUTOR | /api/health reports the sha; headers match |
 | A test signin_fail moves its metric and the heartbeat reports | manual | qa | HUMAN | metric counts 1; heartbeat present |
@@ -52,7 +52,7 @@ status: draft
 ## Rollout order
 <!-- Numbered steps with owner and the wait between them. Say what must never happen, for example one repo reaching production without the other. -->
 1. HUMAN setup steps; CDK already bootstrapped in us-east-1 (the only region, D-89).
-2. CI on the qa merge: data stack (pool changes, new client, triggers, secret), API stack (audience lists both clients), web stack (adopts the app, roles, firewall, tables, bucket rule, housekeeping), alarms stack; then the Amplify job and the health check.
+2. CI on the qa merge: data stack (pool changes, new client, triggers, secret), API stack (audience lists both clients), web stack (adopts the app, roles, tables, bucket rule, housekeeping), alarms stack; then the Amplify job and the health check.
 3. After qa checks pass and the public client is removed: the same order on staging, then prod.
 Never: open sign-up on any stage before Q-8; open staging or prod before SES and the concurrency raise.
 
