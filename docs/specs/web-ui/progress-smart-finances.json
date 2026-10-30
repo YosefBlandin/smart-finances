@@ -98,9 +98,13 @@
     },
     {
       "id": "SF-106",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "5b176a3",
+      "evidence": [
+        "T-WEB-5 and T-WEB-6 fail first: npm test --workspace @smart-finances/web -- src/i18n/i18n.test.ts -> Error: Cannot find module './format', Tests: no tests",
+        "After: same command -> Test Files 1 passed, Tests 24 passed (24): en and es have the same 378 keys, none empty, 7 plurals (vsUp, vsDown, todoReview, todoImports, skippedTitle, deleting x2) with the same arguments and forms in both languages and always one and other, todoReview and todoImports have =0, every message is valid ICU and formats with sample values in both languages, 13 language-choice cases (cookie wins, else Accept-Language, es-AR and ES-ar mean Spanish, anything else English), amounts and percentages per D-23 and D-30",
+        "npm run lint --workspace @smart-finances/web -> clean; tsc --noEmit -> exit 0 (after clearing stale .next build output from the SF-105 probe); root npm test -> exit 0 (37 api+contracts, 68 web in 4 files, 11 infra pass)"
+      ],
       "review": ""
     },
     {
@@ -178,6 +182,9 @@
     "SF-104: Prettier printWidth is 150, chosen so SF-103 route.ts (one 141-character line) passes without editing a file outside this task. Rules apply to src/ only; the app/ to adapters rule from architecture.md (\"through container.ts only\") was not in the brief and is not enforced yet.",
     "SF-104: @eslint/eslintrc (already ESLint's own dependency, 3.3.7) is imported by eslint.config.mjs for Next 15's documented FlatCompat setup, and plugins come through eslint-config-next; only eslint, eslint-config-next, eslint-plugin-import, eslint-plugin-jsx-a11y and prettier were added to package.json.",
     "SF-105 GAP: nothing in the brief wires tokens.css, base.css and fonts.ts into the root layout. apps/web/src/app/layout.tsx is SF-103's file and not in SF-105's Files; SF-111 lists only the (app) layout. The files exist and were proven to build when wired temporarily. The root layout needs imports of ../styles/tokens.css, ../styles/base.css and className={fontVariables} on <html>; the planning session should add layout.tsx to a task (SF-106 or SF-111).",
-    "SF-105: tokens.css was reformatted by Prettier (required by the lint script); values are identical to the prototype. Tabler icons are not installed yet; the Icon primitive arrives in SF-109."
+    "SF-105: tokens.css was reformatted by Prettier (required by the lint script); values are identical to the prototype. Tabler icons are not installed yet; the Icon primitive arrives in SF-109.",
+    "SF-106 GAP: next-intl is not connected yet. It needs createNextIntlPlugin('./src/i18n/request.ts') in next.config.ts (SF-103 file) and a NextIntlClientProvider and html lang in the root layout; together with the SF-105 gap (tokens, base styles, fonts) the root layout.tsx and next.config.ts need an owner task. Neither file is in SF-106's Files.",
+    "SF-106: messages exclude what the app does not build (prototype controls, design-system page, assistant screens per D-46); empty-state copy is stored as title, text and action instead of the prototype's arrays; prototype-only account-screen keys (pick, v, intro) are left out.",
+    "SF-106: the Ask nav entry and the assistant copy are not in the catalogues; they arrive with Epic 4."
   ]
 }
