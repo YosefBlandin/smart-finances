@@ -57,16 +57,41 @@ test('T-WEB-8: in a browser, an inline script without the nonce does not run', a
   expect(violations.length).toBeGreaterThanOrEqual(2);
 });
 
-test("T-WEB-8: the app's own scripts run under the policy without a script violation", async ({ page }) => {
+test("T-WEB-8: the app's own scripts run under the policy without a script violation", async ({ page, context }) => {
+  // Real app pages: the sign-in placeholder, then a money page behind the dummy session cookie (any value passes the
+  // middleware until PR 3; with it, /sign-in would redirect to /overview). A blocked script shows up three ways: a
+  // console error, a thrown error (a blocked eval is an EvalError, not a console message) and a securitypolicyviolation
+  // event; all three are collected.
+  await context.addInitScript(() => {
+    const w = window as unknown as { __violations: string[] };
+    w.__violations = [];
+    document.addEventListener('securitypolicyviolation', (e) => w.__violations.push(`${e.effectiveDirective} ${e.blockedURI}`));
+  });
   const violations: string[] = [];
   page.on('console', (m) => {
     if (m.type() === 'error' && /Content Security Policy/i.test(m.text()) && /script-src/.test(m.text())) violations.push(m.text());
   });
-  const res = await page.goto('/sign-in');
-  expect(res?.headers()['content-security-policy']).toContain("'nonce-");
-  const nonce = nonceOf(res?.headers()['content-security-policy'] ?? '');
-  const scripts = await page.evaluate(() => [...document.scripts].map((s) => s.nonce));
-  expect(scripts.length).toBeGreaterThan(0);
-  expect(scripts.every((n) => n === nonce)).toBe(true);
+  page.on('pageerror', (e) => {
+    if (/Content Security Policy|unsafe-eval/i.test(e.message)) violations.push(e.message);
+  });
+
+  for (const path of ['/sign-in', '/overview']) {
+    if (path === '/overview') {
+      await context.addCookies([
+        { name: '__Host-sid', value: 'e2e-dummy-session', url: 'https://localhost:3000/', secure: true, httpOnly: true, sameSite: 'Lax' },
+      ]);
+    }
+    const res = await page.goto(path, { waitUntil: 'load' });
+    expect(new URL(page.url()).pathname).toBe(path);
+    const nonce = nonceOf(res?.headers()['content-security-policy'] ?? '');
+    expect(nonce).not.toBe('');
+    const scripts = await page.evaluate(() => [...document.scripts].map((s) => s.nonce));
+    expect(scripts.length).toBeGreaterThan(0);
+    expect(scripts.every((n) => n === nonce)).toBe(true);
+    // Give the client code a moment to hydrate, so a violation it causes is seen.
+    await page.waitForLoadState('networkidle');
+    const events = await page.evaluate(() => (window as unknown as { __violations: string[] }).__violations);
+    violations.push(...events.filter((v) => v.startsWith('script-src')));
+  }
   expect(violations).toEqual([]);
 });
