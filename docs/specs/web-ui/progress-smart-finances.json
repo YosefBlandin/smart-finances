@@ -165,7 +165,7 @@
     },
     {
       "id": "SF-111",
-      "status": "blocked",
+      "status": "todo",
       "commit": "",
       "evidence": [
         "Stopped before writing code: the task as written needs a file outside its Files (see deviations, SF-111, 2026-10-30).",
@@ -178,7 +178,7 @@
     },
     {
       "id": "SF-112",
-      "status": "blocked",
+      "status": "todo",
       "commit": "",
       "evidence": [
         "Blocked by SF-111 (After: SF-111): SF-111 is blocked on the undecided ShellNav deviation (deviations, SF-111, decidedBy empty). No code written; nothing to verify until the owner decides and SF-111 lands."
@@ -187,7 +187,7 @@
     },
     {
       "id": "SF-113",
-      "status": "blocked",
+      "status": "todo",
       "commit": "",
       "evidence": [
         "Blocked by SF-111 (After: SF-111): SF-111 is blocked on the undecided ShellNav deviation (deviations, SF-111, decidedBy empty). No code written; nothing to verify until the owner decides and SF-111 lands."
@@ -234,8 +234,16 @@
       "task": "SF-111",
       "from": "pr-smart-finances.md SF-111 Files and Do (\"Server shell with MenuPanel (from ui/patterns) as the only client island\"), D-137",
       "proposal": "MenuPanel's API (children: (close) => ReactNode, from SF-109) cannot be filled by a server component: Next refuses to pass a function to a client component (build error recorded in SF-111 evidence). Also a shared (app) layout never learns the current path, so it cannot set aria-current on the rail or name the screen on the menu button. Proposed: add one new client file, apps/web/src/ui/ShellNav.tsx ('use client'), to SF-111's Files. It takes only serializable props (the nav items with href, label and icon name, the account rows, the review count and its words), reads usePathname(), and renders (1) the rail nav links with aria-current and (2) MenuPanel with a render function that shows the same links and account rows and calls close() when a link is chosen. The (app) layout keeps the server Shell (brand, env tag, account area with the /api/lang form post and Sign out, <main>), wrapped in QueryProvider; pages start with <h1 tabIndex={-1}> so Next's own focus handling moves focus to it after navigation. Alternative: change MenuPanel (SF-109 file) to accept plain children and close itself on a pathname change; that touches T-WEB-9 tests and is the larger change.",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "owner, in chat, 2026-10-30 (chose the new client file apps/web/src/ui/ShellNav.tsx over changing MenuPanel)",
+      "newDecision": "pending: the planning session records it in the brief or decisions"
+    },
+    {
+      "date": "2026-10-30",
+      "task": "SF-109",
+      "from": "no task lists .gitignore",
+      "proposal": "Add apps/web/storybook-static/, apps/web/test-results/ and apps/web/playwright-report/ to .gitignore so build and test output cannot be committed.",
+      "decidedBy": "owner, in chat, 2026-10-30",
+      "newDecision": "pending: the planning session records it"
     }
   ],
   "surprises": [
@@ -283,6 +291,7 @@
     "SF-111: the brief's 'MenuPanel as the only client island' cannot hold with SF-109's MenuPanel API (render-function children) under the React Server Components rules; and a server layout cannot mark the current screen because App Router layouts get no pathname and do not re-render between sibling pages. Recorded as a deviation; the task is blocked until the owner picks the extra client file (ui/ShellNav.tsx) or a MenuPanel change. Also seen: the Icon primitive has no nav icons (prototype uses Tabler layout-dashboard, arrows-exchange, list-check, upload, coin, database); Icon.tsx is SF-109's file, so the shell would import those Tabler icons directly or Icon.tsx needs adding to Files too.",
     "SF-114: the repo markdown (README.md, docs/adr/*.md) does not follow prettier at HEAD (no blank line after headings), and markdown is outside the web lint glob; the new ADR follows the existing ADR house style instead of prettier formatting.",
     "SF-114: conformance review reported 1 failed | 211 passed (212) in the web suite at f7ad6ff; at 5197445 (214 tests) four runs all passed, so the failure looks flaky under load and was not identified.",
-    "SF-107: the conformance fix changes next for percent-encoded paths: /%6Fverview now redirects with next=/%6Fverview (as requested) instead of /overview."
+    "SF-107: the conformance fix changes next for percent-encoded paths: /%6Fverview now redirects with next=/%6Fverview (as requested) instead of /overview.",
+    "Owner confirmed explicitly in chat on 2026-10-30 that the extended prototype is a go (T-WEB-1 manual gate passed), replacing the earlier inferred go."
   ]
 }
