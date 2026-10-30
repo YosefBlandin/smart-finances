@@ -109,7 +109,7 @@
     },
     {
       "id": "SF-107",
-      "status": "done",
+      "status": "blocked",
       "commit": "a66ca7f",
       "evidence": [
         "T-WEB-7 fail first: npm test --workspace @smart-finances/web -- src/middleware.test.ts -> FAIL: Error: Cannot find module './middleware', Tests: no tests",
@@ -122,7 +122,11 @@
         "Conformance fix fail first: npm test --workspace @smart-finances/web -- src/middleware.test.ts against the old middleware -> Tests 3 failed | 18 passed (21): 'percent-encoded paths are matched after decoding' (next now expected /%6Fverview), 'next is the path as requested, never the decoded one', 'a path that decodes to dot segments, a double slash, a backslash, ? or # gets a bare /sign-in' (received ?next=%2Foverview%2F..%2F..%2F%2Fevil.com)",
         "Conformance fix after: npm test --workspace @smart-finances/web -- src/middleware.test.ts -> Tests 21 passed (21)",
         "Conformance fix after: playwright e2e/headers.spec.ts (scratchpad config, Chromium at /opt/pw-browsers/chromium) -> 4 passed",
-        "Conformance fix after: npm run lint --workspace @smart-finances/web -> exit 0; cd apps/web && npx tsc --noEmit -> exit 0; npm run build --workspace @smart-finances/web -> exit 0; npm run build --workspace @smart-finances/infra -> exit 0"
+        "Conformance fix after: npm run lint --workspace @smart-finances/web -> exit 0; cd apps/web && npx tsc --noEmit -> exit 0; npm run build --workspace @smart-finances/web -> exit 0; npm run build --workspace @smart-finances/infra -> exit 0",
+        "Conformance fix (2026-10-30, commit ccf614e): the T-WEB-8 test \"the app's own scripts run under the policy without a script violation\" passed for the wrong reason: it heard only console errors, while a blocked eval is a thrown EvalError, and it ran on Next's default 404 at /sign-in. It now visits the real sign-in placeholder (SF-112) and /overview with the dummy __Host-sid, and collects console errors, pageerror and securitypolicyviolation events.",
+        "Conformance fix result under next dev (pw.local.config.ts, the brief's verify): npm run e2e -- e2e/headers.spec.ts -> 1 failed, 3 passed: the strengthened test now reports \"Evaluating a string as JavaScript violates ... 'unsafe-eval' is not an allowed source of script: script-src 'self' 'nonce-...' 'strict-dynamic'\" on both pages. This is the real defect behind the SF-111 next dev deviation, not a test fault.",
+        "Conformance fix result against a production build (pw.prod.config.ts): e2e/headers.spec.ts -> 4 passed",
+        "Status set to blocked: SF-107's verify as the brief states it (npm run e2e with next dev) is red until the owner decides the next dev deviation (deviations: SF-111, Verify, and the SF-107 entry of 2026-10-30)."
       ],
       "review": "findings (1 major, 2 minor; all fixed in a66ca7f before commit)"
     },
@@ -168,11 +172,11 @@
       "status": "blocked",
       "commit": "f155497",
       "evidence": [
-        "Stopped before writing code: the task as written needs a file outside its Files (see deviations, SF-111, 2026-10-30).",
+        "[superseded] First attempt, before the owner chose ShellNav.tsx: stopped before writing code because the task as written needed a file outside its Files. The code landed later in f155497 (second attempt below).",
         "Probe (temporary page, deleted, nothing committed): a server component rendering <MenuPanel label=\"Overview\">{() => <a href=\"/transactions\">Transactions</a>}</MenuPanel> -> npm run build (next build) exit 1: \"Error: Functions cannot be passed directly to Client Components unless you explicitly expose it by marking it with \\\"use server\\\" ... {label: ..., children: function children}\". MenuPanel (SF-109) takes children: (close) => ReactNode, so a server Shell cannot fill it.",
         "Source check, next 15.5.28 dist/client/components/layout-router.js InnerScrollAndFocusHandler: after a client navigation Next calls domNode.focus() on the first element of the changed segment (skipping sticky and fixed ones). If the (app) layout renders the shell and each page starts with <h1 tabIndex={-1}>, focus reaches the h1 with no extra client code. But a shared layout is not re-rendered on navigation and gets no pathname, so the rail's aria-current needs either a client island (usePathname) or the shell rendered by each page (which then defeats Next's focus handling).",
         "git status after the probe: clean except the already untracked apps/web/storybook-static/",
-        "Conformance review (2026-10-30): still blocked. The findings (shell missing, D-144 root wiring not carried out, /api/lang Origin check and lang cookie missing, T-WEB-10 and T-WEB-11 untested) all wait for the owner's decision on the ShellNav deviation; no code written in the conformance round. The /api/lang route needs tests that an Origin equal to WEB_ORIGIN is accepted and that missing, 'null' and foreign Origins get 403 with no Set-Cookie, and a lang cookie (en or es only) with SameSite=Lax and a one-year Max-Age.",
+        "[superseded by the second attempt and f155497] Conformance review (2026-10-30): still blocked. The findings (shell missing, D-144 root wiring not carried out, /api/lang Origin check and lang cookie missing, T-WEB-10 and T-WEB-11 untested) all wait for the owner's decision on the ShellNav deviation; no code written in the conformance round. The /api/lang route needs tests that an Origin equal to WEB_ORIGIN is accepted and that missing, 'null' and foreign Origins get 403 with no Set-Cookie, and a lang cookie (en or es only) with SameSite=Lax and a one-year Max-Age.",
         "Second attempt (2026-10-30), after the owner chose ShellNav.tsx (deviation decided) and gave the explicit prototype go.",
         "T-WEB-10 and T-WEB-11 fail first: playwright e2e/shell.spec.ts (scratchpad config, Chromium at /opt/pw-browsers/chromium, next dev) -> 12 failed: rail navigation not found (no (app) pages, 404), main element missing, /api/lang 404 so 'expect(received).toBe(expected)' on 303/403/400",
         "Implementation: root layout (tokens.css, base.css, fontVariables on <html>, lang from getLocale, NextIntlClientProvider, csp-nonce meta from x-nonce), next.config.ts wrapped with createNextIntlPlugin('./src/i18n/request.ts') keeping the existing options, (app) layout = QueryProvider > server Shell, six placeholder pages each starting with <h1 tabIndex={-1}>, ui/ShellNav.tsx client islands (rail links with aria-current, ShellBar with MenuPanel unchanged, LangForm), /api/lang POST route, one new message key shell.screens in en and es",
@@ -180,25 +184,40 @@
         "Verify as the brief states it (npm run e2e, webServer next dev, via the scratchpad pw.local.config.ts) -> 8 failed, 8 passed: next dev's client code evaluates strings (webpack eval-source-map, React dev tooling) and the SF-107 policy has no 'unsafe-eval', so every page throws \"Evaluating a string as JavaScript violates the following Content Security Policy directive because 'unsafe-eval' is not an allowed source of script\" and nothing hydrates (no client navigation focus, MenuPanel does not open, LangForm does not run). Fixing it needs middleware.ts or playwright.config.ts, both outside SF-111 Files: see deviations (SF-111, second entry). Blocked on that decision; nothing else is red.",
         "npm run lint --workspace @smart-finances/web -> eslint clean, Prettier clean; cd apps/web && npx tsc --noEmit -> exit 0",
         "root npm test -> exit 0 (api+contracts 37 pass, web lint clean, web vitest Test Files 23 passed, Tests 214 passed, infra 11 pass); npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0 (/overview, /transactions, ... and /api/lang dynamic; Middleware 35.1 kB)",
-        "git status after the code commit: clean except ignored build output (.next, storybook-static, next-env.d.ts, tsconfig.tsbuildinfo)"
+        "git status after the code commit: clean except ignored build output (.next, storybook-static, next-env.d.ts, tsconfig.tsbuildinfo)",
+        "Conformance round 2 (2026-10-30): still blocked. The fix the findings ask for (Option A: a production webServer in playwright.config.ts; Option B: 'unsafe-eval' in script-src only when NODE_ENV is development, in middleware.ts) touches files outside SF-111 Files and needs the owner's decision on the open deviation (deviations: SF-111, Verify; decidedBy empty). Not applied.",
+        "Re-run under next dev (pw.local.config.ts, the brief's verify), whole suite after the SF-112 and SF-113 fixes: 9 failed, 13 passed. The 8 SF-111 failures are unchanged (shell.spec.ts:34, 96, 132, 152, 175, 192, 234, 261, all from the blocked eval), plus the strengthened SF-107 test. Against a production build (pw.prod.config.ts) the whole suite passes: 22 passed (headers 4, shell 12, states 6)."
       ],
       "review": ""
     },
     {
       "id": "SF-112",
-      "status": "todo",
-      "commit": "",
+      "status": "done",
+      "commit": "2999ad4",
       "evidence": [
-        "Blocked by SF-111 (After: SF-111): SF-111 is blocked on the undecided ShellNav deviation (deviations, SF-111, decidedBy empty). No code written; nothing to verify until the owner decides and SF-111 lands."
+        "Conformance fix (2026-10-30): the earlier 'Blocked by SF-111 ... undecided ShellNav deviation' line was stale (the owner decided ShellNav); replaced by this record.",
+        "T-WEB-12 fail first: npm run e2e (scratchpad pw.local.config.ts, next dev, Chromium at /opt/pw-browsers/chromium) -- e2e/states.spec.ts -> 6 failed: no h1 'We can’t find that page' on /no-such-page (Next's default 404), /sign-in?reason=idle status 404 (expected 200), /overview without the cookie lands on a 404 sign-in, lang es not-found heading missing, screenOf timeout",
+        "Implementation: app/not-found.tsx (auth.notFound label, title, lead, link to /overview, h1 tabIndex -1), app/error.tsx ('use client', states.errT and errB, a primary retry Button calling reset(), role alert, no error details shown), app/(auth)/sign-in/page.tsx (placeholder: brand, h1 auth.signIn.title, a status Note with auth.idle.banner only when reason=idle, lead and the 30-idle-minutes footer), app/states.module.css (tokens only, no style attributes). No new message keys.",
+        "After: npm run e2e -- e2e/states.spec.ts (pw.local.config.ts, next dev, the brief's verify) -> 6 passed: 404 status and the one not-found screen with the overview link and one h1; a missing resource under /transactions with __Host-sid gives the same screen (heading, text, link) and 404; the screen follows lang=es (html lang es, 'No encontramos esa página', 'Ir al resumen'); /sign-in?reason=idle shows the idle notice as role status; /sign-in, ?reason=other and ?next=... show none; /overview without the cookie lands on the sign-in placeholder with 200; no style-src violation",
+        "Cross-check against a production build (pw.prod.config.ts: next build then next start) -> 6 passed",
+        "npm run lint --workspace @smart-finances/web -> eslint clean, Prettier clean; cd apps/web && npx tsc --noEmit -> exit 0",
+        "Final profile verify (after all conformance fixes): root npm test -> exit 0 (api+contracts 37 pass, web lint clean, web vitest 23 files 214 tests pass, infra 11 pass); npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0 (/_not-found 103 kB, /sign-in 103 kB first load)"
       ],
       "review": ""
     },
     {
       "id": "SF-113",
-      "status": "todo",
-      "commit": "",
+      "status": "done",
+      "commit": "8cfb20d",
       "evidence": [
-        "Blocked by SF-111 (After: SF-111): SF-111 is blocked on the undecided ShellNav deviation (deviations, SF-111, decidedBy empty). No code written; nothing to verify until the owner decides and SF-111 lands."
+        "Conformance fix (2026-10-30): the earlier 'Blocked by SF-111 ... undecided ShellNav deviation' line was stale; replaced by this record.",
+        "T-WEB-17 fail first: cd apps/web && node --test scripts/lhci.test.mjs -> # pass 0 # fail 5: ENOENT apps/web/lighthouserc.json (tests 1 to 4), @lhci/cli not installed and no lhci script (test 5)",
+        "Implementation: apps/web/lighthouserc.json (collect: STAGE=test next start -p 3000, the six money pages, 5 runs, Lighthouse mobile form factor with simulated throttling, performance only, a dummy __Host-sid Cookie header so the middleware lets the pages through; assert: median per metric, largest-contentful-paint <= 2500 ms, cumulative-layout-shift <= 0.1, resource-summary:script:size <= 204800 bytes, each 'error'); script lhci = node --test scripts/lhci.test.mjs && next build && lhci collect && lhci assert; @lhci/cli 0.15.1 (devDependency, exact)",
+        "scripts/lhci.test.mjs (T-WEB-17): the config uses next start with STAGE=test and lists exactly the MONEY_ROUTES of middleware.ts; phone settings; the three budgets; lhci assert over synthetic results passes within budget and fails (exit 1, 'failure for maxNumericValue assertion' naming the audit and /transactions) when one page breaks LCP, CLS or the script size; the script and the binary exist -> node --test scripts/lhci.test.mjs: # pass 5 # fail 0",
+        "Verify: CHROME_PATH=<scratchpad wrapper that runs /opt/pw-browsers/chromium --no-sandbox> npm run lhci --workspace @smart-finances/web -> exit 0: '# pass 5', next build, 'Checking assertions against 6 URL(s), 30 total run(s)', 'All results processed!'. Measured (median LCP of 5 runs; CLS max; script transfer bytes): /overview 2273 ms, 0, 170103; /transactions 2314 ms; /review 2269 ms; /imports 2287 ms; /rates 2267 ms; /data 2275 ms; all CLS 0, all 170103 bytes. Every run measured the money page itself (finalDisplayedUrl the page, not /sign-in).",
+        "A first run with median-run aggregation and 3 runs failed /transactions on LCP 2566.884 ms (single runs ranged 1.5 to 2.9 s); switched to 5 runs and the per-metric median so one noisy run neither passes nor fails a page (see surprises).",
+        "npm run lint --workspace @smart-finances/web -> eslint clean, Prettier clean (scripts/ and lighthouserc.json included); cd apps/web && npx tsc --noEmit -> exit 0; .lighthouseci/ output deleted after the run (not git-ignored)",
+        "Final profile verify: root npm test -> exit 0; npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0"
       ],
       "review": ""
     },
@@ -260,6 +279,14 @@
       "proposal": "next dev cannot run client code under the contract's policy: it evaluates strings, so pages never hydrate in dev and the shell e2e (menu panel, focus after client navigation, language form) fails, while it passes 12/12 against next build + next start. Option A (recommended): apps/web/playwright.config.ts webServer runs a production server (next build && next start -p 3000, STAGE=test), so the e2e and its policy checks test what ships; slower e2e start. Option B: apps/web/src/middleware.ts adds 'unsafe-eval' to script-src only when NODE_ENV === 'development' (Next's documented pattern), production unchanged; also needed for local next dev to work at all. Both touch a file outside SF-111 Files; A and B can be combined.",
       "decidedBy": "",
       "newDecision": ""
+    },
+    {
+      "date": "2026-10-30",
+      "task": "SF-107",
+      "from": "pr-smart-finances.md SF-107 Verify (npm run e2e against next dev, SF-103 playwright.config.ts) with the contract's script-src (no 'unsafe-eval')",
+      "proposal": "Same decision as the SF-111 next dev deviation: the conformance fix made T-WEB-8's own-scripts test collect thrown errors and policy events on real pages, and under next dev it now fails on the blocked eval (as the shell tests do). Option A (production webServer in playwright.config.ts) or Option B ('unsafe-eval' only when NODE_ENV is development, in middleware.ts, with a middleware test that production policies never contain it) turns both green; both touch files outside SF-107 and SF-111 Files.",
+      "decidedBy": "",
+      "newDecision": ""
     }
   ],
   "surprises": [
@@ -314,6 +341,14 @@
     "SF-111: Next 15.5 moves focus to the first element of the changed segment after a client navigation, so each placeholder page starts with <h1 tabIndex={-1}> and no extra focus code exists; the shell's h1:focus shows no ring (as the prototype). This only works once client code runs (see the next dev deviation).",
     "SF-111: Sign out is a plain button with no action until PR 3 (SF-151 makes it a server action); the D-44 review count is wired (Shell reviewCount prop, amber count on the rail link and the menu button) but the (app) layout passes 0 until PR 4 reads the review data, so the e2e checks only that no count shows at 0 (the count itself is covered by T-WEB-9). The address is the synthetic you@example.com; the stage tag shows STAGE unless it is prod.",
     "SF-111: the Icon primitive has no nav icons; ShellNav imports the six Tabler outline icons (layout-dashboard, arrows-exchange, list-check, upload, coin, database) directly at 2px, so Icon.tsx (SF-109) was not touched. Shell.tsx and ShellNav.tsx share one Shell.module.css.",
-    "SF-111: Playwright cannot add a __Host- cookie for an http URL (Storage.setCookies: Invalid cookie fields); the e2e adds __Host-sid for https://localhost:3000/ with Secure, which Chrome sends to http://localhost because localhost counts as secure."
+    "SF-111: Playwright cannot add a __Host- cookie for an http URL (Storage.setCookies: Invalid cookie fields); the e2e adds __Host-sid for https://localhost:3000/ with Secure, which Chrome sends to http://localhost because localhost counts as secure.",
+    "SF-112: error.tsx has no automated test. T-WEB-12 covers not-found and the idle notice; no route throws in PR 1, a throwing test page or a unit test file is outside SF-112 Files, and under next dev the retry button would not hydrate anyway. It is covered only by tsc, lint and next build; PR 4's screens (or a later task) should test the failed state and its retry.",
+    "SF-112: no page answers 403 in PR 1, so T-WEB-12's '403 and 404 show the same screen' is tested as a missing page versus a missing resource under a money screen (/transactions/another-persons-row with the session cookie), both 404 with the same screen. PR 3's guard must answer another person's resource with notFound(), not a 403 page, for this to hold.",
+    "SF-112: the sign-in placeholder shows the wordmark in lowercase 'cuenta', as the shell does; with __Host-sid set the middleware sends /sign-in to /overview, so the placeholder is only seen signed out.",
+    "SF-113: @lhci/cli 0.15.1 (2025-06-25, the newest by 2026-10-16) pins lighthouse 12.6.1 and adds 234 lockfile entries; no existing package changed version; npm 10 dropped 52 libc fields, restored.",
+    "SF-113: apps/web/.lighthouseci/ (lhci output) is not git-ignored and .gitignore is outside SF-113 Files; it was deleted after the run. It needs a .gitignore line.",
+    "SF-113: Chromium here runs as root and needs --no-sandbox. Setting it through LHCI_COLLECT__SETTINGS__CHROME_FLAGS replaced lhci's whole settings object, which dropped the Cookie header, so every run silently measured the /sign-in redirect and still passed. The verify used CHROME_PATH pointing at a scratchpad wrapper script (chromium --no-sandbox); nothing local is committed. `lhci collect --settings.chromeFlags=...` on the command line merges correctly. T-WEB-17 cannot see this mistake from synthetic results; the evidence records that every measured page was the money page itself.",
+    "SF-113: the LCP margin is thin. The placeholder money pages measure a 2.27 to 2.31 s median against the 2.5 s budget, with single runs from 1.5 to 2.9 s; Lighthouse attributes about 2.1 s to render delay under simulated slow 4G (the bundled fonts and 170 KB of script). PR 4's real screens will likely need font or script trimming to stay under. '200 KB' is read as 204,800 bytes of script transfer per page (Lighthouse resource-summary); Next's build table reports 103 kB first-load JS per route while Lighthouse counts 170,103 bytes of script transfer per page; the budget is asserted on Lighthouse's figure, the larger of the two.",
+    "Conformance round 2: SF-107 moved from done to blocked. Its strengthened T-WEB-8 test shows that under next dev the app's scripts are blocked by the policy, the same root cause as the SF-111 deviation; one owner decision (Option A or B) unblocks SF-107 and SF-111 together."
   ]
 }
