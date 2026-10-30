@@ -109,10 +109,17 @@
     },
     {
       "id": "SF-107",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "a66ca7f",
+      "evidence": [
+        "T-WEB-7 fail first: npm test --workspace @smart-finances/web -- src/middleware.test.ts -> FAIL: Error: Cannot find module './middleware', Tests: no tests",
+        "T-WEB-8 fail first: playwright test e2e/headers.spec.ts -> 4 failed (no content-security-policy header, so no nonce; money route not redirected)",
+        "After: npm test --workspace @smart-finances/web -- src/middleware.test.ts -> Test Files 1 passed, Tests 19 passed (19): the policy equals architecture.md Contracts \"Response headers\" string for string (upload host from UPLOAD_HOST, uploads.test.invalid when STAGE=test, left out otherwise); HSTS, nosniff, no-referrer, Permissions-Policy on pages, API routes and redirects; 50 requests give 50 distinct 16-byte base64 nonces; x-nonce and the policy passed in the request headers, a browser-sent x-nonce replaced; no-store on money pages, /consent, /too-many and /api/data/*, not on /sign-in, /privacy, /terms; money routes without __Host-sid -> 307 /sign-in?next=<path and search>; any __Host-sid value passes, other cookies do not; auth routes with __Host-sid -> 307 /overview; lookalike and percent-encoded paths; matcher skips only _next/static, _next/image, favicon.ico; the only import is next/server",
+        "After: npm run e2e --workspace @smart-finances/web -- e2e/headers.spec.ts -> 4 passed (run through a scratchpad config that only points Playwright at /opt/pw-browsers/chromium; repo config unchanged): fresh nonce per response, money redirect, under the app's real policy an inline script with the nonce runs while one without it, one with a guessed nonce and an onerror handler do not, and the app's own scripts all carry the nonce with no script-src violation",
+        "npm run lint --workspace @smart-finances/web -> eslint clean, Prettier clean; tsc --noEmit -> exit 0; root npm test -> exit 0 (37 api+contracts, 87 web, 11 infra pass); npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0 (Middleware 35 kB)",
+        "Fresh-context review (subagent, claude-sonnet, read-only): 0 blocker, 1 major, 2 minor. Major: the browser test replayed every real header (content-encoding, content-length) onto a hand-made body -> now replays only the policy and adds a real-page check. Minor: percent-encoded money paths skipped the redirect -> paths are decoded first, test added (failed first: 2 failed, 17 passed). Minor: /api/data/* had no no-store -> added, same test. One fix round; all green after it."
+      ],
+      "review": "findings (1 major, 2 minor; all fixed in a66ca7f before commit)"
     },
     {
       "id": "SF-108",
@@ -195,6 +202,11 @@
     "SF-106 GAP: next-intl is not connected yet. It needs createNextIntlPlugin('./src/i18n/request.ts') in next.config.ts (SF-103 file) and a NextIntlClientProvider and html lang in the root layout; together with the SF-105 gap (tokens, base styles, fonts) the root layout.tsx and next.config.ts need an owner task. Neither file is in SF-106's Files.",
     "SF-106: messages exclude what the app does not build (prototype controls, design-system page, assistant screens per D-46); empty-state copy is stored as title, text and action instead of the prototype's arrays; prototype-only account-screen keys (pick, v, intro) are left out.",
     "SF-106: the Ask nav entry and the assistant copy are not in the catalogues; they arrive with Epic 4.",
-    "Brief re-locked at locked-v5 (PR #7 merged; origin/feature/web-ui merged into the branch): D-144 gives SF-111 app/layout.tsx and next.config.ts and adds npm run build to its verify, closing the SF-105 and SF-106 gaps; D-146 adds a danger Button variant to SF-109 (T-WEB-9 changed); D-145, D-147, D-148 touch the auth copy, not this PR. From SF-107 the executor is Claude Code in a cloud session on claude-opus-5-5 (checked with get_session); SF-100 to SF-106 ran on the desktop app with claude-sonnet-5-5."
+    "Brief re-locked at locked-v5 (PR #7 merged; origin/feature/web-ui merged into the branch): D-144 gives SF-111 app/layout.tsx and next.config.ts and adds npm run build to its verify, closing the SF-105 and SF-106 gaps; D-146 adds a danger Button variant to SF-109 (T-WEB-9 changed); D-145, D-147, D-148 touch the auth copy, not this PR. From SF-107 the executor is Claude Code in a cloud session on claude-opus-5-5 (checked with get_session); SF-100 to SF-106 ran on the desktop app with claude-sonnet-5-5.",
+    "SF-107: under the contract's 'strict-dynamic', Chrome runs an inline script that a nonced script inserts (CSP3 trust propagation; seen in the e2e probe, case removed). AC-9 still rests on rendering imported text as text, not on the policy alone.",
+    "SF-107: style-src has no 'unsafe-inline', so server-rendered style=\"...\" attributes are blocked; next dev's error page logged 5 inline-style violations. Parts must style through CSS modules (D-57); SF-111's build and e2e should confirm the real pages log none.",
+    "SF-107: with only a cookie-presence check, a stale __Host-sid can loop (/overview -> guard -> /sign-in -> middleware -> /overview) unless the PR 3 guard deletes the cookie when the session is gone. Not in this brief; PR 3 should cover it.",
+    "SF-107: Next.js 15.5 also takes the nonce from the middleware's response policy, so dropping the request-header copy alone does not break the page scripts; both are set, as Next's docs show.",
+    "SF-107: the preinstalled Chromium here (1243) does not match @playwright/test 1.64.1 (1248) and channel chrome is absent; e2e ran through a scratchpad config with executablePath, nothing committed. next dev also tries www.google.com (blocked by the proxy) without failing."
   ]
 }
