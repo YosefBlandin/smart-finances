@@ -62,7 +62,7 @@ status: draft
 - D-121: Integration branch: the four PRs (foundation, infra, auth, screens) each open as a draft into feature/web-ui, in order; once all are merged there, one PR from feature/web-ui into qa ships infra and web in one merge. The agent commits, pushes its feature branches and opens draft PRs; the user reviews, merges and promotes. Narrows D-6.
 - Values:
   - Branch per stage: qa → qa, staging → staging, prod → main; branch address https://<branch>.<app id>.amplifyapp.com. Stage values are read at deploy time, so synth and tests need none.
-  - Metrics: namespace SmartFinances/<stage>; StuckDeletions (count), and security-event metrics per event name from the log's metric filters; alarm period 5 minutes unless the table says an hour, 1 evaluation; the dashboard has one widget per alarm.
+  - Metrics: namespace SmartFinances/<stage>; StuckDeletions (count), and security-event metrics per event name from the log's metric filters; period 5 minutes unless the table says an hour; one dashboard widget per alarm.
   - Lambdas in infra/lambda/*.mjs are built with makeFunction (infra/lib/function.ts), like the API's.
   - amplify-release.mjs takes --stage, --branch, --sha and reads the app id from /smart-finances/<stage>/amplify-app-id; its tests are scripts/amplify-release.test.mjs (node --test).
   - Code emails: subject "Your Cuenta code" / "Tu código de Cuenta", one sentence with {####}.
