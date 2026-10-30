@@ -34,6 +34,26 @@ browser ─https─▶ Amplify (CDN) ─▶ Next.js web server ─────�
 - Quality: ESLint (Next.js, React Hooks, jsx-a11y) and Prettier (D-132); Storybook with the accessibility add-on and interaction tests, in CI only (D-129, D-136); Lighthouse CI budgets (D-134); CloudWatch RUM in the browser (D-135).
 - Serves: AC-4, AC-6, AC-8, AC-10, AC-16; D-24, D-35 to D-46, D-71, D-82, D-83, D-124 to D-137.
 
+### Code structure (D-138)
+```
+apps/web/src/
+  domain/       pure TypeScript: money (kept, typical and bad month), limit windows, password rules,
+                session policy (idle, absolute), consent, deletion steps. Imports nothing but domain/ and @smart-finances/contracts.
+  application/  use cases: auth (signUp, confirm, resend, signIn, setup, code, consent, reset, signOut),
+                account (deleteAccount, finishDeletion), data (listTransactions, getOverview, review, setRate,
+                requestImport, erase), guard (requireMoneyAccess), pow. Import domain/ and ports/ only.
+  ports/        IdentityProvider, SessionStore, PreAuthStore, AccountStore, Counter, PowStore, DataApi,
+                BreachChecker, SecretStore, Settings, Clock, Logger, ParameterStore.
+  adapters/     cognito/, dynamodb/ (sessions, pre-auth, accounts, counters, pow), data-api/ (fetch + contracts),
+                pwned/, secrets/, ssm/, memory/ (every port, for STAGE=test and Storybook), container.ts.
+  app/          Next.js delivery: pages, layouts, actions.ts files (server actions through guarded()),
+                api/ JSON routes; calls application/ through container.ts only.
+  ui/ screens/ queries/ i18n/ styles/   presentation: parts, screen components, TanStack hooks, next-intl, tokens.
+```
+- Dependency rule: domain ← application ← adapters and app; ui, screens and queries never import adapters or application directly (queries call /api/data/*, screens receive data or call actions). Enforced by ESLint import/no-restricted-paths (D-132).
+- container.ts picks real adapters, or memory/ when STAGE=test; nothing else reads STAGE to choose behaviour.
+- Serves: D-124, D-125, D-127, D-133, D-137, D-138.
+
 ### Design tokens and parts
 - Where: apps/web/src/styles/tokens.css (new), apps/web/src/styles/base.css (new), apps/web/src/ui/ (new).
 - What: the prototype's custom properties copied as they are, light and dark, theme from the system setting; parts use only tokens, through CSS modules (D-57). Fonts through next/font from local files (D-58); Tabler outline icons at 2px (D-17). Red: the bad money figure (AC-11) and error notes or failed statuses (D-63), never a second money figure.
@@ -141,12 +161,10 @@ browser ─https─▶ Amplify (CDN) ─▶ Next.js web server ─────�
 The routes, shapes, error codes and paging are the data-architecture spec's: docs/specs/data-architecture/architecture.md, Contracts, "HTTP routes". This spec adds none. The web server sends authorization: Bearer <access token>; the API's audience check takes the web-server client id, which the access token carries as client_id (D-53).
 
 ### Interfaces between the PRs
-What each PR (pr-smart-finances*.md) provides to the later ones. A later PR imports these names; it never redefines them.
-- PR 1: apps/web scripts test (vitest run) and e2e (playwright test); playwright.config.ts starts `next dev` on port 3000 with STAGE=test; (app) and (auth) route groups; i18n t(key, lang); ui parts; CATEGORIES from "@smart-finances/api/categories".
-- Until PR 3, PR 1 code reads process.env directly (STAGE, COMMIT_SHA, UPLOAD_HOST, WEB_ORIGIN), with test defaults when STAGE=test.
-- PR 3: src/server/settings.ts getSettings() (STAGE=test defaults: WEB_ORIGIN http://localhost:3000, SUPPORT_ADDRESS support@example.test, fixed fake secrets); src/server/aws.ts clients() returns real AWS clients, or in-memory fakes (src/server/fakes/) when STAGE=test; src/server/log.ts securityEvent(event, outcome, { sub?, requestId }) (requestId from x-amzn-trace-id, else a random UUID); src/server/session.ts getSession() → { sub, email, accessToken, … } | null, createSession(sub, tokens), refreshIfNeeded(session) (secret hash with the sub as username), signOutEverywhere(sub), createPreAuth, getPreAuth, deletePreAuth; sessions GSI bySub; src/server/limits.ts hit(scope, value) → { ok, retryAfterSeconds }, scopes person, ip-auth, email-fail (value = email|prefix), email-code-hour, email-code-day; HMAC-SHA256 base64url keys; src/server/post.ts handlePost(req, { auth?: boolean }, fn(ctx: { body, ip, session? }) → Response): 403 on Origin, 429 { messageKey, retryAfterSeconds } on proof of work or limits; auth routes /api/auth/{pow (GET), sign-up, confirm, resend, sign-in, setup, code, consent, reset, reset/confirm, sign-out}; src/server/accounts.ts getAccount, putConsent, markDeleting, reserveImport, releaseImport, resetStoredBytes, deleteAccountRow; e2e/helpers/signIn.ts signs a test person in through the fakes (email code 123456, authenticator code 000000); src/server/guard.ts requireMoneyAccess({ allowDeleting?: boolean }); src/server/auth/signIn.ts signIn(email, password, { reauth?: boolean }); src/legal/versions.ts TERMS_VERSION and PRIVACY_VERSION ("2026-11-01").
-- PR 4: src/server/api.ts api(session) with one method per route in types.ts; routes GET /api/data/export, POST /api/data/erase, POST /api/account/delete, POST /api/account/delete/finish; signed-out page /goodbye.
-- Fixtures: apps/web/src/server/fixtures/sample.json (from SF-101: the prototype's synthetic months, rates, imports in every state, review rows, mercadopago rows; 2026-03 is the bad month, 2026-10 has no rate) plus the hostile rows of data/synthetic/generate.mjs.
+What each PR (pr-smart-finances*.md) provides to the later ones. A later PR imports these names; it never redefines them. Paths are under apps/web/src unless stated.
+- PR 1: packages/contracts (@smart-finances/contracts: FIELDS, KINDS, CATEGORIES, Zod schemas per data route); apps/web scripts test, e2e (STAGE=test, port 3000), lint, storybook, test-storybook, lhci; messages/en.json and es.json with next-intl; ui/ parts with stories; queries/provider.tsx and prefetch(); ports/ interfaces and adapters/memory/; adapters/container.ts; (app) layout and (auth) group; fixtures in apps/web/fixtures/sample.json. Until PR 3, code reads process.env (STAGE, COMMIT_SHA, UPLOAD_HOST, WEB_ORIGIN) with test defaults.
+- PR 3: ports Settings, SecretStore, Logger, SessionStore, PreAuthStore, Counter, PowStore, BreachChecker, IdentityProvider, AccountStore with real adapters; application/session.ts getSession() → { sub, email, accessToken, … } | null, createSession, refreshIfNeeded, signOutEverywhere(sub); domain/limits.ts and application hit(scope, value) → { ok, retryAfterSeconds }; app/guarded.ts guarded(schema, opts, fn) → { ok, data } | { ok: false, messageKey, retryAfterSeconds? }; application/guard.ts requireMoneyAccess({ allowDeleting? }); application/auth/signIn.ts signIn(email, password, { reauth? }); legal/versions.ts TERMS_VERSION and PRIVACY_VERSION ("2026-11-01"); the memory identity fake (email code 123456, authenticator code 000000); e2e/helpers/signIn.ts.
+- PR 4: ports DataApi and ParameterStore with adapters; application/data/* use cases; app/api/data/* JSON routes and export; queries/ hooks; domain/money.ts overviewModel; application/account/deleteAccount.ts; /goodbye.
 
 ### Web routes
 | Path | Who | Purpose |
@@ -307,7 +325,7 @@ amplify.yml writes these into apps/web/.env.production before next build; no sec
 ## Risks
 | RK | Risk | Likelihood | Impact | Mitigation or acceptance | Owner |
 |---|---|---|---|---|---|
-| RK-1 | The read and import routes are not merged, so screens are built against the contract alone. | high | high | types.ts is the one copy; fixture tests cover every screen; qa checks wait for the data PRs (D-64). | owner |
+| RK-1 | The read and import routes are not merged, so screens are built against the contract alone. | high | high | packages/contracts is the one copy (D-133); fixture tests cover every screen; qa checks wait for the data PRs (D-64). | owner |
 | RK-2 | An Amplify build fails or serves an old commit unnoticed. | medium | high | CI starts the job and polls /api/health for the sha (D-93); amplify.yml runs tests first. | owner |
 | RK-3 | A missing or wrong content policy ships unnoticed. | low | high | The post-deploy check compares headers with the contract; a browser test checks the nonce policy locally. | owner |
 | RK-4 | The compute role gives the server no credentials (F-45). | medium | high | A qa check in the first web task; any fallback becomes a new decision. | owner |

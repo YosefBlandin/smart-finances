@@ -8,13 +8,13 @@ status: draft
 
 <!-- The executor's main document. It must stand alone: copy values in, and link only to sections a task cites. At most 6k tokens; comments do not count. Required reading (intent.md, this file and its Read first sections) stays under 15k. Before the lock, the cold-read dry run must find zero "cannot start" items. -->
 
-- Goal: people can sign up, confirm, set up an authenticator, sign in, reset and sign out, with server-held sessions, limits and consent.
-- Implements: AC-1, AC-12, AC-13, AC-14, AC-15, AC-16, AC-17, AC-19, AC-20, D-72, D-73, D-75, D-87, D-91, D-92, D-103, D-106, D-108, D-115, D-117, D-120
+- Goal: people can sign up, confirm, set up an authenticator, sign in, reset and sign out, with server-held sessions, limits and consent, built as hexagonal use cases.
+- Implements: AC-1, AC-12 to AC-17, AC-19, AC-20, D-72, D-73, D-75, D-87, D-91, D-92, D-103, D-106, D-108, D-115, D-117, D-120, D-124, D-125, D-138
 - Spec folder: /home/user/smart-finances/docs/specs/web-ui in a cloud session; locally <repo root>/docs/specs/web-ui. Read and write the spec there, on the branch named under Branch, never a copy elsewhere.
 - Refs: smart-finances at the sha in intent.md refs. Before the first task: `git fetch origin qa feature/web-ui`, then `node ~/.claude/skills/spec/scripts/drift.mjs docs/specs/web-ui --strict` (exit 0; NEW lines are expected)
 - Worktree: a cloud session's own checkout; locally <repo root>/.claude/worktrees/web-auth (profile Notes)
-- Profile verify (full, at the baseline and before the PR): `npm test` and `npm run build --workspace @smart-finances/infra`. No separate lint or typecheck exists; record "none".
-- Every task may also touch, without stopping: apps/web/package.json and package-lock.json (for packages this brief allows), apps/web/src/i18n/en.ts and es.ts (new keys only, both files), and its own *.module.css files.
+- Profile verify (full, at the baseline and before the PR): `npm test` and `npm run build --workspace @smart-finances/infra`. Before PR 1's SF-104 no lint exists; record "none". From then on also `npm run lint --workspace @smart-finances/web`.
+- Every task may also touch, without stopping: apps/web/package.json and package-lock.json (for packages this brief allows), apps/web/messages/en.json and es.json (new keys only, both files), apps/web/src/adapters/container.ts and adapters/memory/ (to register what the task adds), and its own *.module.css files.
 - Judgment: high tasks get a fresh-context reviewer before done: a subagent or fresh chat given the task, its diff and the review prompt in ~/.claude/skills/spec/references/handoff-prompts.md.
 - Branch: feature/web-auth · Base: origin/feature/web-ui, after the previous PR is merged into it · Draft PR into feature/web-ui (D-121)
 - Brief version: the locked-vN named in the handoff prompt; record it as pr-smart-finances-auth.md@locked-vN in progress-smart-finances-auth.json
@@ -23,8 +23,8 @@ status: draft
 ## Read first
 1. This file, all of it.
 2. intent.md: Acceptance criteria, No-gos, Glossary.
-3. architecture.md: Components "Auth flows (web server)", "Sessions and accounts"; Contracts "Interfaces between the PRs", "Cookies", "Sessions table", "Accounts table", "Limits", "Password and code rules", "Security events", "Web server settings"; "States and exits" rows sign-up to reset confirm.
-4. CLAUDE.md in the worktree.
+3. architecture.md: Components "Code structure", "Auth flows (web server)", "Sessions and accounts"; Contracts "Interfaces between the PRs", "Cookies", "Sessions table", "Accounts table", "Limits", "Password and code rules", "Security events", "Web server settings"; "States and exits" rows sign-up to reset confirm.
+4. CLAUDE.md in the worktree, if present.
 5. test-matrix.md rows whose task is SF-141 to SF-153.
 
 ## HUMAN needs
@@ -52,10 +52,12 @@ status: draft
 - D-120: No WAF for now, on any stage. Limits live in the web server's window counters: auth posts per IP 20 per 5 minutes, sign-in or reset failures per email and address prefix 5 per 15 minutes, code emails per email 3 an hour and 10 a day, data requests per person 120 a minute. A self-hosted proof-of-work check (served from the site, no third party) guards sign-up and the auth posts instead of the WAF challenge. The user accepts that floods reach the web server's compute. Supersedes D-90 and D-105.
 - D-121: Integration branch: the four PRs (foundation, infra, auth, screens) each open as a draft into feature/web-ui, in order; once all are merged there, one PR from feature/web-ui into qa ships infra and web in one merge. The agent commits, pushes its feature branches and opens draft PRs; the user reviews, merges and promotes. Narrows D-6.
 - D-122: Until SES is set up (D-77), the notice after a password or authenticator reset is shown on the next sign-in screen and logged as a security event, not emailed; the email is added with SES before staging and prod open sign-up. Narrows D-115.
+- D-124: Zod validates every boundary: server action inputs, the JSON routes' inputs, every data API reply mirrored in types.ts, and the settings. Bad input becomes a plain error message, never a crash.
+- D-125: Forms submit through Next.js server actions, each wrapped by one guarded(action, opts) helper (exact Origin, proof of work for auth, limits, session and consent, Zod input). Route handlers remain only for health, the proof-of-work challenge, export, language and the JSON reads. Narrows D-82 and D-115.
+- D-138: Code architecture: the web server's logic is hexagonal (domain, application use cases, ports, adapters, with in-memory adapters for tests and Storybook); Next.js app/ only delivers (pages, layouts, server actions, JSON routes) and calls use cases through one container; presentation (ui, screens, queries, i18n) follows Next.js conventions. ESLint import rules enforce the dependency direction.
 - Values:
-  - Packages allowed: @aws-sdk/client-ssm, @aws-sdk/client-cognito-identity-provider, @aws-sdk/client-dynamodb, @aws-sdk/lib-dynamodb, @aws-sdk/client-secrets-manager, qrcode.
-  - Secret hash: base64(HMAC-SHA256(client secret, username + client id)). Username is the email, lower-cased.
-  - Timing: auth replies for known and unknown emails take the same time (pad to 800 ms).
+  - Packages allowed: @aws-sdk/client-cognito-identity-provider, -dynamodb, @aws-sdk/lib-dynamodb, -secrets-manager, -ssm, qrcode.
+  - Username in the pool is the sub; sign-in uses the lower-cased email as the login.
   - Web tests: `npm test --workspace @smart-finances/web -- <file>`; browser tests: `npm run e2e --workspace @smart-finances/web -- <file>`.
 - Rules: README.md "Layout" (only data/synthetic is committed); .gitignore block "Real financial data stays local"; docs/adr/README.md (one ADR per decision, NNNN-short-title.md); docs/threat-model.md (update when a trust boundary or data store changes); public repo: no personal data or account ids in anything committed.
 
@@ -86,123 +88,116 @@ status: draft
   - Run drift as the header says.
 - Verify: the profile's verify.smart-finances → each result recorded under baseline, red or green
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json
-### SF-141 · Load the settings and secrets, and add a safe logger
-- Implements: AC-16, D-110, D-80, D-115 · After: SF-140 · Judgment: high
-- Files: apps/web/src/server/settings.ts (new), apps/web/src/server/log.ts (new), apps/web/src/server/aws.ts (new), apps/web/src/server/fakes/ (new), apps/web/src/server/server.test.ts (new)
+### SF-141 · Add the settings, secrets and logger ports with their adapters
+- Implements: AC-16, D-110, D-80, D-115, D-138 · After: SF-140 · Judgment: high
+- Files: apps/web/src/ports/{Settings,SecretStore,Logger}.ts, apps/web/src/adapters/{env-settings,secrets,log}.ts (new), apps/web/src/adapters/memory/, apps/web/src/adapters/container.ts, apps/web/src/adapters/adapters.test.ts (new)
 - Tests first: T-WAUTH-1, T-WAUTH-2
 - Do:
-  - settings.ts reads the names in Contracts "Web server settings"; secrets through Secrets Manager with the compute role, cached 5 minutes.
-  - log.ts writes one JSON security event per line; it throws on keys named password, code, secret, token, email or ip.
-  - aws.ts returns real clients, or in-memory fakes when STAGE=test: tables with conditional updates and TTL fields, a secrets store, and a sign-in service fake that later tasks extend. Secrets are plain strings.
-- Verify: `npm test --workspace @smart-finances/web -- src/server/server.test.ts` → pass
+  - Settings from the names in Contracts "Web server settings" (Zod-parsed), with STAGE=test defaults; secrets from Secrets Manager through the compute role, cached 5 minutes; plain strings.
+  - Logger writes one JSON security event per line and throws on keys named password, code, secret, token, email or ip.
+- Verify: `npm test --workspace @smart-finances/web -- src/adapters/adapters.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
-### SF-142 · Store sessions and pre-auth rows
-- Implements: AC-16, AC-15, D-72, D-91 · After: SF-141 · Judgment: high
-- Files: apps/web/src/server/session.ts (new), apps/web/src/server/session.test.ts (new)
+### SF-142 · Sessions and pre-auth: policy, port and DynamoDB adapter
+- Implements: AC-15, AC-16, D-72, D-91 · After: SF-141 · Judgment: high
+- Files: apps/web/src/domain/session-policy.ts (new), apps/web/src/ports/{SessionStore,PreAuthStore}.ts, apps/web/src/adapters/dynamodb/sessions.ts (new), apps/web/src/application/session.ts (new), apps/web/src/domain/session-policy.test.ts (new), apps/web/src/adapters/dynamodb/sessions.test.ts (new)
 - Tests first: T-WAUTH-3, T-WAUTH-4
 - Do:
-  - Cookies and rows exactly as Contracts "Cookies" and "Sessions table"; keys are SHA-256 of the cookie id.
-  - Every read checks expires_at and last_seen_at (idle 30 minutes, absolute 12 hours); refresh when the access token has under 5 minutes.
-  - Sign out: delete the row, revoke the refresh token; signOutEverywhere(sub) uses the sub index and AdminUserGlobalSignOut.
-- Verify: `npm test --workspace @smart-finances/web -- src/server/session.test.ts` → pass
+  - Policy: idle 30 minutes, absolute 12 hours, refresh when under 5 minutes left; reads check both themselves.
+  - Cookies and rows as Contracts "Cookies" and "Sessions table"; keys SHA-256 of the cookie id; refresh uses the sub as username in the secret hash; signOutEverywhere(sub) uses bySub and AdminUserGlobalSignOut.
+- Verify: `npm test --workspace @smart-finances/web -- src/domain/session-policy.test.ts` and `npm test --workspace @smart-finances/web -- src/adapters/dynamodb/sessions.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
-### SF-143 · Add window counters with HMAC keys
+### SF-143 · Limits: window math, counter port and adapter
 - Implements: AC-17, D-120, D-115 · After: SF-142 · Judgment: high
-- Files: apps/web/src/server/limits.ts (new), apps/web/src/server/limits.test.ts (new)
+- Files: apps/web/src/domain/limits.ts (new), apps/web/src/ports/Counter.ts, apps/web/src/adapters/dynamodb/counters.ts (new), apps/web/src/domain/limits.test.ts (new)
 - Tests first: T-WAUTH-5
 - Do:
-  - Atomic counter per scope and window start (window start = floor(now / window) * window), values per Contracts "Limits"; keys HMAC of the email or address prefix (IPv4 /24, IPv6 /48) or the sub. In STAGE=test the person limit is 5 a minute.
-  - Client IP: the right-most X-Forwarded-For entry.
-- Verify: `npm test --workspace @smart-finances/web -- src/server/limits.test.ts` → pass, window edges included
+  - Window start = floor(now / window) * window; scopes and values per Contracts "Limits"; keys HMAC-SHA256 base64url of email|address prefix (IPv4 /24, IPv6 /48) or the sub; client IP is the right-most X-Forwarded-For entry. STAGE=test person limit 5 a minute.
+- Verify: `npm test --workspace @smart-finances/web -- src/domain/limits.test.ts` → pass, window edges included
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
-### SF-144 · Add the proof-of-work check
+### SF-144 · Proof of work
 - Implements: AC-19, D-120 · After: SF-143 · Judgment: high
-- Files: apps/web/src/server/pow.ts (new), apps/web/src/ui/PowField.tsx (new), apps/web/src/server/pow.test.ts (new)
+- Files: apps/web/src/application/pow.ts (new), apps/web/src/ports/PowStore.ts, apps/web/src/adapters/dynamodb/pow.ts (new), apps/web/src/app/api/auth/pow/route.ts (new), apps/web/src/ui/PowField.tsx (new), apps/web/src/application/pow.test.ts (new)
 - Tests first: T-WAUTH-6
 - Do:
-  - Own code, no package: the server issues { salt, challenge = SHA-256(salt + n), max } signed with the HMAC secret, valid 10 minutes, one use (row POW#<sha256 of salt> in the sessions table, TTL 10 minutes); start with max 100000.
-  - The browser finds n with Web Crypto from a nonce-allowed script; tune max so a laptop needs about 1 second.
-- Verify: `npm test --workspace @smart-finances/web -- src/server/pow.test.ts` → pass
+  - GET /api/auth/pow issues { salt, challenge = SHA-256(salt + n), max, expires, sig } (HMAC-SHA256); one use via row POW#<sha256 of salt>, TTL 10 minutes; max starts at 100000.
+  - PowField (client, nonce from x-nonce) solves with Web Crypto and adds powSalt, powN, powSig to the form.
+- Verify: `npm test --workspace @smart-finances/web -- src/application/pow.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
-### SF-145 · Wrap every post: Origin, proof of work, limits
-- Implements: AC-17, AC-19, D-115 · After: SF-144 · Judgment: high
-- Files: apps/web/src/server/post.ts (new), apps/web/src/server/post.test.ts (new)
+### SF-145 · The guarded() wrapper for server actions
+- Implements: AC-15, AC-17, AC-19, D-115, D-124, D-125 · After: SF-144 · Judgment: high
+- Files: apps/web/src/app/guarded.ts (new), apps/web/src/app/guarded.test.ts (new)
 - Tests first: T-WAUTH-7
 - Do:
-  - Origin must equal WEB_ORIGIN; missing or null → 403. Auth posts also need a valid proof of work, then the counters.
-  - A refusal returns the message keys auth.tooManyTries or auth.reload.
-- Verify: `npm test --workspace @smart-finances/web -- src/server/post.test.ts` → pass
+  - guarded(schema, opts, fn): exact Origin = WEB_ORIGIN (missing or null refused); auth actions need proof of work, then the counters; money actions need the session and consent (allowDeleting for the finish step); input parsed by the Zod schema.
+  - Returns { ok: true, data } or { ok: false, messageKey, retryAfterSeconds? }; never throws to the client.
+- Verify: `npm test --workspace @smart-finances/web -- src/app/guarded.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
-### SF-146 · Refuse breached passwords
+### SF-146 · Breached-password check
 - Implements: AC-12, AC-20, D-117 · After: SF-141 · Judgment: high
-- Files: apps/web/src/server/auth/breached.ts (new), apps/web/src/server/auth/breached.test.ts (new)
+- Files: apps/web/src/ports/BreachChecker.ts, apps/web/src/adapters/pwned.ts (new), apps/web/src/adapters/pwned.test.ts (new)
 - Tests first: T-WAUTH-8
 - Do:
-  - GET https://api.pwnedpasswords.com/range/<first 5 of SHA-1, upper case> with Add-Padding; refuse when the suffix appears; on error accept and log breach_check_unavailable.
-- Verify: `npm test --workspace @smart-finances/web -- src/server/auth/breached.test.ts` → pass
+  - GET https://api.pwnedpasswords.com/range/<first 5 of SHA-1, upper case> with Add-Padding: true, 2-second timeout; refuse when the suffix appears; on error accept and log breach_check_unavailable.
+- Verify: `npm test --workspace @smart-finances/web -- src/adapters/pwned.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
-### SF-147 · Sign up and confirm
-- Implements: AC-12, AC-14, D-106, D-75 · After: SF-145, SF-146 · Judgment: high
-- Files: apps/web/src/server/auth/signUp.ts (new), apps/web/src/server/auth/confirm.ts (new), apps/web/src/legal/versions.ts (new), apps/web/src/app/(auth)/sign-up/ (new), apps/web/src/server/auth/signUp.test.ts (new)
+### SF-147 · Identity provider port and Cognito adapter
+- Implements: AC-1, AC-12, AC-13, AC-20, D-73 · After: SF-141 · Judgment: high
+- Files: apps/web/src/ports/IdentityProvider.ts, apps/web/src/adapters/cognito.ts (new), apps/web/src/adapters/memory/identity.ts, apps/web/src/adapters/cognito.test.ts (new)
+- Tests first: T-WAUTH-18
+- Do:
+  - Methods: signUp, confirm, resend, passwordAuth, respondSetup (associate + verify), respondCode, forgotPassword, confirmForgot, adminGet, adminDelete, adminGlobalSignOut, refresh; secret hash base64(HMAC-SHA256(secret, username + client id)); clientMetadata.lang on sign-up and reset.
+  - Memory fake: email code 123456, authenticator code 000000, deterministic subs.
+- Verify: `npm test --workspace @smart-finances/web -- src/adapters/cognito.test.ts` → pass
+- Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
+### SF-148 · Sign up and confirm
+- Implements: AC-12, AC-14, D-106, D-75 · After: SF-145, SF-146, SF-147 · Judgment: high
+- Files: apps/web/src/application/auth/{signUp,confirm}.ts (new), apps/web/src/legal/versions.ts (new), apps/web/src/app/(auth)/sign-up/ (new, page and actions.ts), apps/web/src/application/auth/signUp.test.ts (new)
 - Tests first: T-WAUTH-9, T-WAUTH-10
 - Do:
-  - SignUp with secret hash and clientMetadata.lang; accepted terms and privacy versions go to the pre-auth row.
-  - Existing unconfirmed email: AdminDeleteUser, then sign up again with the new password (D-106). Existing confirmed email: the same reply, no email.
-  - Code emails capped per email (Contracts "Limits"); confirm and resend.
-- Verify: `npm test --workspace @smart-finances/web -- src/server/auth/signUp.test.ts` → pass
+  - Accepted TERMS_VERSION and PRIVACY_VERSION ("2026-11-01") go to the pre-auth row; an unconfirmed existing email is deleted and signed up again (D-106); a confirmed one gets the same reply and no email; code emails capped; replies padded to 800 ms.
+- Verify: `npm test --workspace @smart-finances/web -- src/application/auth/signUp.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
-### SF-148 · Sign in: password, authenticator setup and code
-- Implements: AC-1, AC-13, D-73, D-91 · After: SF-147 · Judgment: high
-- Files: apps/web/src/server/auth/signIn.ts (new), apps/web/src/server/auth/challenges.ts (new), apps/web/src/app/(auth)/sign-in/ (completes PR 1's placeholder), apps/web/src/server/auth/signIn.test.ts (new)
+### SF-149 · Sign in: password, authenticator setup and code
+- Implements: AC-1, AC-13, D-73, D-91 · After: SF-148 · Judgment: high
+- Files: apps/web/src/application/auth/signIn.ts (new), apps/web/src/app/(auth)/sign-in/ (completes PR 1’s placeholder; actions.ts), apps/web/src/application/auth/signIn.test.ts (new)
 - Tests first: T-WAUTH-11, T-WAUTH-12
 - Do:
-  - InitiateAuth USER_PASSWORD_AUTH with secret hash; MFA_SETUP: AssociateSoftwareToken, QR drawn on the server as SVG (qrcode) for otpauth issuer "Cuenta" ("Cuenta qa" or "Cuenta staging" off prod), VerifySoftwareToken; SOFTWARE_TOKEN_MFA: RespondToAuthChallenge. reauth mode checks the result's sub equals the session's and creates no session.
-  - State in the pre-auth row; an expired challenge returns to the password step; success deletes it and creates a new session.
+  - Setup QR drawn on the server as SVG (qrcode), issuer "Cuenta" ("Cuenta qa" or "Cuenta staging" off prod); state in the pre-auth row; an expired challenge returns to the password step; 5 wrong codes start over; success creates a new session. reauth mode checks the sub and creates none.
   - UserNotConfirmed: resend within the cap and go to confirm.
-- Verify: `npm test --workspace @smart-finances/web -- src/server/auth/signIn.test.ts` → pass
+- Verify: `npm test --workspace @smart-finances/web -- src/application/auth/signIn.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
-### SF-149 · Record consent and gate the money screens
-- Implements: AC-14, D-87, D-108 · After: SF-148 · Judgment: high
-- Files: apps/web/src/server/accounts.ts (new), apps/web/src/server/guard.ts (new), apps/web/src/app/consent/ (new), apps/web/src/app/(app)/layout.tsx, apps/web/src/server/guard.test.ts (new)
+### SF-150 · Consent, the account store and the money guard
+- Implements: AC-14, D-87, D-108 · After: SF-149 · Judgment: high
+- Files: apps/web/src/ports/AccountStore.ts, apps/web/src/adapters/dynamodb/accounts.ts (new), apps/web/src/application/guard.ts (new), apps/web/src/app/consent/ (new), apps/web/src/app/(app)/layout.tsx, apps/web/src/application/guard.test.ts (new)
 - Tests first: T-WAUTH-13
 - Do:
-  - At the first completed sign-in write consent from the pre-auth row with putConsent; guard.ts (used by the money layout and every route handler) needs a session, a consent row and status active. resetStoredBytes leaves consent in place.
-  - No consent row → /consent, which asks for the current TERMS_VERSION and PRIVACY_VERSION (the pre-auth row may have expired); refusing consent signs out.
-- Verify: `npm test --workspace @smart-finances/web -- src/server/guard.test.ts` → pass
+  - AccountStore: getAccount, putConsent, markDeleting, reserveImport, releaseImport, resetStoredBytes, deleteAccountRow (conditional updates).
+  - Consent from the pre-auth row at the first completed sign-in; requireMoneyAccess needs session, consent and status active; /consent asks for the current versions; refusing signs out.
+- Verify: `npm test --workspace @smart-finances/web -- src/application/guard.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
-### SF-150 · Reset the password and sign out everywhere
-- Implements: AC-20, D-92, D-115 · After: SF-148 · Judgment: high
-- Files: apps/web/src/server/auth/reset.ts (new), apps/web/src/app/(auth)/reset/ (new), apps/web/src/server/auth/reset.test.ts (new)
-- Tests first: T-WAUTH-14
+### SF-151 · Reset the password and sign out
+- Implements: AC-16, AC-20, D-92, D-122 · After: SF-149 · Judgment: high
+- Files: apps/web/src/application/auth/{reset,signOut}.ts (new), apps/web/src/app/(auth)/reset/ (new), apps/web/src/application/auth/reset.test.ts (new)
+- Tests first: T-WAUTH-14, T-WAUTH-15
 - Do:
-  - ForgotPassword (same reply for any email, capped), ConfirmForgotPassword with the breached check, AdminGetUser for the sub, then signOutEverywhere; a notice cookie (HttpOnly, 10 minutes) makes the sign-in screen say "your password was changed"; a reset event is logged (D-122).
-  - The next sign-in still asks for the authenticator.
-- Verify: `npm test --workspace @smart-finances/web -- src/server/auth/reset.test.ts` → pass
+  - Forgot (same reply for any email, capped), confirm with the breached check, adminGet for the sub, signOutEverywhere, then a 10-minute HttpOnly notice cookie so sign-in says "your password was changed" (D-122).
+  - Sign out is a server action: delete the row, revoke the refresh token, clear __Host-sid.
+- Verify: `npm test --workspace @smart-finances/web -- src/application/auth/reset.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
-### SF-151 · Sign out
-- Implements: AC-16, D-72 · After: SF-142 · Judgment: normal
-- Files: apps/web/src/app/api/auth/sign-out/route.ts (new), apps/web/src/app/api/auth/sign-out/route.test.ts (new)
-- Tests first: T-WAUTH-15
-- Do:
-  - A post only; deletes the row, revokes the refresh token, clears __Host-sid.
-- Verify: `npm test --workspace @smart-finances/web -- src/app/api/auth/sign-out/route.test.ts` → pass
-- Done when: verify is green, evidence is in progress-smart-finances-auth.json
-### SF-152 · Add the lost-authenticator, privacy and terms pages
+### SF-152 · Lost-authenticator, privacy and terms pages
 - Implements: AC-14, D-103, D-115, D-118 · After: SF-141 · Judgment: normal
-- Files: apps/web/src/app/lost-authenticator/ (new), apps/web/src/app/privacy/ (new), apps/web/src/app/terms/ (new), apps/web/e2e/public-pages.spec.ts (new); read docs/runbooks/lost-authenticator.md (PR 2)
+- Files: apps/web/src/app/{lost-authenticator,privacy,terms}/ (new), apps/web/e2e/public-pages.spec.ts (new)
 - Tests first: T-WAUTH-16
 - Do:
-  - Draft both languages under TERMS_VERSION and PRIVACY_VERSION: what is stored (transactions, files, choices, rates, consent, sessions), where (AWS us-east-1), how long (until erase or delete; backups 35 days), rights to access, correct and delete, contact SUPPORT_ADDRESS, no advice and no money movement, and that qa is a test stage whose data may be wiped.
-  - Lost authenticator shows SUPPORT_ADDRESS and the runbook steps.
-  - The owner reviews the privacy and terms text before merge; Q-8 may change it.
+  - Drafts in both languages under the versions: what is stored, where (AWS us-east-1), how long (until erase or delete; backups 35 days), rights, SUPPORT_ADDRESS, no advice or money movement, and that qa is a test stage whose data may be wiped. Lost authenticator follows docs/runbooks/lost-authenticator.md (PR 2).
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/public-pages.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json
-### SF-153 · Browser tests of the auth flows on fixtures
-- Implements: AC-1, AC-12, AC-13, AC-17, AC-19, AC-20 · After: SF-150, SF-152 · Judgment: normal
-- Files: apps/web/e2e/auth.spec.ts (new), apps/web/e2e/helpers/signIn.ts (new), apps/web/src/server/fakes/
+### SF-153 · Browser tests of the auth flows
+- Implements: AC-1, AC-12, AC-13, AC-17, AC-19, AC-20 · After: SF-150, SF-151, SF-152 · Judgment: normal
+- Files: apps/web/e2e/auth.spec.ts (new), apps/web/e2e/helpers/signIn.ts (new)
 - Tests first: T-WAUTH-17
 - Do:
-  - Extend the sign-in fake from SF-141 (selected by aws.ts when STAGE=test; email code 123456, authenticator code 000000); walk sign-up, confirm, setup, code, consent, reset, sign out and an ip-auth limit refusal in both languages. Add e2e/helpers/signIn.ts for PR 4.
+  - Under STAGE=test walk sign-up, confirm, setup, code, consent, reset, sign out and an ip-auth refusal in both languages; helpers/signIn.ts signs a test person in for PR 4.
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/auth.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json
 

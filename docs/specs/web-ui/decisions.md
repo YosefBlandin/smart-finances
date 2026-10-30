@@ -152,6 +152,7 @@ status: draft
 | D-135 | Browser monitoring with CloudWatch RUM: page loads, web vitals and JavaScript errors, client bundled from npm, no cookies, addresses stripped of search values, no person ids; a guest identity pool may only put RUM events; about 1 dollar per 100,000 events. | 2-way | user, 2026-10-30 | accepted |
 | D-136 | Storybook runs locally and in CI only: CI builds it and runs the accessibility checks and interaction tests on every story; nothing is published. | 2-way | user, 2026-10-30 | accepted |
 | D-137 | Component boundaries: a server shell (layouts, rail, static text) with client islands for the interactive screens, driven by TanStack Query over hydrated data. | 2-way | user, 2026-10-30 | accepted |
+| D-138 | Code architecture: the web server's logic is hexagonal (domain, application use cases, ports, adapters, with in-memory adapters for tests and Storybook); Next.js app/ only delivers (pages, layouts, server actions, JSON routes) and calls use cases through one container; presentation (ui, screens, queries, i18n) follows Next.js conventions. ESLint import rules enforce the dependency direction. | 2-way | user, 2026-10-30 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:
