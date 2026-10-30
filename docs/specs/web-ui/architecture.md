@@ -10,7 +10,7 @@ status: draft
 
 ## Overview
 <!-- 3 to 6 lines: the shape of the change and the data flow. -->
-A Next.js 15 app in apps/web, built and served by the Amplify app the owner created in the console (D-102), in us-east-1 like every other stack (D-89). CI deploys the stacks, then starts the Amplify build (D-93). The web server is the only thing the browser talks to apart from file uploads: it runs sign-up and sign-in with the sign-in service itself (D-66, D-73), keeps pre-auth and session state in server-side rows behind opaque cookies (D-72, D-91), and calls the data API with the person's access token (D-53, D-82). A firewall limits automated traffic (D-90); the pool blocks breached passwords (D-94); alarms watch the whole path (D-80).
+A Next.js 15 app in apps/web, built and served by the Amplify app the owner created in the console (D-102), in us-east-1 like every other stack (D-89). CI deploys the stacks, then starts the Amplify build (D-93). The web server is the only thing the browser talks to apart from file uploads: it runs sign-up and sign-in with the sign-in service itself (D-66, D-73), keeps pre-auth and session state in server-side rows behind opaque cookies (D-72, D-91), and calls the data API with the person's access token (D-53, D-82). A firewall limits automated traffic (D-90); the web server refuses breached passwords (D-117); alarms watch the whole path (D-80).
 
 ```
 browser ─https─▶ WAF (CloudFront scope) ─▶ Amplify: Next.js web server ──▶ sign-in pool (confidential client)
@@ -44,14 +44,14 @@ browser ─https─▶ WAF (CloudFront scope) ─▶ Amplify: Next.js web server
 
 ### Auth flows (web server)
 - Where: apps/web/src/server/auth/ (new): signUp.ts, confirm.ts, signIn.ts, challenges.ts, reset.ts, signOut.ts, deleteAccount.ts, preauth.ts; apps/web/src/app/(auth)/ (new) screens.
-- Calls the pool with the confidential client (secret hash) and the person's IP as context data (D-73, D-94). The IP is the right-most X-Forwarded-For entry added by Amplify's CDN, never the left-most; a qa check confirms the header.
+- Calls the pool with the confidential client (secret hash) (D-73). Before sign-up and reset it checks the new password against the Pwned Passwords range API (D-117). The client IP for the counters is the right-most X-Forwarded-For entry added by Amplify's CDN, never the left-most; a qa check confirms the header.
 - Between steps the state lives in the pre-auth row (D-91); a completed sign-in deletes it and issues a new __Host-sid.
 - At the first completed sign-in the consent from the pre-auth row is written to the accounts table before any money screen (D-87); a person without a consent row sees the consent screen.
 - Every auth post is a route handler that checks the Origin against the stage's web address (D-115), then the window counters (D-90); a WAF 429 or a counter refusal shows the "too many tries" message with the wait; a WAF challenge reply shows "reload and try again" (D-105).
 - Sign-up, reset and sign-in give the same message and timing for known and unknown emails. A sign-up for an existing unconfirmed email replaces it with the new password (D-106); code emails are capped per email (Limits).
 - After a reset: global sign-out, session rows removed and a notice email (D-92, D-115). Delete account: D-104, after a full re-sign-in. Lost authenticator: the owner's runbook in Docs (D-115).
 - Logs: one security event per outcome (Contracts); the logger refuses fields named password, code, secret or token.
-- Serves: AC-1, AC-12, AC-13, AC-14, AC-17, AC-18, AC-19, AC-20; D-66, D-73, D-75, D-87, D-90 to D-92, D-94, D-97, D-99, D-103.
+- Serves: AC-1, AC-12, AC-13, AC-14, AC-17, AC-18, AC-19, AC-20; D-66, D-73, D-75, D-87, D-90 to D-92, D-103 to D-106, D-115, D-117.
 
 ### Sessions and accounts
 - Where: apps/web/src/server/session.ts (new), apps/web/src/server/accounts.ts (new); tables in smart-finances:infra/lib/web-stack.ts#WebStack (new).
@@ -90,10 +90,10 @@ browser ─https─▶ WAF (CloudFront scope) ─▶ Amplify: Next.js web server
 
 ### Sign-in pool changes
 - Where: smart-finances:infra/lib/data-stack.ts#DataStack.
-- What: self sign-up on; Plus plan with threat protection per D-94; password policy per Contracts; a new confidential web-server client (secret, password flow, refresh, additional context data; access token 60 minutes, refresh token 12 hours, challenge session 15 minutes); its secret copied into a Secrets Manager secret in this stack, whose ARN (never the value) is a stage parameter. Pre-sign-up trigger per D-98 and D-109; custom message trigger for the email language. Triggers take no pool or client id from their environment; they read stage parameters at run time (D-109). Email through SES once the owner's domain exists (D-77).
+- What: self sign-up on; the Lite plan stays, no threat protection (D-117); password policy per Contracts; a new confidential web-server client (secret, password flow, refresh; access token 60 minutes, refresh token 12 hours, challenge session 15 minutes); its secret copied into a Secrets Manager secret in this stack, whose ARN (never the value) is a stage parameter. Pre-sign-up trigger per D-98 and D-109; custom message trigger for the email language. Triggers take no pool or client id from their environment; they read stage parameters at run time (D-109). Email through SES once the owner's domain exists (D-77).
 - The public SRP client stays only until the web server signs in on qa, and goes before any stage opens sign-up (D-98). Meanwhile the API's audience lists both clients (smart-finances:infra/lib/api-stack.ts#ApiStack).
 - Stays the same: the pool itself (not replaced; a synth test checks), email sign-in, TOTP required, email-only recovery.
-- Serves: AC-12, AC-13, AC-19, AC-20; D-73, D-77, D-94, D-98.
+- Serves: AC-12, AC-13, AC-19, AC-20; D-73, D-77, D-98, D-109, D-117.
 
 ### Data service changes
 - Where: smart-finances:infra/lib/api-stack.ts#ApiStack, smart-finances:infra/lib/data-stack.ts#DataStack.
@@ -177,10 +177,10 @@ pk ACCT#<sub>: consent { terms_version, privacy_version, lang, accepted_at }, st
 | data requests per person | 120 per 1-minute window | counter | 429 page (AC-17) |
 | imports per person | 10 a day, 200 MiB stored, 1 running | accounts table | plain refusal |
 | all imports | pause switch | stage parameter | plain refusal |
-| sign-up email | web-server client only; not disposable; signup-open true, or on the qa allow-list | pre-sign-up trigger (D-109) | plain refusal (AC-19) |
+| sign-up email | web-server client only; not disposable; signup-open true (qa: true, D-118) | pre-sign-up trigger (D-109) | plain refusal (AC-19) |
 
-### Password and code rules (D-75, D-94)
-Length 12 to 128, any characters, no composition rules or expiry; breached passwords blocked from launch; TOTP required at first sign-in; the email code expires in 24 hours and the reset code in 1 hour; 5 wrong codes lock the step.
+### Password and code rules (D-75, D-117)
+Length 12 to 128, any characters, no composition rules or expiry; breached passwords refused by the range check (D-117); TOTP required at first sign-in; the email code expires in 24 hours and the reset code in 1 hour; 5 wrong codes lock the step.
 
 ### Response headers (middleware, every response)
 - Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-<n>' 'strict-dynamic'; style-src 'self' 'nonce-<n>'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://<upload bucket host>; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'.
@@ -202,14 +202,13 @@ Length 12 to 128, any characters, no composition rules or expiry; breached passw
 amplify.yml writes these into apps/web/.env.production before next build; no secret value is ever a variable.
 
 ### Security events (web server log, one JSON line each)
-{ "event": "signup" | "signup_confirm" | "signin" | "signin_fail" | "mfa_setup" | "reset" | "signout" | "account_delete" | "rate_limited" | "health", "outcome", "sub"?, "request_id", "ts" }. Never an email, password, code, token, IP or imported text.
+{ "event": "signup" | "signup_confirm" | "signin" | "signin_fail" | "mfa_setup" | "reset" | "signout" | "account_delete" | "rate_limited" | "breached_password" | "breach_check_unavailable" | "health", "outcome", "sub"?, "request_id", "ts" }. Never an email, password, code, token, IP or imported text.
 
 ### Alarms (D-80, one SNS topic per stage)
 | Alarm | Source | Threshold |
 |---|---|---|
 | sign-up spike | security events, signup | over 50 in 1 hour |
 | sign-in failures | security events, signin_fail | over 100 in 15 minutes |
-| threat protection blocks | pool risk metrics | over 10 in 15 minutes |
 | WAF blocks | web ACL metrics | over 500 in 5 minutes |
 | web server errors | Amplify 5xx | over 2% for 10 minutes |
 | API errors and throttles | HTTP API 5xx and 429 | over 2%, or any 429 for 5 minutes |
@@ -228,7 +227,6 @@ amplify.yml writes these into apps/web/.env.production before next build; no sec
 | web-client-secret-arn | DataStack | WebStack (compute role grant) |
 | api-url | ApiStack | WebStack (build setting) |
 | support-address | a person | WebStack (build setting, D-103) |
-| signup-allowlist | a person (qa only) | pre-sign-up trigger (D-98) |
 | signup-open | a person; false or missing means closed | pre-sign-up trigger, sign-up screen (D-109) |
 | housekeeping-hmac-secret-arn | WebStack | compute role, housekeeping (counter keys, D-115) |
 | imports-paused | a person, in an emergency | web server (D-96) |
@@ -282,7 +280,7 @@ amplify.yml writes these into apps/web/.env.production before next build; no sec
 ## Cross-cutting
 - **Security and permissions:** OWASP ASVS 5.0 V6, V7, V3 and V14 and the OWASP Authentication, Session Management and CSRF cheat sheets are the checklist (D-75). The browser holds only opaque cookies (AC-16). CSRF: SameSite plus an Origin check on every post. The person comes only from the session; the API checks the token's sub (AC-15). Admin rights on the pool are limited to get, delete and global sign-out for the compute role and the housekeeping function.
 - **Personal data and logs:** security events carry no email, IP or token. WAF logs keep IPs 30 days, for abuse review. Amplify logs one month. Pre-auth rows hold an email hash, never the email. Fixtures and screenshots use data/synthetic only.
-- **Performance and cost:** pages render per request (nonces, no streaming, D-101): one session read and up to four API reads on the overview. New costs per stage: Cognito Plus per active person, WAF rules and requests, Amplify builds and compute, two on-demand tables, SES per email, one hourly function. Budgets alarm at 50, 80 and 100%.
+- **Performance and cost:** pages render per request (nonces, no streaming, D-101): one session read and up to four API reads on the overview. New costs per stage: no Cognito plan cost (Lite, D-117); WAF web ACL, rules and requests, Amplify builds and compute, two on-demand tables, SES per email, one hourly function. Budgets alarm at 50, 80 and 100%.
 - **Deploy and infrastructure:** release.md, "Rollout order" and "HUMAN needs".
 - **Observability:** the alarms table, the heartbeat, one dashboard per stage, and the post-deploy health check.
 - **Old clients:** none (D-2). The public SRP client goes before any stage opens sign-up (D-98).
@@ -297,8 +295,9 @@ amplify.yml writes these into apps/web/.env.production before next build; no sec
 | RK-4 | The compute role gives the server no credentials (F-45). | medium | high | A qa check in the first web task; any fallback becomes a new decision. | owner |
 | RK-5 | A pool change replaces the pool and orphans the data. | low | high | A synth test asserts the pool's logical id and no replacement. | owner |
 | RK-6 | The password crosses the web server and could be logged. | low | high | A logger test that refuses secret field names; a fresh review of every auth handler. | owner |
-| RK-7 | Fake sign-ups run up cost or email reputation. | medium | medium | D-90, D-96, D-98 and the sign-up and SES alarms; accepted in D-67. | owner |
-| RK-8 | Cognito's default sender caps emails per day before SES is ready. | high | medium | Only qa uses it, behind the allow-list (D-77, D-98). | owner |
+| RK-7 | Fake sign-ups run up cost or email reputation. | medium | medium | D-90, D-96, D-106 and the sign-up and SES alarms; accepted in D-67 and, on qa, D-118. | owner |
+| RK-15 | Without threat protection, credential stuffing is caught only by the firewall and counters. | medium | medium | Accepted in D-117; the sign-in failure alarm and TOTP on every sign-in limit the damage. | owner |
+| RK-8 | Cognito's default sender caps emails per day before SES is ready. | high | medium | Only qa uses it (D-77); the per-email cap (D-106) and the sign-up spike alarm watch it. | owner |
 | RK-9 | The data service was built for one owner (F-31). | high | medium | D-81, D-95, D-96 and the follow-up rows in the data-architecture spec. | owner |
 | RK-10 | Legal duties are unmet when sign-up opens. | medium | high | Q-8 gates every stage's public sign-up (D-98). | legal |
 | RK-11 | Chivo is wide, so Spanish wraps in tables, chips and the rail. | medium | low | Screenshots in Spanish at 400 and 1400 pixels, checked by a person. | owner |

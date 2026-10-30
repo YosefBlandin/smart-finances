@@ -14,7 +14,7 @@ status: draft
 2. EXECUTOR: prototype and design-system update for the auth and account screens (D-100); HUMAN reviews it.
 3. EXECUTOR: one PR into qa with infra, web and docs; draft, then the conformance review.
 4. HUMAN: merge into qa; CI deploys data, API, web and alarms, then starts the Amplify build (D-93).
-5. HUMAN: the qa checks below, signing up only with allow-listed test addresses (D-98).
+5. HUMAN: the qa checks below; qa sign-up is open to anyone (D-118).
 6. HUMAN: after Q-8, data PRs 2 and 3, SES and the concurrency raise: open sign-up on staging, check, then promote to prod.
 
 ## Gates
@@ -28,12 +28,12 @@ status: draft
 <!-- Values and actions only a person can supply, each as a HUMAN marker with the gate it blocks. Preflight failures from intake land here. The executor asks for these at the start and never invents them. -->
 - <HUMAN: store the Amplify app id as /smart-finances/<stage>/amplify-app-id in us-east-1 (D-102); qa done 2026-10-30, staging and prod later> · Blocks: the web stack
 - <HUMAN: turn auto-build off on each Amplify branch, or let the web stack do it on its first deploy; qa done 2026-10-30> · Blocks: first qa build
-- <HUMAN: set support-address, signup-open (false) and, on qa, signup-allowlist stage parameters> · Blocks: the auth tasks' qa check
+- <HUMAN: set support-address, and signup-open (true on qa per D-118, false on staging and prod) stage parameters> · Blocks: the auth tasks' qa check
 - <HUMAN: redeploy the OIDC stack with Amplify job rights and amplify-app-id read (D-113); again when staging and prod apps exist> · Blocks: the first qa deploy
 - <HUMAN: read-only check that /aws/amplify/<app id> exists before the first web stack deploy (D-112)> · Blocks: the web stack
 - <HUMAN: confirm the SNS alarm email subscription> · Blocks: G-promote
 - <HUMAN: verify an SES domain identity and request SES production access> · Blocks: sign-up on staging and prod (D-77)
-- <HUMAN: raise the account's Lambda concurrency quota and confirm it> · Blocks: sign-up on any stage beyond the qa allow-list (D-95)
+- <HUMAN: raise the account's Lambda concurrency quota and confirm it> · Blocks: setting signup-open to true on any stage, qa included (D-95, D-118)
 - <HUMAN: send Q-8 to a lawyer and record the answer> · Blocks: public sign-up on every stage (D-98)
 - <HUMAN: walk one sign-up, setup, sign-in, reset and delete account on qa with a test address> · Blocks: G-merge sign-off of the auth tasks
 - <HUMAN: who promotes to production: the owner> · Blocks: G-promote
