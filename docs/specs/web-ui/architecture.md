@@ -32,7 +32,7 @@ browser ──SRP──▶ user pool (tokens kept in the tab only)
 - Where: apps/web/src/styles/tokens.css (new), apps/web/src/styles/base.css (new), apps/web/src/ui/ (new).
 - What: the prototype's custom properties copied as they are, light and dark; theme follows the system setting. Parts (button, field, chip, flag, note, table, state block, colour field, kept bar, band strip, category square) use only these tokens (D-16, D-22, D-25, D-27, D-32 to D-34, D-57). Fonts are bundled files, not a font service (D-58). Icons are Tabler outline at 2px (D-17).
 - Stays the same: the prototype remains the design reference; a hand-off that changes a token changes tokens.css first.
-- Serves: AC-3, AC-10; D-12, D-13, D-15 to D-17, D-21, D-22, D-25, D-27, D-32 to D-34, D-57, D-58.
+- Serves: AC-11, AC-10; D-12, D-13, D-15 to D-17, D-21, D-22, D-25, D-27, D-32 to D-34, D-57, D-58.
 
 ### Words and formats
 - Where: apps/web/src/i18n/en.ts (new), apps/web/src/i18n/es.ts (new), apps/web/src/i18n/format.ts (new).
@@ -59,7 +59,7 @@ browser ──SRP──▶ user pool (tokens kept in the tab only)
 - Your data: export download, and erase-all with the typed word, the 35-day note and the counts (AC-7, F-12).
 - Every screen has loading, empty, failed and partial states with a next step (AC-8).
 - Imported text (place, original text, file names) renders as text nodes only; no screen uses raw HTML insertion (AC-9).
-- Serves: AC-2, AC-3, AC-5 to AC-9; D-13, D-18 to D-21, D-23, D-26 to D-31, D-34.
+- Serves: AC-2, AC-11, AC-5 to AC-9; D-13, D-18 to D-21, D-23, D-26 to D-31, D-34.
 
 ### Shared field and category lists
 - Where: smart-finances:apps/api/src/ingest/fields.mjs (new) holds FIELDS and KINDS, which smart-finances:apps/api/src/ingest/schema.mjs#FIELDS re-exports; smart-finances:apps/api/src/ingest/categories.mjs#CATEGORIES (new) lists the rule categories plus Uncategorized, next to smart-finances:apps/api/src/ingest/categories.mjs#categoryFor. smart-finances:apps/api/package.json gains an exports map for these two files only.

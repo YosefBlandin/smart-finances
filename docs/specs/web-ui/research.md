@@ -10,6 +10,8 @@ status: draft
 
 ## Scope
 <!-- Areas covered, repos and refs read, and how this was produced (area sweep, then a verifier re-checks the facts that will become decisions). At most 3 lines. -->
+Areas: web screens and API contract (first sweep, at 7ce1ffb, re-checked at 903321c); accounts; web server; obligations (second sweep, after D-60 to D-62).
+Repo smart-finances at 903321c. Read-only subagents per area; the code facts behind D-n were re-read in the main session. AWS and Argentine government pages could not be fetched from this session, so web facts rest on search summaries and need a confirming read.
 
 ## Facts
 <!-- One verified fact per row, with evidence. Give a row an F id only when another file cites it; otherwise put - in the first cell. Example row: | F-1 | write path | Every signed-in call writes one event after the response. | api:src/events/log.ts:L97-121 | -->
@@ -39,22 +41,54 @@ status: draft
 | F-22 | plan | Epic 1 asks for: a design brief; a design system (light and dark tokens, income, expense and savings colours, colour-blind-safe charts); screens for import, dashboard (net worth, spend by category, savings-rate trend), transactions, assistant, settings and data controls; trust states (citations, tool trace, refusal, uncertainty, rate limit); empty, loading, error and partial-import states; one critique round; tokens exported to Tailwind and shadcn. | plan doc, "Epic 1" |
 | F-23 | plan | Epic 3 asks for Next.js with the exported tokens, shadcn and in-app sign-in; charts with text alternatives; server-side filter, sort and paging; an import screen with partial-failure report; data controls; keyboard, contrast and reduced-motion pass; a strict content policy; tokens kept out of local storage. | plan doc, "Epic 3" |
 | F-24 | data | No source sends account balances, so net worth has no data behind it. | smart-finances:apps/api/src/ingest/schema.mjs#FIELDS |
+| F-25 | accounts | The pool has sign-up off, email sign-in, email auto-verify, the Lite feature plan and TOTP-only MFA required; the web client has no secret, SRP only, OAuth off. Tests pin these values and the pool's and client's logical ids. | infra/lib/data-stack.ts:L62-81; infra/test/data-stack.test.ts:L113-142, L162-185 |
+| F-26 | accounts | No email setting exists, so Cognito's own sender is used; AWS documents its daily limit as below production volume and names SES as the fix. | infra/lib/data-stack.ts:L62-73; https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-email.html |
+| F-27 | accounts | A client secret cannot be added to an existing app client: a confidential client is a new client with a new id, which the API's audience check and the client id stage parameter must follow. | infra/lib/data-stack.ts:L96-99; infra/lib/api-stack.ts:L56-58 |
+| F-28 | accounts | With TOTP-only MFA required, a new account's first sign-in returns an MFA setup challenge, answered with associate and verify software-token calls; later sign-ins get the TOTP challenge. | https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-settings-mfa-totp.html |
+| F-29 | accounts | Every store key starts with the person (U#sub) and uploads sit under uploads/sub/; the person comes only from the verified token. The store itself does not check that a key belongs to the caller, and no data handler exists yet, so isolation between accounts is untested. | apps/api/src/store/keys.mjs:L17-45; apps/api/src/store/repo.mjs:L88-110; apps/api/src/handlers/http.mjs:L22-28 |
+| F-30 | accounts | The API throttle (10 per second, burst 20) is for the whole stage, not per person; per-person quotas and a web firewall are planned for Epic 6. | infra/lib/api-stack.ts:L51-53; docs/threat-model.md:L46 |
+| F-31 | accounts | The data-architecture design assumes one owner in several places: sizing of about 700 rows a year, one rollup stream at parallelism 1, alarms that email the owner, owner-entered dollar rates, and repair and rebuild as the owner's fixes. | docs/adr/0003-data-store.md:L6; docs/specs/data-architecture/architecture.md:L38, L112-114; data-architecture D-7 |
+| F-32 | accounts | The threat model lists "single user" as out of scope and calls self sign-up off a done control. Open sign-up reverses both. | docs/threat-model.md:L45, L101 |
+| F-33 | accounts | Cognito threat protection needs the Plus plan; its leaked-password check does not work with SRP sign-in. CAPTCHA and disposable-email blocking need a pre-sign-up trigger; rate limits per address need a web firewall on the pool. | https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pool-settings-threat-protection.html; https://aws.amazon.com/blogs/security/protect-your-amazon-cognito-user-pool-with-aws-waf/ |
+| F-34 | web server | Amplify Hosting does not support manual deploys for server-rendered apps; a server-rendered Next.js app needs a Git-connected Amplify app with a build spec. | https://docs.aws.amazon.com/amplify/latest/userguide/manual-deploys.html |
+| F-35 | web server | Amplify's server rendering supports Next.js 12 to 15, middleware (not Edge) and route handlers; streaming and Edge are not supported; responses over 5.72 MB fail. Console variables do not reach the server at run time. | https://docs.aws.amazon.com/amplify/latest/userguide/ssr-amplify-support.html; ssr-environment-variables.md; troubleshooting-SSR.html |
+| F-36 | web server | The CI role may only assume the CDK roles, so anything outside CloudFormation (an Amplify deploy call, a GitHub connection token) needs new rights or a secret. | infra/lib/github-oidc-stack.ts:L47-53; .github/workflows/deploy.yml:L41-54 |
+| F-37 | web server | The Amplify Next.js adapter's server-side sign-in keeps tokens in httpOnly cookies but goes through Cognito's managed sign-in pages with the OAuth code flow, and is marked experimental. Keeping our own sign-in screens means a server flow we write. | https://docs.amplify.aws/react/build-a-backend/server-side-rendering/nextjs |
+| F-38 | web server | A nonce-based content policy in Next.js is set by middleware for every request and makes every page dynamic, with no CDN caching of pages. | https://nextjs.org/docs/15/app/guides/content-security-policy |
+| F-39 | web server | OpenNext runs Next.js on Lambda behind CloudFront, deployed by CDK with no Git connection; it is three years old and targets Next.js 15. | https://opennext.js.org/news/2026-03-25-3-years-of-opennext |
+| F-40 | obligations | Argentina's data law asks for registered databases, informed consent, access within 10 calendar days and correction or deletion within 5 business days; storing data in the US needs model clauses or the provider's terms. A reform is not in force. Unconfirmed by a lawyer. | https://www.argentina.gob.ar/aaip/datospersonales/derechos; Res. AAIP 137/2019; Disp. 60/2016 |
+| F-41 | obligations | Venezuela has a constitutional right to see, correct and delete one's data but no data law or regulator. GDPR applies only if the app targets people in the EU. | https://iapp.org/news/a/venezuela-data-breach-highlights-scattered-privacy-regulation |
+| F-42 | obligations | Investment advice in Argentina is a regulated adviser role (CNV) and payment services are regulated by the central bank; the app gives no advice and moves no money, but no source gives safe wording. | https://abogados.com.ar/cnv-resolucion-general-710-e2017-agente-asesor-global-de-inversion/20490 |
 | - | callers | Callers of the touched code: the planned web app (only client of the new screens); the old Angular app on main (no link to the new API, D-2); the local import script (uses importers directly, unaffected); staging checks run by a person. | smart-finances:scripts/ingest-local.mjs; README.md, "Branches" |
 
 ## Corrections
 <!-- Where two sources disagreed or an earlier claim was wrong: the claim, the resolved fact, and the evidence that settles it. Example row: | 1 | The docs say old events expire after 30 days. | Old events have no expiry set, so they never expire. | live check 1 | -->
 | # | Earlier claim | Resolved fact | Evidence |
 |---|---|---|---|
+| 1 | F-1 (first sweep): the API is one hello function with no sign-in check. | At 903321c it has GET /health and a token check bound to the stage's pool and client. | infra/lib/api-stack.ts:L55-66 |
+| 2 | Threat model: a short token lifetime is in place. | No token lifetime is set; the defaults apply. | infra/lib/data-stack.ts:L75-81; docs/threat-model.md:L44 |
+| 3 | First design draft: Amplify serves the app from CI without Git. | True only for static files; server rendering needs Git (F-34). | F-34 |
 
 ## Assumptions
 <!-- What we believe but have not verified. Importance and evidence are high, medium or low. High importance with low evidence needs a live check, a question or a task. Example row: | Production has the same table shape as staging. | high | low | live check on production by a person | -->
 | Assumption | Importance | Evidence | Next step |
 |---|---|---|---|
+| Turning on self sign-up and adding a client do not replace the pool. | high | medium | a synth diff check on qa before merge (task) |
+| Every data handler will key on the token's person, so accounts cannot read each other. | high | medium | the data-architecture spec's second-account test across all routes must pass before sign-up opens |
+| The app is a database that must be registered in Argentina, and the US hosting needs model clauses. | high | medium | Q-8, for a lawyer |
+| Erased data kept restorable for 35 days fits the 5-business-day deletion rule. | high | low | Q-8 |
 
 ## Unknowns
 <!-- What nobody knows yet. Every high-impact unknown points to a question, a task or a live check. Example row: | Whether page views from the mobile app are needed. | high | Q-1 | -->
 | Unknown | Impact | Goes to |
 |---|---|---|
+| Hosting for a server-rendered app: Git-connected Amplify or OpenNext on Lambda through CDK | high | Q-4 |
+| Our own sign-in and sign-up screens, or Cognito's managed pages | high | Q-5 |
+| Who may sign up at first: anyone, or by invitation | high | Q-6 |
+| Appetite and split for the larger scope | high | Q-7 |
+| Legal duties for strangers' financial data, safe wording, sanctions | high | Q-8 |
+| Per-person limits, cost and alarms in a data design built for one owner (F-30, F-31) | high | design, with a data-architecture follow-up |
+| Server timeout, region and run-time secrets on the chosen host | medium | design, after Q-4 |
 | Web host for staging and prod, and so the allowed web addresses and the deploy path | high | D-45 (was Q-1) |
 | Whether the assistant screens are built now against a fake, or designed now and built with the Epic 4 contract | high | D-46 (was Q-2) |
 | Where sign-in tokens live in the browser, and whether any data or chat is kept there | high | D-47 (was Q-3) |
@@ -76,3 +110,5 @@ status: draft
 <!-- Questions someone would ask that the code already answers. Nobody re-asks these. -->
 | Question | Answer | Evidence |
 |---|---|---|
+| Can a request name another person? | No: the person is the token's sub and key parts refuse # and / | apps/api/src/handlers/http.mjs:L22-28; apps/api/src/store/keys.mjs:L17-22 |
+| Is the pool kept if its stack is deleted? | Yes, retained in every stage | infra/lib/data-stack.ts:L62-73 |
