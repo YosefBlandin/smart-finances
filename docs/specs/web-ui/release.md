@@ -26,7 +26,7 @@ status: draft
 
 ## HUMAN needs
 <!-- Values and actions only a person can supply, each as a HUMAN marker with the gate it blocks. Preflight failures from intake land here. The executor asks for these at the start and never invents them. -->
-- <HUMAN: store the Amplify app id as /smart-finances/<stage>/amplify-app-id in us-east-1 (qa done in the console, D-102)> · Blocks: the web stack
+- <HUMAN: store the Amplify app id as /smart-finances/<stage>/amplify-app-id in us-east-1 (D-102); qa done 2026-10-30, staging and prod later> · Blocks: the web stack
 - <HUMAN: turn auto-build off on each Amplify branch, or let the web stack do it on its first deploy> · Blocks: first qa build
 - <HUMAN: set support-address and, on qa, signup-allowlist stage parameters> · Blocks: the auth tasks' qa check
 - <HUMAN: confirm the SNS alarm email subscription> · Blocks: G-promote
