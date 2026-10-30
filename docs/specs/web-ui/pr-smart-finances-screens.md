@@ -13,6 +13,9 @@ status: draft
 - Spec folder: /home/user/smart-finances/docs/specs/web-ui in a cloud session; locally <repo root>/docs/specs/web-ui. Read and write the spec there, on the branch named under Branch, never a copy elsewhere.
 - Refs: smart-finances at the sha in intent.md refs. Before the first task: `git fetch origin qa feature/web-ui`, then `node ~/.claude/skills/spec/scripts/drift.mjs docs/specs/web-ui --strict` (exit 0; NEW lines are expected)
 - Worktree: a cloud session's own checkout; locally <repo root>/.claude/worktrees/web-screens (profile Notes)
+- Profile verify (full, at the baseline and before the PR): `npm test` and `npm run build --workspace @smart-finances/infra`. No separate lint or typecheck exists; record "none".
+- Every task may also touch, without stopping: apps/web/package.json and package-lock.json (for packages this brief allows), apps/web/src/i18n/en.ts and es.ts (new keys only, both files), and its own *.module.css files.
+- Judgment: high tasks get a fresh-context reviewer before done: a subagent or fresh chat given the task, its diff and the review prompt in ~/.claude/skills/spec/references/handoff-prompts.md.
 - Branch: feature/web-screens · Base: origin/feature/web-ui, after the previous PR is merged into it · Draft PR into feature/web-ui (D-121)
 - Brief version: the locked-vN named in the handoff prompt; record it as pr-smart-finances-screens.md@locked-vN in progress-smart-finances-screens.json
 - Order: PR 4 of 4.
@@ -23,6 +26,12 @@ status: draft
 3. architecture.md: Components "Data access (web server)", "Screens", "Screen states"; Contracts "Data API", "Accounts table", "Limits"; "States and exits" rows import, erasing, deleting account.
 4. docs/specs/data-architecture/architecture.md: Contracts "HTTP routes" (the contract types.ts mirrors).
 5. test-matrix.md rows whose task is SF-161 to SF-171.
+
+## Interfaces between the PRs
+- PR 1: apps/web scripts test (vitest run) and e2e (playwright test); playwright.config.ts starts `next dev` on port 3000 with STAGE=test; (app) and (auth) route groups; i18n t(key, lang); ui parts; CATEGORIES from "@smart-finances/api/categories".
+- PR 3: src/server/settings.ts getSettings(); src/server/aws.ts clients() returns real AWS clients, or in-memory fakes (src/server/fakes/) when STAGE=test; src/server/log.ts securityEvent(event, outcome, sub?); src/server/session.ts getSession(), createSession(sub, tokens), refreshIfNeeded(session), signOutEverywhere(sub), plus the pre-auth helpers; src/server/limits.ts hit(scope, value) with scopes person, ip-auth, email-fail, email-code-hour, email-code-day; src/server/post.ts handlePost(req, { auth?: boolean }, fn); src/server/guard.ts requireMoneyAccess({ allowDeleting?: boolean }); src/server/auth/signIn.ts signIn(email, password, { reauth?: boolean }); src/legal/versions.ts TERMS_VERSION and PRIVACY_VERSION ("2026-11-01").
+- PR 4: src/server/api.ts api(session) with one method per route in types.ts; routes POST /api/data/erase, POST /api/account/delete, POST /api/account/delete/finish.
+
 
 ## HUMAN needs
 - <HUMAN: data PRs 2 and 3 merged into qa before the qa checks of imports, transactions, erase and delete account (D-64)> · Blocks: the qa checks, not the tasks
@@ -48,6 +57,7 @@ status: draft
 - D-120: No WAF for now, on any stage. Limits live in the web server's window counters: auth posts per IP 20 per 5 minutes, sign-in or reset failures per email and address prefix 5 per 15 minutes, code emails per email 3 an hour and 10 a day, data requests per person 120 a minute. A self-hosted proof-of-work check (served from the site, no third party) guards sign-up and the auth posts instead of the WAF challenge. The user accepts that floods reach the web server's compute. Supersedes D-90 and D-105.
 - D-121: Integration branch: the four PRs (foundation, infra, auth, screens) each open as a draft into feature/web-ui, in order; once all are merged there, one PR from feature/web-ui into qa ships infra and web in one merge. The agent commits, pushes its feature branches and opens draft PRs; the user reviews, merges and promotes. Narrows D-6.
 - Values:
+  - Packages allowed: @aws-sdk/client-ssm, @aws-sdk/client-dynamodb, @aws-sdk/lib-dynamodb (same as PR 3).
   - Synthetic data: data/synthetic/transactions.csv; bad month 2026-03, no-rate month 2026-10.
   - Caps: 10 imports a day, 200 MiB stored, one running; source maximum 20 MiB for excel, 5 MiB for the others.
   - Web tests: `npm test --workspace @smart-finances/web -- <file>`; browser tests: `npm run e2e --workspace @smart-finances/web -- <file>`.
@@ -87,7 +97,7 @@ status: draft
 - Do:
   - types.ts mirrors the data-architecture spec, Contracts "HTTP routes", route by route.
   - api.ts: bearer access token, 5-second timeout, errors keyed on status (401 refresh once then sign out; 403 and 404 not found; 409, 429, 5xx failed with retry), counts the person's requests.
-  - fixtures.ts answers every route from data/synthetic for STAGE=test, the 8 hostile rows included.
+  - fixtures.ts answers every route from data/synthetic/transactions.csv for STAGE=test, the hostile rows from data/synthetic/generate.mjs included; payments-report rows are source mercadopago.
 - Verify: `npm test --workspace @smart-finances/web -- src/server/api.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
 ### SF-162 · Work out kept, typical month and the bad month
@@ -95,7 +105,7 @@ status: draft
 - Files: apps/web/src/screens/overview/model.ts (new), apps/web/src/screens/overview/model.test.ts (new)
 - Tests first: T-WSCR-2, T-WSCR-3
 - Do:
-  - Kept in pesos at the month's rate; typical month from 3 to 6 earlier rated months, none below 3; the bad month when spending exceeds earnings.
+  - Inputs: GET /totals (view native and usd) and GET /rates. Kept in pesos at the month's rate, cents rounded half away from zero; typical month from 3 to 6 earlier rated months, none below 3; the bad month when spending exceeds earnings.
 - Verify: `npm test --workspace @smart-finances/web -- src/screens/overview/model.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-163 · Build the overview
@@ -104,7 +114,7 @@ status: draft
 - Tests first: T-WSCR-4, T-WSCR-5
 - Do:
   - Colour field, kept bar, waiting line, band strip, sections with headline sentences, SVG charts with a table alternative; each section fails alone.
-  - The browser test checks the bad month (2026-03 in the synthetic data): exactly one money figure is red.
+  - Money figures carry data-money; the bad figure also data-tone="bad". The browser test checks 2026-03: exactly one [data-money][data-tone=bad].
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/overview.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-164 · Build transactions
@@ -128,7 +138,7 @@ status: draft
 - Files: apps/web/src/app/(app)/imports/ (new), apps/web/src/server/caps.ts (new), apps/web/src/server/caps.test.ts (new), apps/web/e2e/imports.spec.ts (new)
 - Tests first: T-WSCR-8, T-WSCR-9
 - Do:
-  - caps.ts: one conditional update on ACCT#<sub> reserves the slot (D-114); release or correct it at the final status; the imports-paused switch.
+  - caps.ts: one conditional update on ACCT#<sub> in ACCOUNTS_TABLE reserves the slot (D-114); release or correct it at the final status; imports-paused read through SSM (cached 60 seconds). Source names and file-name rules are the data spec's POST /imports.
   - Upload with fetch and FormData to the presigned URL; poll the import through the server; skipped rows per D-86.
 - Verify: `npm test --workspace @smart-finances/web -- src/server/caps.test.ts` and `npm run e2e --workspace @smart-finances/web -- e2e/imports.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
@@ -137,7 +147,7 @@ status: draft
 - Files: apps/web/src/app/(app)/data/ (new), apps/web/e2e/erase.spec.ts (new)
 - Tests first: T-WSCR-10
 - Do:
-  - Export download; "Erase my data" with the typed word DELETE, the 35-day note and counts; timeout or 5xx says it may be unfinished and offers Finish erasing; reset stored_bytes on 202.
+  - Export download; "Erase my data" posts POST /api/data/erase with the typed word DELETE; the 35-day note and counts; timeout or 5xx says it may be unfinished and offers Finish erasing (the same route); reset stored_bytes on 202 in the accounts row.
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/erase.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-168 · Delete the account
@@ -145,13 +155,13 @@ status: draft
 - Files: apps/web/src/server/auth/deleteAccount.ts (new), apps/web/src/server/auth/deleteAccount.test.ts (new), apps/web/e2e/delete-account.spec.ts (new)
 - Tests first: T-WSCR-11, T-WSCR-12
 - Do:
-  - Full re-sign-in (password and code) and no running import, then mark deleting; erase until 202; signOutEverywhere; AdminDeleteUser (not found is done); remove the account row; signed-out page with counts.
+  - POST /api/account/delete: signIn(email, password, { reauth: true }) plus the code, and no running import, then mark deleting; POST /api/account/delete/finish (requireMoneyAccess({ allowDeleting: true })): erase until 202, signOutEverywhere, AdminDeleteUser (not found is done), remove the account row; signed-out page with counts.
   - Only the deleting session may reach the finish route; a test fails at each step and finishes it.
 - Verify: `npm test --workspace @smart-finances/web -- src/server/auth/deleteAccount.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
 ### SF-169 · Prove imported text stays inert
 - Implements: AC-9 · After: SF-164, SF-166 · Judgment: normal
-- Files: apps/web/e2e/hostile.spec.ts (new), scripts/check-no-raw-html.mjs (new)
+- Files: apps/web/e2e/hostile.spec.ts (new), scripts/check-no-raw-html.mjs (new), package.json
 - Tests first: T-WSCR-13, T-WSCR-14
 - Do:
   - Load the hostile synthetic rows on every screen that shows imported text; the payload shows as text, no img or script from it, no request or dialog.
@@ -163,7 +173,7 @@ status: draft
 - Files: apps/web/e2e/a11y.spec.ts (new)
 - Tests first: T-WSCR-15, T-WSCR-16
 - Do:
-  - axe on every screen in both languages and themes; keyboard walk of every action with visible focus; switching language keeps the screen and address.
+  - axe on every screen in both languages and both colour schemes (Playwright emulateMedia); keyboard walk of every action with visible focus; switching language keeps the screen and address.
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/a11y.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-171 · Show the per-person limit page
@@ -171,7 +181,7 @@ status: draft
 - Files: apps/web/src/app/(app)/too-many/ (new), apps/web/e2e/limit.spec.ts (new)
 - Tests first: T-WSCR-17
 - Do:
-  - Over 120 requests a minute shows the plain 429 page with the wait; other people are not counted.
+  - Past the person limit (5 a minute under STAGE=test) the next page is the plain 429 page with the wait; another session's person is not counted.
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/limit.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 

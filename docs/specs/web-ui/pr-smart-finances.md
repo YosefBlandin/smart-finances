@@ -13,6 +13,9 @@ status: draft
 - Spec folder: /home/user/smart-finances/docs/specs/web-ui in a cloud session; locally <repo root>/docs/specs/web-ui. Read and write the spec there, on the branch named under Branch, never a copy elsewhere.
 - Refs: smart-finances at the sha in intent.md refs. Before the first task: `git fetch origin qa feature/web-ui`, then `node ~/.claude/skills/spec/scripts/drift.mjs docs/specs/web-ui --strict` (exit 0; NEW lines are expected)
 - Worktree: a cloud session's own checkout; locally <repo root>/.claude/worktrees/web-foundation (profile Notes)
+- Profile verify (full, at the baseline and before the PR): `npm test` and `npm run build --workspace @smart-finances/infra`. No separate lint or typecheck exists; record "none".
+- Every task may also touch, without stopping: apps/web/package.json and package-lock.json (for packages this brief allows), apps/web/src/i18n/en.ts and es.ts (new keys only, both files), and its own *.module.css files.
+- Judgment: high tasks get a fresh-context reviewer before done: a subagent or fresh chat given the task, its diff and the review prompt in ~/.claude/skills/spec/references/handoff-prompts.md.
 - Branch: feature/web-foundation · Base: origin/feature/web-ui · Draft PR into feature/web-ui (D-121)
 - Brief version: the locked-vN named in the handoff prompt; record it as pr-smart-finances.md@locked-vN in progress-smart-finances.json
 - Order: PR 1 of 4.
@@ -24,6 +27,12 @@ status: draft
 4. CLAUDE.md in the worktree.
 5. test-matrix.md rows whose task is SF-101 to SF-110.
 
+## Interfaces between the PRs
+- PR 1: apps/web scripts test (vitest run) and e2e (playwright test); playwright.config.ts starts `next dev` on port 3000 with STAGE=test; (app) and (auth) route groups; i18n t(key, lang); ui parts; CATEGORIES from "@smart-finances/api/categories".
+- PR 3: src/server/settings.ts getSettings(); src/server/aws.ts clients() returns real AWS clients, or in-memory fakes (src/server/fakes/) when STAGE=test; src/server/log.ts securityEvent(event, outcome, sub?); src/server/session.ts getSession(), createSession(sub, tokens), refreshIfNeeded(session), signOutEverywhere(sub), plus the pre-auth helpers; src/server/limits.ts hit(scope, value) with scopes person, ip-auth, email-fail, email-code-hour, email-code-day; src/server/post.ts handlePost(req, { auth?: boolean }, fn); src/server/guard.ts requireMoneyAccess({ allowDeleting?: boolean }); src/server/auth/signIn.ts signIn(email, password, { reauth?: boolean }); src/legal/versions.ts TERMS_VERSION and PRIVACY_VERSION ("2026-11-01").
+- PR 4: src/server/api.ts api(session) with one method per route in types.ts; routes POST /api/data/erase, POST /api/account/delete, POST /api/account/delete/finish.
+
+
 ## HUMAN needs
 - <HUMAN: review the extended prototype and say go before SF-108> · Blocks: SF-108
 - <HUMAN: merge the spec branch claude/intent-web-ui-spec-ssm5mn into feature/web-ui so the spec and this brief are on the base> · Blocks: SF-100
@@ -32,10 +41,24 @@ status: draft
 - D-6: Roles: the agent writes code, commits, pushes feature branches and opens draft PRs into qa; the user reviews, merges and promotes. Source: data-architecture spec D-4 (default).
 - D-11: Language: English and Spanish, switchable. Spanish addresses people with tú.
 - D-17: Icons: Tabler outline icons at a 2px line, which matches the stem of Chivo 400. They mark the current screen, statuses, review reasons, notes and assistant answers, always next to a word. Narrows D-15: bands now appear only where they carry a number (the spending strip, bars and the category key) plus the logo.
+- D-19: Wording: each overview section opens with its finding as a short headline sentence, not a neutral label.
 - D-22: Type and spacing rules: sizes 12, 14, 16, 20, 24, 32, 48 plus one display size; body 16, tables and data 14, uppercase labels 12 with one letter-spacing. Weights 400, 500 and 700, with 800 only for the display figure. Spacing uses only the 4px-based tokens. Text meets 4.5:1 contrast and input borders 3:1. Click targets are at least 32px, and 44px on touch screens.
 - D-23: Amounts: summaries (the overview's colour field, category rows and places) show pesos as whole numbers and dollars with cents. Lists of single transactions keep exact cents in both currencies.
+- D-24: Phones: under 720px the side rail folds into a top bar with the brand and a menu button that names the current screen. Nothing else sits above the overview's answer, so it shows in the first screen.
+- D-30: Percentages in the colour field are whole numbers (32%, not 31.7%); the comparison sentence keeps its exact points.
+- D-34: Lists mark a category with the same solid square as the overview's category rows, not a striped mark, so one category has one mark everywhere and its colour shows at list size.
+- D-35: Desktop rail: the rail stays in view while the page scrolls, with the account area pinned to its bottom, so the nav and Sign out are always on screen.
+- D-37: Language leaves the nav and joins the account area as one row that names the other language ("Español" in English, "English" in Spanish), beside the language icon and shaped like the Sign out row. The two-way switch goes.
+- D-38: The account area says who is signed in (the address, then "Authenticator on" in small muted text), then the language row and Sign out as a plain row with no border, so nothing in the rail is boxed.
+- D-39: The current screen is marked by a 2px ink line beside its bold ink label, with no fill and no shadow (16.1:1 light, 13.9:1 dark against the rail). Hover keeps the white fill.
+- D-40: The wordmark is set at 700, not 800, so 800 stays for the display figure (D-22). The environment tag ("qa") is a 12px uppercase label in Chivo, not Chivo Mono (D-16).
+- D-41: Nav group labels sit 24px below the group above and 8px above their first link, so each label heads its own group.
+- D-42: The Spanish nav label for dollar rates is "Cotizaciones", which fits on one line; the screen title keeps "Cotización del dólar".
+- D-43: The top bar from D-24 applies up to 960px, not 720px, so tablets get it too. Its menu opens as a panel over the page, under the bar, without moving the page; the button shows a close mark while open and is 44px tall. Narrows D-24.
+- D-44: The top bar's menu button carries the amber "To review" count beside the screen name, so it shows from every screen. The user accepted one more mark in the bar than D-24 allowed.
 - D-36: Nav groups: Money (Overview, Transactions, To review, Imports, Dollar rates, Ask), Account (Your data) and Prototype (Sign-in flow, Design system). The one-link Assistant group goes; Sign-in flow moves to Prototype because it is not a screen of the real app.
 - D-46: Assistant screens: designed now in the prototype and the design system; their code is built in Epic 4 against its real answer format.
+- D-86: Skipped-row reasons: a translated lead, then the importer's own words as raw text in English. Narrows AC-4 for that text.
 - D-57: Styling: the prototype's CSS custom properties as tokens with CSS modules; no Tailwind or shadcn. Charts in hand-drawn SVG, each with a table alternative.
 - D-58: Fonts (Chivo, Chivo Mono) and Tabler icons are bundled; no font or icon service at run time.
 - D-62: Next.js with server rendering, and the session held by the web server in cookies page scripts cannot read; the browser never holds a token. Supersedes D-49 and D-52.
@@ -51,7 +74,7 @@ status: draft
 - D-121: Integration branch: the four PRs (foundation, infra, auth, screens) each open as a draft into feature/web-ui, in order; once all are merged there, one PR from feature/web-ui into qa ships infra and web in one merge. The agent commits, pushes its feature branches and opens draft PRs; the user reviews, merges and promotes. Narrows D-6.
 - Values:
   - Prototype: https://claude.ai/code/artifact/10e1188c-9601-4133-9a2d-3502b0bc2ac6 (synthetic data only).
-  - Packages allowed: next 15.x, react and react-dom 19.x, typescript, vitest, @playwright/test, @axe-core/playwright, @tabler/icons-react, @fontsource/chivo, @fontsource/chivo-mono.
+  - Packages allowed: next 15.x, react and react-dom 19.x, typescript, vitest, jsdom, @testing-library/react, @playwright/test, @axe-core/playwright, @tabler/icons-react, @fontsource/chivo, @fontsource/chivo-mono.
   - Web tests: `npm test --workspace @smart-finances/web -- <file>` (vitest run); browser tests: `npm run e2e --workspace @smart-finances/web -- <file>`; the dev server on port 3000 with strictPort.
   - Breakpoints: top bar under 960px; touch targets 44px; click targets 32px.
 - Rules: README.md "Layout" (only data/synthetic is committed); .gitignore block "Real financial data stays local"; docs/adr/README.md (one ADR per decision, NNNN-short-title.md); docs/threat-model.md (update when a trust boundary or data store changes); public repo: no personal data or account ids in anything committed.
@@ -88,10 +111,10 @@ status: draft
 - Files: the prototype artifact (read and republish it with the Artifact tool; its link is in Values), apps/web/design/prototype-screens.md (new)
 - Tests first: T-WEB-1
 - Do:
-  - Load the smart-finances-ui skill and follow its checks; read decisions D-1 to D-120 that it points to.
+  - Load the account skill smart-finances-ui (anthropic-skills:smart-finances-ui) and its checks: calm-ui css_audit.py and contrast.py, prototype-check syntax_check.py, class_check.py and shoot.py. If the skill is missing, the prototype file and decisions.md are the sources.
   - Add screens in English and Spanish: sign-up with terms and privacy acceptance and the proof-of-work note; confirm (resend, expired); setup with QR and key text; code; reset and reset confirm; lost authenticator; consent; delete account (re-sign-in, warning, partial failure, signed-out result with counts); too many tries; not found; signed out after idle.
   - Fix the copy: "Close the tab when you’re done" becomes "Sign out when you’re done; the session also ends after 30 idle minutes"; remove the temporary-password screen.
-  - Republish, then list every new screen and state in prototype-screens.md with its catalogue keys.
+  - Republish, then list every new screen and state in prototype-screens.md with proposed keys named screen.part (for example signUp.title); SF-105 adopts them.
   - Stop for the owner's review of the prototype (HUMAN need) before SF-108.
 - Verify: the prototype-check scripts named in the skill, on the saved file → syntax, class and smoke checks pass; screenshots in both languages and themes exist
 - Done when: verify is green, evidence is in progress-smart-finances.json
@@ -123,7 +146,7 @@ status: draft
 - Do:
   - Copy every custom property from the prototype (light, dark media query, data-theme dark) into tokens.css unchanged.
   - Chivo and Chivo Mono through next/font/local from the @fontsource packages' woff2 files.
-  - The test parses tokens.css and checks the D-22 sizes, weights and spacing tokens exist, and that no category colour is the bad red.
+  - The test parses tokens.css: --t-xs to --t-display, --w-text to --w-display, --s1 to --s7 exist; no --cat1 to --cat12 equals --bad.
 - Verify: `npm test --workspace @smart-finances/web -- src/styles/tokens.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances.json
 ### SF-105 · Add the language catalogues and formatters
@@ -142,13 +165,13 @@ status: draft
 - Tests first: T-WEB-7, T-WEB-8
 - Do:
   - Per request: a fresh nonce; the headers exactly as architecture.md Contracts "Response headers"; UPLOAD_HOST from the settings.
-  - Redirect by cookie presence only: no __Host-sid on a money route → /sign-in with the path kept; __Host-sid on an auth route → /overview. No AWS SDK in middleware (D-108).
+  - Redirect by cookie presence only: no __Host-sid on a money route → /sign-in?next=<path>; __Host-sid on an auth route → /overview. No AWS SDK in middleware (D-108).
   - The browser test loads a page and checks the policy and that no inline script runs without the nonce.
 - Verify: `npm test --workspace @smart-finances/web -- src/middleware.test.ts` → pass; `npm run e2e --workspace @smart-finances/web -- e2e/headers.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances.json, and the reviewer has no blocker
 ### SF-107 · Build the base parts
 - Implements: AC-8, AC-10, AC-11, D-63, D-22, D-34 · After: SF-104 · Judgment: normal
-- Files: apps/web/src/ui/ (new): Button, Field, Chip, Note, StateBlock, Table, CategorySquare, with *.module.css and ui.test.tsx (new)
+- Files: apps/web/src/ui/ (new): Button, Field, Chip, Note, StateBlock, Table, CategorySquare, with *.module.css and ui.test.tsx (new); props are yours to design, matching the prototype's parts
 - Tests first: T-WEB-9
 - Do:
   - Parts use tokens only; busy state on Button; Field wires aria-describedby to its error; form message role=alert.
@@ -157,29 +180,29 @@ status: draft
 - Done when: verify is green, evidence is in progress-smart-finances.json
 ### SF-108 · Build the shell: rail, top bar and account area
 - Implements: AC-4, AC-10, D-24, D-35 to D-44, D-36, D-46 · After: SF-107, SF-101 · Judgment: normal
-- Files: apps/web/src/app/(app)/layout.tsx (new), apps/web/src/ui/Shell.tsx (new), apps/web/e2e/shell.spec.ts (new)
+- Files: apps/web/src/app/(app)/layout.tsx (new), apps/web/src/ui/Shell.tsx (new), placeholder pages apps/web/src/app/(app)/{overview,transactions,review,imports,rates,data}/page.tsx (new) each with one h1, apps/web/e2e/shell.spec.ts (new)
 - Tests first: T-WEB-10, T-WEB-11
 - Do:
-  - Rail per D-35 to D-42 with groups Money (no Ask) and Account; no Prototype group.
+  - Rail per D-35 to D-42 with groups Money (no Ask) and Account; no Prototype group. The account area shows a placeholder address until PR 3 supplies the session.
   - Top bar under 960px with the menu panel (D-43, D-44).
   - Language row switches the lang cookie and keeps the address; html lang follows; focus moves to the main heading after navigation.
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/shell.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances.json
 ### SF-109 · Add the not-found, error and signed-out notices
 - Implements: AC-8, AC-15, D-101 · After: SF-108 · Judgment: normal
-- Files: apps/web/src/app/not-found.tsx (new), apps/web/src/app/error.tsx (new), apps/web/src/app/(auth)/sign-in/notice.ts (new), apps/web/e2e/states.spec.ts (new)
+- Files: apps/web/src/app/not-found.tsx (new), apps/web/src/app/error.tsx (new), apps/web/src/app/(auth)/sign-in/page.tsx (new, a placeholder PR 3 completes), apps/web/e2e/states.spec.ts (new)
 - Tests first: T-WEB-12
 - Do:
   - One not-found screen with a link to the overview, used for 403 and 404 alike.
-  - The sign-in screen shows "signed out after 30 minutes without activity" when the redirect says so.
+  - The sign-in placeholder shows "signed out after 30 minutes without activity" when the address has reason=idle; an unknown path shows not-found.
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/states.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances.json
-### SF-110 · Write ADR 0004 and update the README
+### SF-110 · Write ADR 0008 and update the README
 - Implements: D-62, D-65, D-89, D-93, D-102 · After: SF-103 · Judgment: normal
-- Files: docs/adr/0004-web-framework-and-host.md (new), smart-finances:README.md
+- Files: docs/adr/0008-web-framework-and-host.md (new), docs/adr/README.md, smart-finances:README.md
 - Tests first: none
 - Do:
-  - ADR 0004: Next.js on Amplify web compute, adopted console app, CI-started builds, one region; cite the D ids.
+  - ADR 0008 (0004 to 0007 are taken; 0005 is reserved): Next.js on Amplify web compute, adopted console app, CI-started builds, one region; cite the D ids; add its row to docs/adr/README.md.
   - README "Layout": apps/web is the Next.js app; "Status": the Vercel project stays off.
 - Verify: `npm test` → still green
 - Done when: verify is green, evidence is in progress-smart-finances.json

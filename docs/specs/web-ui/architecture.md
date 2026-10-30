@@ -124,7 +124,7 @@ browser ─https─▶ Amplify (CDN) ─▶ Next.js web server ─────�
 - Serves: D-59, D-93.
 
 ### Docs
-- docs/adr/0004-web-framework-and-host.md (new): D-62, D-65, D-89, D-93, D-102. docs/adr/0005-sessions-and-sign-up.md (new): D-72, D-73, D-87, D-91 to D-93, D-98, D-104, D-115, D-117, D-120.
+- docs/adr/0008-web-framework-and-host.md (new): D-62, D-65, D-89, D-93, D-102. docs/adr/0009-sessions-and-sign-up.md (new): D-72, D-73, D-87, D-91 to D-93, D-98, D-104, D-115, D-117, D-120.
 - smart-finances:docs/threat-model.md: open sign-up, the web server, the sessions and accounts tables and the secret as trust boundaries; B1 updated; "single user" leaves the out-of-scope list.
 - docs/runbooks/lost-authenticator.md (new): identity proof, 72-hour wait, admin MFA reset, global sign-out, session rows removed, notice email (D-115).
 - README.md, "Layout" and "Status"; the data-architecture spec's decisions get the follow-up rows for D-81 and D-95.

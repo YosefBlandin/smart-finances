@@ -13,6 +13,9 @@ status: draft
 - Spec folder: /home/user/smart-finances/docs/specs/web-ui in a cloud session; locally <repo root>/docs/specs/web-ui. Read and write the spec there, on the branch named under Branch, never a copy elsewhere.
 - Refs: smart-finances at the sha in intent.md refs. Before the first task: `git fetch origin qa feature/web-ui`, then `node ~/.claude/skills/spec/scripts/drift.mjs docs/specs/web-ui --strict` (exit 0; NEW lines are expected)
 - Worktree: a cloud session's own checkout; locally <repo root>/.claude/worktrees/web-infra (profile Notes)
+- Profile verify (full, at the baseline and before the PR): `npm test` and `npm run build --workspace @smart-finances/infra`. No separate lint or typecheck exists; record "none".
+- Every task may also touch, without stopping: apps/web/package.json and package-lock.json (for packages this brief allows), apps/web/src/i18n/en.ts and es.ts (new keys only, both files), and its own *.module.css files.
+- Judgment: high tasks get a fresh-context reviewer before done: a subagent or fresh chat given the task, its diff and the review prompt in ~/.claude/skills/spec/references/handoff-prompts.md.
 - Branch: feature/web-infra · Base: origin/feature/web-ui, after the previous PR is merged into it · Draft PR into feature/web-ui (D-121)
 - Brief version: the locked-vN named in the handoff prompt; record it as pr-smart-finances-infra.md@locked-vN in progress-smart-finances-infra.json
 - Order: PR 2 of 4.
@@ -21,7 +24,7 @@ status: draft
 1. This file, all of it.
 2. intent.md: Acceptance criteria, No-gos, Glossary.
 3. architecture.md: Components "Sign-in pool changes", "Data service changes", "Web stack", "Alarms", "CI and build", "Docs"; Contracts "Sessions table", "Accounts table", "Alarms", "Stage parameters", "Web server settings".
-4. release.md: Rollout order and HUMAN needs.
+4. architecture.md Contracts "Security events", "Response headers", "Web routes"; release.md Rollout order and HUMAN needs.
 5. test-matrix.md rows whose task is SF-121 to SF-131.
 
 ## HUMAN needs
@@ -32,6 +35,7 @@ status: draft
 ## Global constraints
 - D-6: Roles: the agent writes code, commits, pushes feature branches and opens draft PRs into qa; the user reviews, merges and promotes. Source: data-architecture spec D-4 (default).
 - D-5: Agent access: local tests, builds and the dev server viewed in the browser pane, plus read-only AWS calls with the personal profile. No AWS writes and no real sign-ins; the user does those.
+- D-15: Leading strand: Cruz-Diez bands. Colour arrives as thin vertical bands; spending is plain ink, income blue, savings green, attention amber; category colours exclude red, so red stays only for the bad figure (D-13).
 - D-53: The web server sends the access token as a bearer token; the API's audience check takes the client id from it. A person confirms it on qa.
 - D-72: Sessions: an opaque id in a __Host- cookie keys a server-side row holding the tokens; idle 30 minutes, absolute 12 hours, new id at sign-in; sign out revokes. A reload keeps you in; the session ends with the browser, not the tab. Supersedes D-47. Details: architecture.md, Contracts.
 - D-73: Sign-in from the web server with a new confidential client (secret, password flow, context data); the server answers each challenge; the secret is read at run time by the compute role; the public client goes once this works on qa. Packages: AWS SDK clients for Cognito, DynamoDB and Secrets Manager, and qrcode.
@@ -57,6 +61,12 @@ status: draft
 - D-120: No WAF for now, on any stage. Limits live in the web server's window counters: auth posts per IP 20 per 5 minutes, sign-in or reset failures per email and address prefix 5 per 15 minutes, code emails per email 3 an hour and 10 a day, data requests per person 120 a minute. A self-hosted proof-of-work check (served from the site, no third party) guards sign-up and the auth posts instead of the WAF challenge. The user accepts that floods reach the web server's compute. Supersedes D-90 and D-105.
 - D-121: Integration branch: the four PRs (foundation, infra, auth, screens) each open as a draft into feature/web-ui, in order; once all are merged there, one PR from feature/web-ui into qa ships infra and web in one merge. The agent commits, pushes its feature branches and opens draft PRs; the user reviews, merges and promotes. Narrows D-6.
 - Values:
+  - Branch per stage: qa → qa, staging → staging, prod → main; branch address https://<branch>.<app id>.amplifyapp.com. Stage values are read at deploy time by readStageValues' custom resource, so synth and unit tests need no real parameter.
+  - Metrics: namespace SmartFinances/<stage>; StuckDeletions (count), and security-event metrics per event name from the log's metric filters; alarm period 5 minutes unless the table says an hour, 1 evaluation; the dashboard has one widget per alarm.
+  - Lambdas in infra/lambda/*.mjs are built with makeFunction (infra/lib/function.ts), like the API's.
+  - amplify-release.mjs takes --stage, --branch, --sha and reads the app id from /smart-finances/<stage>/amplify-app-id; its tests are scripts/amplify-release.test.mjs (node --test).
+  - Code emails: subject en "Your Cuenta code" / es "Tu código de Cuenta"; body one sentence with {####}; reset uses the same with "to reset your password" / "para cambiar tu contraseña".
+  - Data spec follow-up rows: the next free D id there, source "web-ui spec, <date>", status proposed.
   - Region us-east-1 only. Stage parameters under /smart-finances/<stage>/: amplify-app-id (qa: set by the owner), web-client-id, web-client-secret-arn, api-url, support-address, signup-open, imports-paused, alarm-email, housekeeping-hmac-secret-arn, delete-function-name (written by data PR 3; may be missing).
   - Packages allowed: disposable-email-domains (trigger), @aws-sdk/client-amplify, @aws-sdk/client-cognito-identity-provider, @aws-sdk/client-ssm, @aws-sdk/client-lambda, @aws-sdk/client-dynamodb (same major as apps/api).
   - Stage values are read with readStageValues, never valueForStringParameter. Log groups one month. No managed policies.
@@ -153,7 +163,7 @@ status: draft
 - Files: smart-finances:infra/lib/web-stack.ts#WebStack, infra/test/web-stack.test.ts
 - Tests first: T-WINF-9
 - Do:
-  - A custom resource puts the bucket CORS: POST from the branch address (https://<branch>.<app id>.amplifyapp.com) and the cdk.json origins for the stage.
+  - A custom resource puts the bucket CORS on the bucket named by the bucket-name stage parameter: POST from the branch address and the cdk.json origins for the stage, unchanged.
 - Verify: `npm test --workspace @smart-finances/infra` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-infra.json
 ### SF-128 · Add the hourly housekeeping function
@@ -188,21 +198,21 @@ status: draft
 - Done when: verify is green, evidence is in progress-smart-finances-infra.json
 ### SF-131 · Extend CI: web tests, deploy order, Amplify job and health check
 - Implements: D-93, D-113, D-59 · After: SF-130 · Judgment: high
-- Files: smart-finances:.github/workflows/deploy.yml, smart-finances:infra/lib/github-oidc-stack.ts, scripts/amplify-release.mjs (new)
+- Files: smart-finances:.github/workflows/deploy.yml, smart-finances:infra/lib/github-oidc-stack.ts, scripts/amplify-release.mjs (new), scripts/amplify-release.test.mjs (new)
 - Tests first: T-WINF-14
 - Do:
   - Before credentials: web unit and browser tests (install Playwright's chromium).
   - Deploy data, API, web, alarms; then amplify-release.mjs starts a RELEASE job for the commit, polls it (15 minutes, fails on FAILED or CANCELLED), then polls /api/health until it reports the sha and checks the headers against the contract.
   - timeout-minutes 45. The OIDC stack gains amplify:StartJob, GetJob, ListJobs on each stage's app and ssm:GetParameter on /smart-finances/*/amplify-app-id; a person deploys it.
-- Verify: `npm test --workspace @smart-finances/infra` → pass; `node scripts/amplify-release.mjs --help` → usage
+- Verify: `npm test --workspace @smart-finances/infra` and `node --test scripts/amplify-release.test.mjs` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-infra.json, and the reviewer has no blocker
-### SF-132 · Update the threat model, ADR 0005 and the data spec follow-ups
+### SF-132 · Update the threat model, ADR 0009 and the data spec follow-ups
 - Implements: D-61, D-81, D-95, D-115 · After: SF-120 · Judgment: normal
-- Files: smart-finances:docs/threat-model.md, docs/adr/0005-sessions-and-sign-up.md (new), docs/runbooks/lost-authenticator.md (new), docs/specs/data-architecture/decisions.md
+- Files: smart-finances:docs/threat-model.md, docs/adr/0009-sessions-and-sign-up.md (new), docs/adr/README.md, docs/runbooks/lost-authenticator.md (new), docs/specs/data-architecture/decisions.md
 - Tests first: none
 - Do:
   - Threat model: open sign-up, the web server, both tables and the secrets as trust boundaries; B1; remove "single user" from out of scope.
-  - ADR 0005 per architecture.md Docs. Runbook per D-115.
+  - ADR 0009 per architecture.md Docs, with its row in docs/adr/README.md. Runbook per D-115.
   - Data spec: add follow-up rows for D-81 and D-95 with source "web-ui spec"; edit no existing row.
 - Verify: `npm test` → still green
 - Done when: verify is green, evidence is in progress-smart-finances-infra.json
