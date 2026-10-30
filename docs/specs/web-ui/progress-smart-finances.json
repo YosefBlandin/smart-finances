@@ -229,6 +229,7 @@
     "SF-108: the memory identity fake already uses email code 123456 and authenticator code 000000, which the Interfaces section lists under PR 3; PR 3 should reuse it rather than add a second fake. domain/ holds only result.ts and application/ only a README until PR 3 and PR 4 add code.",
     "SF-108: the memory data API is seeded with contract-shaped rows; mapping apps/web/fixtures/sample.json (prototype shapes such as rates as strings and review: null) into it is left to PR 4.",
     "SF-110: added @tanstack/react-query 5.104.3, @tanstack/react-query-devtools 5.104.3, jsdom 30.1.3 and @testing-library/react 16.3.3 (all in Values, pinned exact, released by 2026-10-15). npm also installed @testing-library/dom as its required peer (lockfile only). npm 10 here dropped the lockfile's libc fields; they were restored so the lockfile diff is only the new packages.",
-    "SF-110: the provider test uses a per-file jsdom environment comment; vitest.config.ts keeps node as the default environment."
+    "SF-110: the provider test uses a per-file jsdom environment comment; vitest.config.ts keeps node as the default environment.",
+    "HUMAN gate before SF-111 (review the extended prototype and say go): after being told SF-111 waits on that go, the owner said in chat on 2026-10-30 \"Proceed using subagents with everything that's left\"; the executor took this as the go. The earlier T-WEB-1 owner review line in SF-101 evidence is superseded by this."
   ]
 }
