@@ -2,14 +2,14 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v4
 ---
 # Web UI: design system and screens: brief for smart-finances (PR 1 of 4, foundation)
 
 <!-- The executor's main document. It must stand alone: copy values in, and link only to sections a task cites. At most 6k tokens; comments do not count. Required reading (intent.md, this file and its Read first sections) stays under 15k. Before the lock, the cold-read dry run must find zero "cannot start" items. -->
 
 - Goal: the prototype has every auth and account screen, the contracts package exists, and apps/web is a linted Next.js app with tokens, words, headers, parts, Storybook, the query provider, the hexagonal skeleton and the shell.
-- Implements: AC-4, AC-8, AC-9, AC-10, AC-11, AC-16, D-57, D-58, D-62, D-71, D-100, D-108, D-124, D-126, D-127, D-129, D-130, D-132 to D-134, D-136 to D-138, D-144
+- Implements: AC-4, AC-8, AC-9, AC-10, AC-11, AC-16, D-57, D-58, D-62, D-71, D-100, D-108, D-124, D-126, D-127, D-129, D-130, D-132 to D-134, D-136 to D-138, D-144, D-146
 - Spec folder: /home/user/smart-finances/docs/specs/web-ui in a cloud session; locally <repo root>/docs/specs/web-ui. Read and write the spec there, on the branch named under Branch, never a copy elsewhere.
 - Refs: smart-finances at the sha in intent.md refs. Before the first task: `git fetch origin qa feature/web-ui`, then `node ~/.claude/skills/spec/scripts/drift.mjs docs/specs/web-ui --strict` (exit 0; NEW lines are expected)
 - Worktree: a cloud session's own checkout; locally <repo root>/.claude/worktrees/web-foundation (profile Notes)
@@ -50,6 +50,7 @@ status: executing
 - D-57: Styling: the prototype's CSS custom properties as tokens with CSS modules; no Tailwind or shadcn. Charts in hand-drawn SVG, each with a table alternative.
 - D-58: Fonts (Chivo, Chivo Mono) and Tabler icons are bundled; no font or icon service at run time.
 - D-63: Red is also allowed for errors and failed statuses (error notes, failed or expired imports, a wrong password). Among money figures it stays only on the one bad figure. Narrows D-13.
+- D-146: Red is also allowed for destructive actions: the buttons that erase data or delete the account. Narrows D-13 and D-63.
 - D-86: Skipped-row reasons: a translated lead, then the importer's own words as raw text in English. Narrows AC-4 for that text.
 - D-108: Middleware does only the nonce, the content policy and a cookie-presence redirect; the session, consent and deleting checks run in a server-only helper called by the money layout and every route handler.
 - D-121: Integration branch: the four PRs (foundation, infra, auth, screens) each open as a draft into feature/web-ui, in order; once all are merged there, one PR from feature/web-ui into qa ships infra and web in one merge. The agent commits, pushes its feature branches and opens draft PRs; the user reviews, merges and promotes. Narrows D-6.
@@ -168,12 +169,12 @@ status: executing
 - Verify: `npm test --workspace @smart-finances/web -- src/adapters/container.test.ts` and the lint → pass
 - Done when: verify is green, evidence is in progress-smart-finances.json
 ### SF-109 · Build the primitives and patterns, and set up Storybook
-- Implements: AC-8, AC-10, AC-11, D-63, D-22, D-34, D-128, D-129, D-136, D-140, D-141, D-143 · After: SF-105, SF-106 · Judgment: normal
+- Implements: AC-8, AC-10, AC-11, D-63, D-22, D-34, D-128, D-129, D-136, D-140, D-141, D-143, D-146 · After: SF-105, SF-106 · Judgment: normal
 - Files: apps/web/src/ui/primitives/ (new: Button, Field, Chip, Note, Skeleton, CategorySquare, Icon), apps/web/src/ui/patterns/ (new: MonthPicker, DataTable, KeptBar, BandStrip, StateBlock, CategoryRow, MenuPanel, ConfirmDialog), one folder each with module, stories and test; apps/web/.storybook/ (new)
 - Tests first: T-WEB-9, T-WEB-15
 - Do:
   - Layout and API per architecture.md "Component architecture"; tokens only.
-  - Interactive patterns (MonthPicker, MenuPanel, ConfirmDialog, selects) on React Aria Components, styled through their data attributes; Button spins only while busy; Field ties errors with aria-describedby; red only for errors and failed statuses (D-63).
+  - Interactive patterns (MonthPicker, MenuPanel, ConfirmDialog, selects) on React Aria Components, styled through their data attributes; Button spins only while busy; Field ties errors with aria-describedby; red only for errors, failed statuses and the danger Button variant for destructive actions (D-63, D-146).
   - Storybook (Next.js framework) with the a11y add-on and the test runner; a story per part in both languages and both colour schemes; script test-storybook builds Storybook, serves it with http-server, waits with wait-on, and runs the test runner.
 - Verify: `npm test --workspace @smart-finances/web -- src/ui/ui.test.tsx` and `npm run test-storybook --workspace @smart-finances/web` → pass
 - Done when: verify is green, evidence is in progress-smart-finances.json

@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v4
 ---
 # Web UI: design system and screens: brief for smart-finances (PR 4 of 4, screens)
 
@@ -46,6 +46,7 @@ status: executing
 - D-53: The web server sends the access token as a bearer token; the API's audience check takes the client id from it. A person confirms it on qa.
 - D-57: Styling: the prototype's CSS custom properties as tokens with CSS modules; no Tailwind or shadcn. Charts in hand-drawn SVG, each with a table alternative.
 - D-63: Red is also allowed for errors and failed statuses (error notes, failed or expired imports, a wrong password). Among money figures it stays only on the one bad figure. Narrows D-13.
+- D-146: Red is also allowed for destructive actions: the buttons that erase data or delete the account. Narrows D-13 and D-63.
 - D-64: The web PR may merge into qa once it is green, before data PRs 2 and 3. Screens whose routes are missing show the failed state; their qa checks, and any promotion to staging, wait for those PRs.
 - D-82: Data access on the server: server components read through one client that adds the token and counts requests; changes are Origin-checked route handlers; free-text search stays out of the address. Supersedes D-54.
 - D-85: Typical month needs three earlier months with a dollar rate and averages up to six; before that, no comparison sentence (prototype copy). Narrows D-20.
@@ -158,19 +159,20 @@ status: executing
 - Verify: `npm test --workspace @smart-finances/web -- src/application/data/requestImport.test.ts` and `npm run e2e --workspace @smart-finances/web -- e2e/imports.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
 ### SF-168 · Your data: export and erase
-- Implements: AC-7, AC-8 · After: SF-163 · Judgment: normal
+- Implements: AC-7, AC-8, D-146 · After: SF-163 · Judgment: normal
 - Files: apps/web/src/application/data/erase.ts (new), apps/web/src/app/(app)/data/, apps/web/src/screens/data/ (new), apps/web/e2e/erase.spec.ts (new)
 - Tests first: T-WSCR-10
 - Do:
-  - Export link to /api/data/export; "Erase my data" is a server action with the typed word DELETE, the 35-day note and counts; timeout or 5xx says it may be unfinished and offers Finish erasing (the same action); resetStoredBytes on 202. No optimistic update.
+  - Export link to /api/data/export; "Erase my data" is a server action with the typed word DELETE, the 35-day note and counts; timeout or 5xx says it may be unfinished and offers Finish erasing (the same action); resetStoredBytes on 202. No optimistic update. The erase buttons use the danger Button variant (D-146).
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/erase.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-169 · Delete the account
-- Implements: AC-18, D-104 · After: SF-168 · Judgment: high
+- Implements: AC-18, D-104, D-146 · After: SF-168 · Judgment: high
 - Files: apps/web/src/application/account/deleteAccount.ts (new), apps/web/src/domain/deletion.ts (new), apps/web/src/app/(app)/data/delete/ (new), apps/web/src/app/goodbye/ (new), apps/web/src/application/account/deleteAccount.test.ts (new), apps/web/e2e/delete-account.spec.ts (new)
 - Tests first: T-WSCR-11, T-WSCR-12
 - Do:
   - Action 1 with { email, password, code }: signIn reauth plus the code, no running_import_id, then markDeleting. Action 2 (allowDeleting): erase until 202, signOutEverywhere, adminDelete (not found is done), deleteAccountRow; set a 5-minute signed HttpOnly goodbye cookie with the counts and go to /goodbye, a public route that reads it.
+  - The delete buttons use the danger Button variant (D-146).
   - domain/deletion.ts holds the step order; a test fails each step and finishes it.
 - Verify: `npm test --workspace @smart-finances/web -- src/application/account/deleteAccount.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker

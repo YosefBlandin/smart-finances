@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v4
 ---
 # Web UI: design system and screens: brief for smart-finances (PR 3 of 4, auth)
 
@@ -39,6 +39,7 @@ status: executing
 - D-73: Sign-in from the web server with a new confidential client (secret, password flow, context data); the server answers each challenge; the secret is read at run time by the compute role; the public client goes once this works on qa. Packages: AWS SDK clients for Cognito, DynamoDB and Secrets Manager, and qrcode.
 - D-75: Authentication follows OWASP ASVS 5.0 V6 and V7 and the OWASP cheat sheets; the rules are in architecture.md, Contracts, "Password and code rules", and in Auth flows.
 - D-87: Consent lives in an accounts table keyed by the person: terms and privacy versions, language and time, from the pre-auth state, written at the first completed sign-in; money screens wait until it exists. Erase-all keeps it; delete account removes it. Supersedes D-78.
+- D-145: Terms and privacy are accepted once, at sign-up. The privacy and terms pages are read-only full text; when either version changes, the consent screen asks the person to accept the new version before any money screen opens. Narrows D-87.
 - D-91: Pre-auth state: a server-side row keyed by a separate __Host-pre cookie (SameSite=Strict) holds the step, the sign-in service's challenge session, the new key during setup and the accepted versions, for 15 minutes; the client's challenge session lasts 15 minutes; an expired challenge returns to the password step.
 - D-92: After a password reset, the web server signs the person out everywhere (admin global sign-out on this pool) and removes their session rows. The compute role may do that and get or delete users on this pool only.
 - D-103: Lost authenticator: the code and reset screens link to a page with the stage's support address (a role address, a stage parameter) and what the owner asks to confirm identity.
@@ -167,12 +168,12 @@ status: executing
 - Verify: `npm test --workspace @smart-finances/web -- src/application/auth/signIn.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
 ### SF-150 · Consent, the account store and the money guard
-- Implements: AC-14, D-87, D-108 · After: SF-149 · Judgment: high
+- Implements: AC-14, D-87, D-108, D-145 · After: SF-149 · Judgment: high
 - Files: apps/web/src/adapters/dynamodb/accounts.ts (new), apps/web/src/application/guard.ts (new), apps/web/src/app/guarded.ts (adds kind "money"), apps/web/src/app/consent/ (new), apps/web/src/app/(app)/layout.tsx, apps/web/src/application/auth/signIn.ts (writes consent), apps/web/src/application/guard.test.ts (new)
 - Tests first: T-WAUTH-13
 - Do:
   - AccountStore per Contracts "Ports", with conditional updates; guarded kind "money" (opts allowDeleting) runs requireMoneyAccess before the input.
-  - Consent from the pre-auth row at the first completed sign-in; requireMoneyAccess needs session, consent and status active; /consent asks for the current versions; refusing signs out.
+  - Consent from the pre-auth row at the first completed sign-in; requireMoneyAccess needs session, consent at the current TERMS_VERSION and PRIVACY_VERSION, and status active; no row or an older version goes to /consent, which asks for the current versions (D-145); refusing signs out.
 - Verify: `npm test --workspace @smart-finances/web -- src/application/guard.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
 ### SF-151 · Reset the password and sign out
@@ -185,11 +186,11 @@ status: executing
 - Verify: `npm test --workspace @smart-finances/web -- src/application/auth/reset.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
 ### SF-152 · Lost-authenticator, privacy and terms pages
-- Implements: AC-14, D-103, D-115, D-118 · After: SF-141 · Judgment: normal
+- Implements: AC-14, D-103, D-115, D-118, D-145 · After: SF-141 · Judgment: normal
 - Files: apps/web/src/app/{lost-authenticator,privacy,terms}/ (new), apps/web/e2e/public-pages.spec.ts (new)
 - Tests first: T-WAUTH-16
 - Do:
-  - Drafts in both languages under the versions: what is stored, where (AWS us-east-1), how long (until erase or delete; backups 35 days), rights, SUPPORT_ADDRESS, no advice or money movement, and that qa is a test stage whose data may be wiped. Lost authenticator follows docs/runbooks/lost-authenticator.md (PR 2).
+  - Drafts in both languages under the versions: what is stored, where (AWS us-east-1), how long (until erase or delete; backups 35 days), rights, SUPPORT_ADDRESS, no advice or money movement, and that qa is a test stage whose data may be wiped. The pages are read-only, with no accept button (D-145). Lost authenticator follows docs/runbooks/lost-authenticator.md (PR 2).
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/public-pages.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json
 ### SF-153 · Browser tests of the auth flows
