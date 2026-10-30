@@ -47,9 +47,15 @@
     },
     {
       "id": "SF-102",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "a592689",
+      "evidence": [
+        "T-WEB-2 fail first: node --test packages/contracts/test/contracts.test.mjs -> ERR_MODULE_NOT_FOUND packages/contracts/src/categories.mjs (package did not exist)",
+        "After: node --test packages/contracts/test/contracts.test.mjs -> tests 10, pass 10, fail 0",
+        "npm test (root, now includes the contracts tests) -> exit 0; api+contracts 37 pass, infra 11 pass, 0 fail; npm run build --workspace @smart-finances/infra -> exit 0 (infra bundles the API through the package link)",
+        "API re-exports unchanged: test asserts apps/api schema.mjs FIELDS and KINDS are the same objects as the package exports; categoryFor output is always in CATEGORIES; categories.mjs throws at load if a rule names a category missing from the package",
+        "A test reads docs/specs/data-architecture/architecture.md \"HTTP routes\" and fails if a route there has no schema (15 routes)"
+      ],
       "review": ""
     },
     {
@@ -146,6 +152,7 @@
     "The prototype had imports in 7 of the 9 import states; two synthetic imports (waiting for file, replaced) were added so the sample covers every state.",
     "Prototype values to confirm before build: confirm-code lifetime \"15 minutes\" and lost-authenticator reply time \"a day or two\" are copy guesses, not settings.",
     "Brief said \"npm run dev\" cannot show this work: apps/web has no dev script until SF-103; the owner asked to see progress, so the working copy was served locally at 127.0.0.1:8765 for the browser pane.",
-    "Acceptance path decision made by the executor to resolve the audit finding: terms are accepted once on sign-up; the Privacy and terms screen is the read-only full text and the re-accept step when the notice changes. Needs recording as a decision by the planning session (the executor cannot write a D-n)."
+    "Acceptance path decision made by the executor to resolve the audit finding: terms are accepted once on sign-up; the Privacy and terms screen is the read-only full text and the re-accept step when the notice changes. Needs recording as a decision by the planning session (the executor cannot write a D-n).",
+    "SF-102: the data-architecture table does not say whether ars_per_usd is a number or a string; the schema takes a positive number with at most two decimals. The data PRs that adopt the package (D-133) should confirm. Brief rule: \"csv\" source added next to mercadopago (both .csv, 5 MiB) as the brief lists it."
   ]
 }
