@@ -8,7 +8,7 @@ Open the prototype, then Prototype > Account screens. Pick a screen, then a stat
 
 | Screen | Key | States | Notes |
 |---|---|---|---|
-| Sign up | `signUp` | default, working, weak, limit, botcheck | AC-12, AC-14, AC-19. Terms and privacy accepted before submit; proof-of-work note. |
+| Sign up | `signUp` | default, working, weak, limit, botcheck | AC-12, AC-14, AC-19. The one place a new person accepts terms and privacy (checkbox; links open the read-only consent page). Proof-of-work note sits under the button. |
 | Confirm email | `confirm` | default, resent, wrong, expired | AC-12. Account exists only after the code. Code lifetime (15 min) is a prototype value to confirm against the pool settings. |
 | Authenticator setup | `setup` | default, wrong | AC-13. Blocks every money screen until done. |
 | Sign in | `signIn` | default, wrong | AC-1, AC-16. Footer copy: sign out when done; session ends after 30 idle minutes. |
@@ -16,7 +16,7 @@ Open the prototype, then Prototype > Account screens. Pick a screen, then a stat
 | Forgot password | `reset` | default, sent | AC-20. Same message whether or not an account exists. |
 | New password | `resetConfirm` | default, wrong, weak | AC-20. Still asks for the authenticator code at sign-in. |
 | Lost authenticator | `lost` | default | No self-service reset; contact the owner. Reply time (a day or two) is a prototype value to confirm. |
-| Privacy and terms | `consent` | default, working | AC-14. Records acceptance with date and version. |
+| Privacy and terms | `consent` | default, working, read | AC-14. Default: re-accept after the notice changes (records date and version). Read only: what the sign-up links open, with no checkbox. |
 | Delete account | `deleteAccount` | reauth, warning, working, partial, done | AC-18. Re-sign-in, warning with typed DELETE, partial failure, signed-out result with counts. No temporary-password screen exists anywhere. |
 | Too many tries | `tooMany` | signIn, signUp, code | AC-17, AC-19. Plain message with wait time. |
 | Not found | `notFound` | default | AC-8. |
@@ -105,7 +105,9 @@ English text shown; the Spanish text is in the prototype under the same key.
 | `lost.step3` | We check it’s you and reset it. You set up a new one the next time you sign in. | Verificamos que eres tú y lo restablecemos. Configuras uno nuevo la próxima vez que entres. |
 | `lost.wait` | A person answers, so it can take a day or two. | Te responde una persona, así que puede tardar uno o dos días. |
 | `consent.title` | Your data, in plain words | Tus datos, en palabras simples |
-| `consent.lead` | Read this once, then accept to continue. You can find it again any time under Your data. | Léelo una vez y acepta para seguir. Lo encuentras de nuevo cuando quieras en Tus datos. |
+| `consent.lead` | We changed this page. Read it, then accept to keep using Cuenta. You can find it again any time under Your data. | Cambiamos esta página. Léela y acepta para seguir usando Cuenta. La encuentras de nuevo cuando quieras en Tus datos. |
+| `consent.leadRead` | This is what you agree to when you create an account. You accept it once, on the sign-up page. | Esto es lo que aceptas al crear una cuenta. Lo aceptas una sola vez, en la página de registro. |
+| `consent.backSignUp` | Back to sign up | Volver a crear cuenta |
 | `consent.keepTitle` | What we keep | Qué guardamos |
 | `consent.keep1` | The files you import, and every row inside them with its original text. | Los archivos que importas y cada fila que traen, con su texto original. |
 | `consent.keep2` | Your review choices and your dollar rates. | Tus revisiones y tus cotizaciones del dólar. |
@@ -137,11 +139,14 @@ English text shown; the Spanish text is in the prototype under the same key.
 | `delete.working` | Erasing {tx} transactions and {files} files, then ending your sessions… | Borrando {tx} movimientos y {files} archivos, y cerrando tus sesiones… |
 | `delete.stay` | Stay on this page until it finishes. | Quédate en esta página hasta que termine. |
 | `delete.partialTitle` | Your account is closed, but not everything is erased | Tu cuenta está cerrada, pero no se borró todo |
-| `delete.partialLead` | Every session has ended and you can’t sign in. We couldn’t erase {left} items yet. We keep trying; you don’t need to do anything. | Se cerraron todas las sesiones y ya no puedes entrar. Todavía no pudimos borrar {left} elementos. Seguimos intentando; no tienes que hacer nada. |
+| `delete.partialLead` | Every session has ended and you can’t sign in. We couldn’t erase {left} transactions yet. We keep trying; you don’t need to do anything. | Se cerraron todas las sesiones y ya no puedes entrar. Todavía no pudimos borrar {left} movimientos. Seguimos intentando; no tienes que hacer nada. |
 | `delete.partialHelp` | Questions? Write to {contact} and quote the reference below. | ¿Dudas? Escribe a {contact} y cita la referencia de abajo. |
 | `delete.reference` | Reference | Referencia |
 | `delete.referenceValue` | erase-4d2b…91 | erase-4d2b…91 |
 | `delete.partlyErased` | Partly erased | Borrado parcial |
+| `delete.erasedSoFar` | Erased so far | Borrado hasta ahora |
+| `delete.stillToErase` | Still to erase | Falta borrar |
+| `delete.stillValue` | {left} transactions | {left} movimientos |
 | `delete.doneTitle` | Your account is deleted | Tu cuenta está borrada |
 | `delete.doneLead` | You’re signed out on every device. Here’s what we removed. | Cerramos tu sesión en todos los dispositivos. Esto es lo que quitamos. |
 | `delete.transactions` | Transactions | Movimientos |
@@ -162,6 +167,17 @@ English text shown; the Spanish text is in the prototype under the same key.
 | `notFound.go` | Go to the overview | Ir al resumen |
 | `notFound.signIn` | Sign in | Entrar |
 | `idle.banner` | You were signed out after 30 minutes without activity. Sign in to pick up where you left off. | Cerramos tu sesión tras 30 minutos sin actividad. Entra de nuevo para seguir donde lo dejaste. |
+
+## Build notes (from the design audit)
+
+- **Acceptance (AC-14):** accepted once, on the sign-up page. The Privacy and terms screen is the full text those links open (read only) and the re-accept step when the notice version changes. This is a proposal for the planning session to record as a decision.
+- **Headings:** each screen has exactly one h1 (its title) and h2 for its sections. The prototype's own page title above the screen is not a heading. Move focus to the h1 after navigation.
+- **Status messages:** keep one live region (role status) mounted on every auth page and put the busy text in it ("Checking…", "Saving…"); the button also shows a spinner while busy (D-128).
+- **QR code:** always black on white with a quiet margin, in every theme. Scanners cannot read an inverted code. The prototype uses the tokens qr-dark and qr-light, which dark mode does not change.
+- **Touch targets:** text links and the checkbox row are at least 44px tall under pointer: coarse (D-22).
+- **Code boxes:** six boxes, digits advance, Backspace on an empty box goes back, a paste of six digits fills all of them, and the first box has autocomplete one-time-code.
+- **Partly erased:** show what was erased and what is left, and one error colour for the state (D-63).
+- **Copy values to confirm:** the confirmation code lifetime (15 minutes) and the lost-authenticator reply time (a day or two) are guesses, not settings.
 
 ## Picker labels (prototype only)
 
