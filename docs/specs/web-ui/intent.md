@@ -3,7 +3,7 @@ spec: web-ui
 ticket: none
 tier: M
 status: draft
-refs: smart-finances@7ce1ffb
+refs: smart-finances@903321c
 door: 2-way   # the least reversible decision sets it
 appetite: 2 weeks; prototype and design system before app code; infra and web ship in one merge, a short window of failed requests is fine
 ---
