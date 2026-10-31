@@ -1,0 +1,62 @@
+/* Base styles for every page: the box model, the page colours, headings and focus. Tokens only (tokens.css loads first). */
+
+/* The fonts are bundled with next/font (app/fonts.ts, D-58); these point the font tokens at them and keep the plain names as a fallback. */
+:root {
+  --font-display: var(--font-chivo, 'Chivo'), 'Helvetica Neue', Arial, sans-serif;
+  --font-data: var(--font-chivo-mono, 'Chivo Mono'), 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--t-m);
+  line-height: 1.5;
+}
+
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: var(--w-head);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  margin: 0;
+}
+
+h1 {
+  font-size: var(--t-2xl);
+  line-height: 1.1;
+}
+
+h2 {
+  font-size: var(--t-l);
+  line-height: 1.25;
+}
+
+h3 {
+  font-size: var(--t-m);
+  font-weight: var(--w-head);
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--income);
+  outline-offset: 2px;
+}

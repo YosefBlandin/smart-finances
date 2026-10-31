@@ -1,0 +1,134 @@
+/* MonthPicker, from the prototype's .mbtn and .mgrid; React Aria state comes in as data attributes. */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: 40px;
+  padding: 0 var(--s3);
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: var(--w-em);
+  font-size: var(--t-m);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.trigger svg {
+  color: var(--muted);
+}
+
+.trigger[data-hovered],
+.trigger[data-pressed],
+.trigger[aria-expanded='true'] {
+  background: var(--sunken);
+}
+
+.trigger[data-focus-visible] {
+  outline: 2px solid var(--income);
+  outline-offset: 2px;
+}
+
+.current {
+  text-transform: capitalize;
+}
+
+.popover {
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
+  box-shadow: var(--pop);
+  max-width: calc(100vw - var(--s6));
+}
+
+.grid {
+  padding: var(--s3) var(--s4) var(--s4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  outline: none;
+}
+
+.year {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.yearLabel {
+  font-size: var(--t-xs);
+  font-weight: var(--w-head);
+  color: var(--muted);
+}
+
+.cells {
+  display: grid;
+  grid-template-columns: repeat(6, 3.5em);
+  gap: var(--s1);
+}
+
+.cell {
+  position: relative;
+  min-height: 36px;
+  border: 0;
+  border-radius: var(--r-s);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--t-s);
+  font-weight: var(--w-em);
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.cell[data-hovered]:not([data-disabled]) {
+  background: var(--sunken);
+}
+
+.cell[data-focus-visible] {
+  outline: 2px solid var(--income);
+  outline-offset: 2px;
+}
+
+.cell[aria-current='date'] {
+  background: var(--ink);
+  color: var(--surface);
+  font-weight: var(--w-head);
+}
+
+.cell[data-disabled] {
+  color: var(--muted);
+  opacity: 0.4;
+  cursor: default;
+}
+
+.cell[data-missing]::after,
+.dot {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warn-band);
+}
+
+.cell[data-missing]::after {
+  position: absolute;
+  top: var(--s1);
+  right: var(--s1);
+}
+
+.key {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--t-xs);
+  color: var(--muted);
+  margin: 0;
+}
+
+@media (pointer: coarse) {
+  .trigger,
+  .cell {
+    min-height: 44px;
+  }
+}

@@ -5,6 +5,7 @@
   "description": "Personal finance assistant: serverless AWS, RAG, evals and AI security.",
   "workspaces": [
     "apps/*",
+    "packages/*",
     "infra",
     "evals"
   ],
@@ -14,7 +15,7 @@
   "scripts": {
     "data:generate": "node data/synthetic/generate.mjs",
     "ingest:local": "node scripts/ingest-local.mjs",
-    "test": "node --test apps/api/test/*.test.mjs && npm test --workspace @smart-finances/infra"
+    "test": "node --test apps/api/test/*.test.mjs packages/contracts/test/*.test.mjs && npm run lint --workspace @smart-finances/web && npm test --workspace @smart-finances/web && npm test --workspace @smart-finances/infra"
   },
   "devDependencies": {
     "esbuild": "0.28.2"
