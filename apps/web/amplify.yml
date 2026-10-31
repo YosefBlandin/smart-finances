@@ -1,0 +1,27 @@
+# Amplify web compute build for the monorepo (D-71, D-110). The settings below arrive as the branch's
+# environment variables; no secret value is ever one of them (only the secret's ARN).
+version: 1
+applications:
+  - appRoot: apps/web
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - cd ../..
+            - npm ci
+            - npm run lint --if-present --workspace @smart-finances/web
+            - npm test --workspace @smart-finances/web
+            - cd apps/web
+        build:
+          commands:
+            - env | grep -E '^(STAGE|AWS_REGION|API_URL|USER_POOL_ID|WEB_CLIENT_ID|WEB_CLIENT_SECRET_ARN|HMAC_SECRET_ARN|SESSIONS_TABLE|ACCOUNTS_TABLE|UPLOAD_HOST|WEB_ORIGIN|SUPPORT_ADDRESS)=' > .env.production || true
+            - echo "COMMIT_SHA=$AWS_COMMIT_ID" >> .env.production
+            - npm run build
+      artifacts:
+        baseDirectory: .next
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*

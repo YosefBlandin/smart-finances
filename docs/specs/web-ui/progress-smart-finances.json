@@ -1,121 +1,359 @@
 {
   "spec": "web-ui",
   "repo": "smart-finances",
-  "brief": "",
-  "tool": "",
-  "model": "",
+  "brief": "pr-smart-finances.md@locked-v5",
+  "tool": "Claude Code (cloud session, desktop app)",
+  "model": "claude-opus-5-5",
   "baseline": {
-    "tests": "",
-    "lint": "",
-    "typecheck": ""
+    "tests": "27 root tests pass (api) + 11 infra tests pass, 0 fail",
+    "lint": "none before SF-104; from SF-104: eslint 0 errors 0 warnings, prettier clean",
+    "typecheck": "infra tsc --noEmit exit 0"
   },
   "tasks": [
     {
       "id": "SF-100",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "923c1f8",
+      "evidence": [
+        "drift --strict exit 0 (10 OK, 2 NEW) after fetch origin qa feature/web-ui",
+        "npm ci ok, 0 vulnerabilities",
+        "npm test exit 0: 27 pass, 0 fail; infra 11 pass, 0 fail",
+        "npm run build --workspace @smart-finances/infra exit 0 (tsc --noEmit)",
+        "worktree clean before progress edit"
+      ],
       "review": ""
     },
     {
       "id": "SF-101",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "2ea667b",
+      "evidence": [
+        "T-WEB-1 fail first: smoke.py on the unmodified prototype -> \"ERROR AX_PAGES/AX_VARIANTS missing: the prototype has no auth and account screens\", exit 1",
+        "After: smoke.py -> \"screens rendered: 66  failing: 0  with unlabeled inputs: 0\", exit 0 (13 screens, 33 states, en and es; checks en/es key parity, no leftover {placeholders}, no temporary-password copy)",
+        "Regression: every existing screen x 4 states x 3 months x 2 languages = 216 combinations render, 0 failures (same as the original)",
+        "prototype-check syntax_check.py ok; class_check.py \"no class has two separate top-level rules (91 classes checked)\"",
+        "calm-ui contrast.py: all listed pairs pass in light and dark; css_audit.py: only new flag is .ax-check input height 20px (its label is the 32px click target); other flags exist in the original",
+        "Screenshots, en and es, light and dark, 1400 and 400 wide, saved under apps/web/design/shots/ (130 files, not staged)",
+        "Prototype republished: https://claude.ai/code/artifact/10e1188c-9601-4133-9a2d-3502b0bc2ac6 version 21",
+        "apps/web/fixtures/sample.json: 12 months, 11 rates (2026-03 present as a bad month, 2026-10 has none), 553 rows, 11 imports in all 9 states, 64 review rows, 174 mercadopago rows; no emails or names",
+        "Owner review of T-WEB-1 is the manual gate: pending",
+        "Design audit (calm-ui + impeccable audit, rendered in the browser pane, 66 states x light/dark, desktop and 375px): 16/20; findings P1 QR inverted in dark mode; P2 text links 32px on touch, partly-erased counts ambiguous, two acceptance paths, working states not announced; P3 h2 title, stacked sign-up blocks, mixed severity, Backspace in code boxes",
+        "Audit fixes, tests first: smoke.py extended with 9 audit assertions; on the pre-fix prototype -> \"ERROR missing state consent:read\" and \"audit findings: 33\" (QR changes with theme; .ax-link no 44px rule; partial state; consent links; stacked proof note; heading level; no status message; chip colour), exit 1",
+        "After fixes: smoke.py -> \"screens rendered: 68  failing: 0  with unlabeled inputs: 0\", \"audit findings: 0\", exit 0; existing screens 216 combinations, 0 failures; syntax_check ok; class_check \"no class has two separate top-level rules (92 classes checked)\"",
+        "Touch emulation 375px: 0 controls under 44px, 0 overflow in 68 states, Backspace moves back in the code boxes; QR pair 21:1 in light and dark; impeccable detect: 0 anti-patterns (its 2 advisories predate the new screens)",
+        "Prototype republished: version 22 at the same link; screenshots retaken (136 files, not staged); audit-fix commit df2dd10"
+      ],
       "review": ""
     },
     {
       "id": "SF-102",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "a592689",
+      "evidence": [
+        "T-WEB-2 fail first: node --test packages/contracts/test/contracts.test.mjs -> ERR_MODULE_NOT_FOUND packages/contracts/src/categories.mjs (package did not exist)",
+        "After: node --test packages/contracts/test/contracts.test.mjs -> tests 10, pass 10, fail 0",
+        "npm test (root, now includes the contracts tests) -> exit 0; api+contracts 37 pass, infra 11 pass, 0 fail; npm run build --workspace @smart-finances/infra -> exit 0 (infra bundles the API through the package link)",
+        "API re-exports unchanged: test asserts apps/api schema.mjs FIELDS and KINDS are the same objects as the package exports; categoryFor output is always in CATEGORIES; categories.mjs throws at load if a rule names a category missing from the package",
+        "A test reads docs/specs/data-architecture/architecture.md \"HTTP routes\" and fails if a route there has no schema (15 routes)"
+      ],
       "review": ""
     },
     {
       "id": "SF-103",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "6c6c46c",
+      "evidence": [
+        "T-WEB-3 fail first: npm test --workspace @smart-finances/web (vitest 5.0.5) -> FAIL src/app/api/health/route.test.ts: Error: Cannot find module './route' (0 tests ran)",
+        "After: npm test --workspace @smart-finances/web -- src/app/api/health/route.test.ts -> Test Files 1 passed, Tests 4 passed (4)",
+        "npm run build --workspace @smart-finances/web -> exit 0 (Next 15.5.28; route /api/health dynamic, 102 kB first load)",
+        "Production server (STAGE=qa COMMIT_SHA=abc1234): curl /api/health -> HTTP 200, cache-control: no-store, {\"sha\":\"abc1234\",\"stage\":\"qa\"}; stopped afterwards",
+        "tsc --noEmit (strict, noUncheckedIndexedAccess) -> exit 0; root npm test -> exit 0 (37 api+contracts, 4 web, 11 infra pass)"
+      ],
       "review": ""
     },
     {
       "id": "SF-104",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "b294aff",
+      "evidence": [
+        "T-WEB-13 fail first: npm test --workspace @smart-finances/web -- src/boundaries.test.ts -> Failed Tests 28 (ENOENT eslint.config.mjs) plus the Prettier check failing",
+        "After: same command -> Test Files 1 passed, Tests 29 passed (29): 13 forbidden imports fail (domain, application, ports, ui tiers, screens, queries), 8 allowed directions pass, frameworks and SDKs banned from domain and application, alt-text, clickable div and conditional hook fail the lint, Prettier flags unformatted code",
+        "npm run lint --workspace @smart-finances/web -> eslint . clean (0 errors, 0 warnings) and \"All matched files use Prettier code style!\"",
+        "root npm test -> exit 0 (lint, 37 api+contracts, 33 web, 11 infra pass); tsc --noEmit -> exit 0; fixture files the test writes are removed after each case (git status clean of them)"
+      ],
       "review": ""
     },
     {
       "id": "SF-105",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "10116e3",
+      "evidence": [
+        "T-WEB-4 fail first: npm test --workspace @smart-finances/web -- src/styles/tokens.test.ts -> Error: ENOENT ... src/styles/tokens.css, Tests: no tests (file did not exist)",
+        "After: same command -> Test Files 1 passed, Tests 11 passed (11): D-22 sizes (0.75 to 3rem plus clamp display), weights 400/500/700/800, spacing 4 to 48px, no --cat1..12 equals --bad in light, dark (system) and dark (chosen), the two dark blocks identical, QR tokens not overridden in dark, fonts and bridge present, base.css has no colour or size literals",
+        "tokens.css parity with the prototype: 154 declarations, same selectors, names, order and values; only number spellings differ after Prettier (.05 -> 0.05, spaces)",
+        "Real build check (layout temporarily wired, then restored and not committed): npm run build --workspace @smart-finances/web -> exit 0; 6 woff2 files emitted under .next/static/media; --font-chivo and --font-chivo-mono defined; base.css bridge var(--font-chivo,\"Chivo\") resolves in the built CSS",
+        "npm run lint --workspace @smart-finances/web -> clean"
+      ],
       "review": ""
     },
     {
       "id": "SF-106",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "5b176a3",
+      "evidence": [
+        "T-WEB-5 and T-WEB-6 fail first: npm test --workspace @smart-finances/web -- src/i18n/i18n.test.ts -> Error: Cannot find module './format', Tests: no tests",
+        "After: same command -> Test Files 1 passed, Tests 24 passed (24): en and es have the same 378 keys, none empty, 7 plurals (vsUp, vsDown, todoReview, todoImports, skippedTitle, deleting x2) with the same arguments and forms in both languages and always one and other, todoReview and todoImports have =0, every message is valid ICU and formats with sample values in both languages, 13 language-choice cases (cookie wins, else Accept-Language, es-AR and ES-ar mean Spanish, anything else English), amounts and percentages per D-23 and D-30",
+        "npm run lint --workspace @smart-finances/web -> clean; tsc --noEmit -> exit 0 (after clearing stale .next build output from the SF-105 probe); root npm test -> exit 0 (37 api+contracts, 68 web in 4 files, 11 infra pass)"
+      ],
       "review": ""
     },
     {
       "id": "SF-107",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "a66ca7f",
+      "evidence": [
+        "T-WEB-7 fail first: npm test --workspace @smart-finances/web -- src/middleware.test.ts -> FAIL: Error: Cannot find module './middleware', Tests: no tests",
+        "T-WEB-8 fail first: playwright test e2e/headers.spec.ts -> 4 failed (no content-security-policy header, so no nonce; money route not redirected)",
+        "After: npm test --workspace @smart-finances/web -- src/middleware.test.ts -> Test Files 1 passed, Tests 19 passed (19): the policy equals architecture.md Contracts \"Response headers\" string for string (upload host from UPLOAD_HOST, uploads.test.invalid when STAGE=test, left out otherwise); HSTS, nosniff, no-referrer, Permissions-Policy on pages, API routes and redirects; 50 requests give 50 distinct 16-byte base64 nonces; x-nonce and the policy passed in the request headers, a browser-sent x-nonce replaced; no-store on money pages, /consent, /too-many and /api/data/*, not on /sign-in, /privacy, /terms; money routes without __Host-sid -> 307 /sign-in?next=<path and search>; any __Host-sid value passes, other cookies do not; auth routes with __Host-sid -> 307 /overview; lookalike and percent-encoded paths; matcher skips only _next/static, _next/image, favicon.ico; the only import is next/server",
+        "After: npm run e2e --workspace @smart-finances/web -- e2e/headers.spec.ts -> 4 passed (run through a scratchpad config that only points Playwright at /opt/pw-browsers/chromium; repo config unchanged): fresh nonce per response, money redirect, under the app's real policy an inline script with the nonce runs while one without it, one with a guessed nonce and an onerror handler do not, and the app's own scripts all carry the nonce with no script-src violation",
+        "npm run lint --workspace @smart-finances/web -> eslint clean, Prettier clean; tsc --noEmit -> exit 0; root npm test -> exit 0 (37 api+contracts, 87 web, 11 infra pass); npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0 (Middleware 35 kB)",
+        "Fresh-context review (subagent, claude-sonnet, read-only): 0 blocker, 1 major, 2 minor. Major: the browser test replayed every real header (content-encoding, content-length) onto a hand-made body -> now replays only the policy and adds a real-page check. Minor: percent-encoded money paths skipped the redirect -> paths are decoded first, test added (failed first: 2 failed, 17 passed). Minor: /api/data/* had no no-store -> added, same test. One fix round; all green after it.",
+        "Conformance fix (2026-10-30, commit 5197445): the sign-in redirect built next from the percent-decoded path (/overview/..%2f..%2f/evil.com -> next=/overview/../..//evil.com). Routes are still matched on the decoded path; next is now the raw req.nextUrl.pathname plus search, and a path whose decoded form has dot segments, a double slash, a backslash, ?, # or a control character gets a bare /sign-in. PR 3's sign-in must still validate next.",
+        "Conformance fix fail first: npm test --workspace @smart-finances/web -- src/middleware.test.ts against the old middleware -> Tests 3 failed | 18 passed (21): 'percent-encoded paths are matched after decoding' (next now expected /%6Fverview), 'next is the path as requested, never the decoded one', 'a path that decodes to dot segments, a double slash, a backslash, ? or # gets a bare /sign-in' (received ?next=%2Foverview%2F..%2F..%2F%2Fevil.com)",
+        "Conformance fix after: npm test --workspace @smart-finances/web -- src/middleware.test.ts -> Tests 21 passed (21)",
+        "Conformance fix after: playwright e2e/headers.spec.ts (scratchpad config, Chromium at /opt/pw-browsers/chromium) -> 4 passed",
+        "Conformance fix after: npm run lint --workspace @smart-finances/web -> exit 0; cd apps/web && npx tsc --noEmit -> exit 0; npm run build --workspace @smart-finances/web -> exit 0; npm run build --workspace @smart-finances/infra -> exit 0",
+        "Conformance fix (2026-10-30, commit ccf614e): the T-WEB-8 test \"the app's own scripts run under the policy without a script violation\" passed for the wrong reason: it heard only console errors, while a blocked eval is a thrown EvalError, and it ran on Next's default 404 at /sign-in. It now visits the real sign-in placeholder (SF-112) and /overview with the dummy __Host-sid, and collects console errors, pageerror and securitypolicyviolation events.",
+        "Conformance fix result under next dev (pw.local.config.ts, the brief's verify): npm run e2e -- e2e/headers.spec.ts -> 1 failed, 3 passed: the strengthened test now reports \"Evaluating a string as JavaScript violates ... 'unsafe-eval' is not an allowed source of script: script-src 'self' 'nonce-...' 'strict-dynamic'\" on both pages. This is the real defect behind the SF-111 next dev deviation, not a test fault.",
+        "Conformance fix result against a production build (pw.prod.config.ts): e2e/headers.spec.ts -> 4 passed",
+        "Status set to blocked: SF-107's verify as the brief states it (npm run e2e with next dev) is red until the owner decides the next dev deviation (deviations: SF-111, Verify, and the SF-107 entry of 2026-10-30).",
+        "Owner decision (option 2) applied in c1f4fb9: playwright.config.ts webServer runs next build && next start -p 3000 with STAGE=test, never reuses a running server, timeout 300 s; .gitignore also ignores apps/web/.lighthouseci/. npm run e2e --workspace @smart-finances/web (all specs, through the scratchpad config that only sets the Chromium path) -> 22 passed (36.1s): headers 4 (T-WEB-7/8), shell 12 (T-WEB-10/11), states 6 (T-WEB-12). tsc --noEmit exit 0; lint clean; root npm test exit 0 (37 api+contracts, 214 web in 23 files, 11 infra); npm run build infra and web exit 0."
+      ],
+      "review": "pass at final review (fresh context, 2026-10-31): 1 minor (matcher skips _next/static, _next/image, favicon.ico, so static files get no security headers; stock Next.js pattern, left for the planning session)"
     },
     {
       "id": "SF-108",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "267a9f4",
+      "evidence": [
+        "T-WEB-14 fail first: npm test --workspace @smart-finances/web -- src/adapters/container.test.ts -> Error: Cannot find module './container', Tests: no tests",
+        "After: same command -> Test Files 1 passed, Tests 14 passed (14): under STAGE=test the container returns one memory adapter per port (13, each the matching Memory class); 13 interface files in ports/ and 13 adapters in adapters/memory/; one shared controllable MemoryClock; fresh adapters per call; outside STAGE=test (qa, prod, empty) it throws until real adapters arrive; sessions and pre-auth rows expire with the clock and update only while they exist; counters per key and window; a pow salt claims once; reserveImport refuses running, bytes (200 MiB) and daily (10) and resets per day; the identity fake (email code 123456, authenticator code 000000) runs sign-up, confirm, setup, code, refresh, global sign-out, reset and delete; the data fake parses requests with @smart-finances/contracts, refuses unknown tokens, pages transactions by cursor and erases",
+        "npm run lint --workspace @smart-finances/web -> eslint clean (boundary rules: domain imports nothing, ports import domain and contracts, adapters import ports), Prettier clean; tsc --noEmit -> exit 0; root npm test -> exit 0 (37 api+contracts, 101 web, 11 infra pass); npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0"
+      ],
       "review": ""
     },
     {
       "id": "SF-109",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "c014638",
+      "evidence": [
+        "T-WEB-9 and T-WEB-15 fail first: npm test --workspace @smart-finances/web -- src/ui -> Test Files 16 failed (16), Tests: no tests; each with Error: Failed to resolve import (e.g. \"./patterns/BandStrip/BandStrip\" from \"src/ui/ui.test.tsx\", \"./Skeleton\" from Skeleton.test.tsx): no part existed",
+        "After: npm test --workspace @smart-finances/web -- src/ui/ui.test.tsx -> Test Files 1 passed, Tests 57 passed (57): var(--bad), --bad-soft and --field-red appear only in rules for Button [data-variant='danger'], Note [data-tone='error'], the Field .error note and Chip [data-tone='failed'], and each of the four uses it; no hex, rgb or hsl literals in any part CSS or TSX; danger and default (secondary) variants as data-variant; a busy Button has aria-busy, a [data-spinner] and ignores clicks, an idle one has neither; rotate() only in Button.module.css, animation only in Button and Skeleton, both with prefers-reduced-motion; Field error and hint tied by aria-describedby with aria-invalid, no aria-invalid without an error; no style={ in any part source; all 16 parts (SelectField included) render on the server with no style attribute except React Aria's hidden-select container; every part folder holds Component.tsx, .module.css, .stories.tsx, .test.tsx; every stories file has globals { locale: 'es' }, { theme: 'dark' } and { locale: 'es', theme: 'dark' }; .storybook uses @storybook/nextjs, @storybook/addon-a11y with a11y test 'error', tokens.css and the locale/data-theme switches; test-storybook runs storybook build, http-server, wait-on and test-storybook --url; every t('key') in the parts exists in en and es",
+        "npm test --workspace @smart-finances/web -- src/ui -> Test Files 16 passed (16), Tests 104 passed (104) (per-part tests: Button ref/variants/submit, Field + React Aria SelectField described error, Chip tones, Note tones/role, Skeleton, CategorySquare 11 colours + grey only for other, Icon decorative/labelled/every name, MonthPicker open/aria-current/disabled/no-rate key/choose/Escape/Spanish names, DataTable region/caption/aria-sort/raw cells, KeptBar solid share/marker/clamp, BandStrip widths/order/scaling, StateBlock loading status/empty/error retry/partial, CategoryRow list, MenuPanel count/close mark/Escape/close fn, ConfirmDialog alertdialog/DELETE gate/danger/busy/Cancel)",
+        "CHROME_PATH=/opt/pw-browsers/chromium npm run test-storybook --workspace @smart-finances/web -> Storybook 10.6.2 build ok, http-server on 127.0.0.1:6007, wait-on, test runner: Test Suites 15 passed, Tests 68 passed (68), exit 0 (every part in en/es x light/dark plus 8 play-function interaction stories: busy button, field error, month choice, open month grid in es dark, sort, retry, menu open/Escape/focus return, typed DELETE)",
+        "a11y enforcement probe: a temporary story with an unnamed <button> made the same command exit 1 with \"Buttons must have discernible text (button-name)\" (1 failed, 68 passed); the probe was deleted before the commit",
+        "npm run lint --workspace @smart-finances/web -> eslint 0 errors 0 warnings, Prettier clean; cd apps/web && npx tsc --noEmit -> exit 0",
+        "root npm test -> exit 0 (lint, 37 api+contracts, 212 web in 23 files, 11 infra pass); npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0"
+      ],
       "review": ""
     },
     {
       "id": "SF-110",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "bb4f783",
+      "evidence": [
+        "T-WEB-16 fail first: npm test --workspace @smart-finances/web -- src/queries/provider.test.tsx -> Error: Failed to resolve import \"./prefetch\" from \"src/queries/provider.test.tsx\", Tests: no tests (before that, the runner could not parse JSX at all: \"make sure to not set jsx to preserve\"; fixed by the owner-approved vitest.config.ts line, see deviations)",
+        "After: same command -> Test Files 1 passed, Tests 7 passed (7): prefetch() dehydrates the fetched query; QueryProvider + HydrationBoundary shows the prefetched data and the browser fetcher is never called; without a prefetch the client does fetch once; default staleTime 30000; a fresh server client per call; a failed prefetch is not dehydrated; devtools absent normally and rendered when NODE_ENV=development",
+        "npm run lint --workspace @smart-finances/web -> clean; tsc --noEmit -> exit 0; root npm test -> exit 0 (37 api+contracts, 108 web, 11 infra pass); npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0"
+      ],
       "review": ""
     },
     {
       "id": "SF-111",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "f155497",
+      "evidence": [
+        "[superseded] First attempt, before the owner chose ShellNav.tsx: stopped before writing code because the task as written needed a file outside its Files. The code landed later in f155497 (second attempt below).",
+        "Probe (temporary page, deleted, nothing committed): a server component rendering <MenuPanel label=\"Overview\">{() => <a href=\"/transactions\">Transactions</a>}</MenuPanel> -> npm run build (next build) exit 1: \"Error: Functions cannot be passed directly to Client Components unless you explicitly expose it by marking it with \\\"use server\\\" ... {label: ..., children: function children}\". MenuPanel (SF-109) takes children: (close) => ReactNode, so a server Shell cannot fill it.",
+        "Source check, next 15.5.28 dist/client/components/layout-router.js InnerScrollAndFocusHandler: after a client navigation Next calls domNode.focus() on the first element of the changed segment (skipping sticky and fixed ones). If the (app) layout renders the shell and each page starts with <h1 tabIndex={-1}>, focus reaches the h1 with no extra client code. But a shared layout is not re-rendered on navigation and gets no pathname, so the rail's aria-current needs either a client island (usePathname) or the shell rendered by each page (which then defeats Next's focus handling).",
+        "git status after the probe: clean except the already untracked apps/web/storybook-static/",
+        "[superseded by the second attempt and f155497] Conformance review (2026-10-30): still blocked. The findings (shell missing, D-144 root wiring not carried out, /api/lang Origin check and lang cookie missing, T-WEB-10 and T-WEB-11 untested) all wait for the owner's decision on the ShellNav deviation; no code written in the conformance round. The /api/lang route needs tests that an Origin equal to WEB_ORIGIN is accepted and that missing, 'null' and foreign Origins get 403 with no Set-Cookie, and a lang cookie (en or es only) with SameSite=Lax and a one-year Max-Age.",
+        "Second attempt (2026-10-30), after the owner chose ShellNav.tsx (deviation decided) and gave the explicit prototype go.",
+        "T-WEB-10 and T-WEB-11 fail first: playwright e2e/shell.spec.ts (scratchpad config, Chromium at /opt/pw-browsers/chromium, next dev) -> 12 failed: rail navigation not found (no (app) pages, 404), main element missing, /api/lang 404 so 'expect(received).toBe(expected)' on 303/403/400",
+        "Implementation: root layout (tokens.css, base.css, fontVariables on <html>, lang from getLocale, NextIntlClientProvider, csp-nonce meta from x-nonce), next.config.ts wrapped with createNextIntlPlugin('./src/i18n/request.ts') keeping the existing options, (app) layout = QueryProvider > server Shell, six placeholder pages each starting with <h1 tabIndex={-1}>, ui/ShellNav.tsx client islands (rail links with aria-current, ShellBar with MenuPanel unchanged, LangForm), /api/lang POST route, one new message key shell.screens in en and es",
+        "Verify against a production build (scratchpad config pw.prod.config.ts: webServer next build then next start, STAGE=test; repo config unchanged): CI=1 npx playwright test e2e/shell.spec.ts e2e/headers.spec.ts -> 16 passed (12 shell + 4 headers): rail groups Money/Account, no Ask or Prototype; 2px ink ::before, weight 700, no fill or shadow on the current link; wordmark 700, stage tag 12px uppercase not mono; group label 24px/8px; account area address, Authenticator on 12px, Español row with lang=es and icon, Sign out, no borders; rail and Sign out stay in view after scrolling 4000px; focus on the h1 after a click and after Enter; every money page one h1 and one main; under 960px rail hidden, 44px menu button naming the screen, h1 within the first 200px, panel under the bar, h1 does not move, same links and account rows, choosing a link closes the panel and focuses the new h1, Escape returns focus to the button; language switch keeps /transactions?month=2026-05&view=usd, html lang es then en, lang cookie Lax one year, __Host-sid kept; menu-panel switch on a tablet; /api/lang 303 + Set-Cookie for the web origin, 403 and no cookie for missing, null, foreign and wrong-port Origins, 400 for fr, empty, 'es;' and 'EN ', unsafe next values go to /overview, GET 405; no Content-Security-Policy violation logged or thrown on any shell page",
+        "Verify as the brief states it (npm run e2e, webServer next dev, via the scratchpad pw.local.config.ts) -> 8 failed, 8 passed: next dev's client code evaluates strings (webpack eval-source-map, React dev tooling) and the SF-107 policy has no 'unsafe-eval', so every page throws \"Evaluating a string as JavaScript violates the following Content Security Policy directive because 'unsafe-eval' is not an allowed source of script\" and nothing hydrates (no client navigation focus, MenuPanel does not open, LangForm does not run). Fixing it needs middleware.ts or playwright.config.ts, both outside SF-111 Files: see deviations (SF-111, second entry). Blocked on that decision; nothing else is red.",
+        "npm run lint --workspace @smart-finances/web -> eslint clean, Prettier clean; cd apps/web && npx tsc --noEmit -> exit 0",
+        "root npm test -> exit 0 (api+contracts 37 pass, web lint clean, web vitest Test Files 23 passed, Tests 214 passed, infra 11 pass); npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0 (/overview, /transactions, ... and /api/lang dynamic; Middleware 35.1 kB)",
+        "git status after the code commit: clean except ignored build output (.next, storybook-static, next-env.d.ts, tsconfig.tsbuildinfo)",
+        "Conformance round 2 (2026-10-30): still blocked. The fix the findings ask for (Option A: a production webServer in playwright.config.ts; Option B: 'unsafe-eval' in script-src only when NODE_ENV is development, in middleware.ts) touches files outside SF-111 Files and needs the owner's decision on the open deviation (deviations: SF-111, Verify; decidedBy empty). Not applied.",
+        "Re-run under next dev (pw.local.config.ts, the brief's verify), whole suite after the SF-112 and SF-113 fixes: 9 failed, 13 passed. The 8 SF-111 failures are unchanged (shell.spec.ts:34, 96, 132, 152, 175, 192, 234, 261, all from the blocked eval), plus the strengthened SF-107 test. Against a production build (pw.prod.config.ts) the whole suite passes: 22 passed (headers 4, shell 12, states 6).",
+        "Owner decision (option 2) applied in c1f4fb9: playwright.config.ts webServer runs next build && next start -p 3000 with STAGE=test, never reuses a running server, timeout 300 s; .gitignore also ignores apps/web/.lighthouseci/. npm run e2e --workspace @smart-finances/web (all specs, through the scratchpad config that only sets the Chromium path) -> 22 passed (36.1s): headers 4 (T-WEB-7/8), shell 12 (T-WEB-10/11), states 6 (T-WEB-12). tsc --noEmit exit 0; lint clean; root npm test exit 0 (37 api+contracts, 214 web in 23 files, 11 infra); npm run build infra and web exit 0.",
+        "Final review fix cae1606: LangForm reported nothing when /api/lang refused or the network failed. Test first: new T-WEB-11 e2e 'a refused or failed language switch says so' failed (no alert); after: an error Note (role=alert, key shell.langFailed in en and es) shows and the page stays as it was. All e2e against the production build: 23 passed; lint clean; tsc 0; root npm test exit 0 (37, 214 web, 11); web and infra builds exit 0."
+      ],
+      "review": "findings at final review (fresh context, 2026-10-31): 3 minor; silent language-switch failure fixed in cae1606; WEB_ORIGIN must be set on non-test hosts until PR 3 moves the route to the settings port; the shell.screens key and Shell.module.css fall under the brief's always-allowed extras"
     },
     {
       "id": "SF-112",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "2999ad4",
+      "evidence": [
+        "Conformance fix (2026-10-30): the earlier 'Blocked by SF-111 ... undecided ShellNav deviation' line was stale (the owner decided ShellNav); replaced by this record.",
+        "T-WEB-12 fail first: npm run e2e (scratchpad pw.local.config.ts, next dev, Chromium at /opt/pw-browsers/chromium) -- e2e/states.spec.ts -> 6 failed: no h1 'We can’t find that page' on /no-such-page (Next's default 404), /sign-in?reason=idle status 404 (expected 200), /overview without the cookie lands on a 404 sign-in, lang es not-found heading missing, screenOf timeout",
+        "Implementation: app/not-found.tsx (auth.notFound label, title, lead, link to /overview, h1 tabIndex -1), app/error.tsx ('use client', states.errT and errB, a primary retry Button calling reset(), role alert, no error details shown), app/(auth)/sign-in/page.tsx (placeholder: brand, h1 auth.signIn.title, a status Note with auth.idle.banner only when reason=idle, lead and the 30-idle-minutes footer), app/states.module.css (tokens only, no style attributes). No new message keys.",
+        "After: npm run e2e -- e2e/states.spec.ts (pw.local.config.ts, next dev, the brief's verify) -> 6 passed: 404 status and the one not-found screen with the overview link and one h1; a missing resource under /transactions with __Host-sid gives the same screen (heading, text, link) and 404; the screen follows lang=es (html lang es, 'No encontramos esa página', 'Ir al resumen'); /sign-in?reason=idle shows the idle notice as role status; /sign-in, ?reason=other and ?next=... show none; /overview without the cookie lands on the sign-in placeholder with 200; no style-src violation",
+        "Cross-check against a production build (pw.prod.config.ts: next build then next start) -> 6 passed",
+        "npm run lint --workspace @smart-finances/web -> eslint clean, Prettier clean; cd apps/web && npx tsc --noEmit -> exit 0",
+        "Final profile verify (after all conformance fixes): root npm test -> exit 0 (api+contracts 37 pass, web lint clean, web vitest 23 files 214 tests pass, infra 11 pass); npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0 (/_not-found 103 kB, /sign-in 103 kB first load)"
+      ],
+      "review": "findings at final review (fresh context, 2026-10-31): 5 minor, none fixed: error.tsx has no automated test; the someone-else's-resource case is simulated until PR 3's guard; the placeholder shows sign-in copy without a form and the idle footer; error.tsx always names a timeout as the cause"
     },
     {
       "id": "SF-113",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "8cfb20d",
+      "evidence": [
+        "Conformance fix (2026-10-30): the earlier 'Blocked by SF-111 ... undecided ShellNav deviation' line was stale; replaced by this record.",
+        "T-WEB-17 fail first: cd apps/web && node --test scripts/lhci.test.mjs -> # pass 0 # fail 5: ENOENT apps/web/lighthouserc.json (tests 1 to 4), @lhci/cli not installed and no lhci script (test 5)",
+        "Implementation: apps/web/lighthouserc.json (collect: STAGE=test next start -p 3000, the six money pages, 5 runs, Lighthouse mobile form factor with simulated throttling, performance only, a dummy __Host-sid Cookie header so the middleware lets the pages through; assert: median per metric, largest-contentful-paint <= 2500 ms, cumulative-layout-shift <= 0.1, resource-summary:script:size <= 204800 bytes, each 'error'); script lhci = node --test scripts/lhci.test.mjs && next build && lhci collect && lhci assert; @lhci/cli 0.15.1 (devDependency, exact)",
+        "scripts/lhci.test.mjs (T-WEB-17): the config uses next start with STAGE=test and lists exactly the MONEY_ROUTES of middleware.ts; phone settings; the three budgets; lhci assert over synthetic results passes within budget and fails (exit 1, 'failure for maxNumericValue assertion' naming the audit and /transactions) when one page breaks LCP, CLS or the script size; the script and the binary exist -> node --test scripts/lhci.test.mjs: # pass 5 # fail 0",
+        "Verify: CHROME_PATH=<scratchpad wrapper that runs /opt/pw-browsers/chromium --no-sandbox> npm run lhci --workspace @smart-finances/web -> exit 0: '# pass 5', next build, 'Checking assertions against 6 URL(s), 30 total run(s)', 'All results processed!'. Measured (median LCP of 5 runs; CLS max; script transfer bytes): /overview 2273 ms, 0, 170103; /transactions 2314 ms; /review 2269 ms; /imports 2287 ms; /rates 2267 ms; /data 2275 ms; all CLS 0, all 170103 bytes. Every run measured the money page itself (finalDisplayedUrl the page, not /sign-in).",
+        "A first run with median-run aggregation and 3 runs failed /transactions on LCP 2566.884 ms (single runs ranged 1.5 to 2.9 s); switched to 5 runs and the per-metric median so one noisy run neither passes nor fails a page (see surprises).",
+        "npm run lint --workspace @smart-finances/web -> eslint clean, Prettier clean (scripts/ and lighthouserc.json included); cd apps/web && npx tsc --noEmit -> exit 0; .lighthouseci/ output deleted after the run (not git-ignored)",
+        "Final profile verify: root npm test -> exit 0; npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0"
+      ],
+      "review": "findings at final review (fresh context, 2026-10-31): 2 minor: no committed check proves the session cookie reaches every audited page; LCP medians 2.27 to 2.31 s against 2.5 s leave little headroom for CI noise"
     },
     {
       "id": "SF-114",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "9b665fe",
+      "evidence": [
+        "Tests first: none (brief lists none for SF-114; docs-only task).",
+        "Wrote docs/adr/0008-web-framework-and-host.md summarising D-62, D-65, D-89, D-93, D-102, D-138 (context, decisions, options, decision, consequences, revisit when), added its row to docs/adr/README.md, README \"Layout\" (apps/web as the Next.js app, new packages/contracts row) and \"Status\" (Amplify host, Vercel project stays off) only.",
+        "npm test (root) -> 11 tests, 11 pass, 0 fail",
+        "npm run build --workspace @smart-finances/infra -> exit 0",
+        "npm run build --workspace @smart-finances/web -> exit 0",
+        "npm run lint --workspace @smart-finances/web -> exit 0 (eslint clean, prettier: all matched files use Prettier code style)",
+        "cd apps/web && npx tsc --noEmit -> exit 0",
+        "git status after commit: clean except the already untracked apps/web/storybook-static/",
+        "Correction (conformance review, 2026-10-30): the line 'npm test (root) -> 11 tests, 11 pass, 0 fail' showed only the infra part of the root run. Re-run of root npm test at 5197445 -> exit 0: api 37 tests 37 pass 0 fail; web lint clean; web vitest Test Files 23 passed (23), Tests 214 passed (214); infra 11 tests 11 pass 0 fail. The web suite was re-run 3 more times: 214 passed each time (the reviewer's one failed of 212 did not reproduce)."
+      ],
       "review": ""
     }
   ],
-  "deviations": [],
-  "surprises": []
+  "deviations": [
+    {
+      "date": "2026-10-30",
+      "task": "SF-111",
+      "from": "pr-smart-finances.md SF-111 Files (lists only the (app) layout)",
+      "proposal": "Add apps/web/src/app/layout.tsx and apps/web/next.config.ts to SF-111's Files: import tokens.css and base.css, put fontVariables on <html>, set html lang from next-intl, wrap children in NextIntlClientProvider, and wrap the config with createNextIntlPlugin('./src/i18n/request.ts'). Needed so SF-105 and SF-106 take effect.",
+      "decidedBy": "owner, in chat, 2026-10-30 (chose SF-111 over SF-107)",
+      "newDecision": "D-144"
+    },
+    {
+      "date": "2026-10-30",
+      "task": "SF-110",
+      "from": "pr-smart-finances.md SF-110 Files (apps/web/vitest.config.ts is SF-103's file)",
+      "proposal": "Add oxc: { jsx: { runtime: 'automatic' } } to apps/web/vitest.config.ts so unit tests can compile JSX while tsconfig keeps jsx as preserve for Next.js. SF-109's component tests need it too.",
+      "decidedBy": "owner, in chat, 2026-10-30 (allowed the one-line change in SF-110)",
+      "newDecision": "pending: the planning session records it in the brief or decisions"
+    },
+    {
+      "date": "2026-10-30",
+      "task": "SF-111",
+      "from": "pr-smart-finances.md SF-111 Files and Do (\"Server shell with MenuPanel (from ui/patterns) as the only client island\"), D-137",
+      "proposal": "MenuPanel's API (children: (close) => ReactNode, from SF-109) cannot be filled by a server component: Next refuses to pass a function to a client component (build error recorded in SF-111 evidence). Also a shared (app) layout never learns the current path, so it cannot set aria-current on the rail or name the screen on the menu button. Proposed: add one new client file, apps/web/src/ui/ShellNav.tsx ('use client'), to SF-111's Files. It takes only serializable props (the nav items with href, label and icon name, the account rows, the review count and its words), reads usePathname(), and renders (1) the rail nav links with aria-current and (2) MenuPanel with a render function that shows the same links and account rows and calls close() when a link is chosen. The (app) layout keeps the server Shell (brand, env tag, account area with the /api/lang form post and Sign out, <main>), wrapped in QueryProvider; pages start with <h1 tabIndex={-1}> so Next's own focus handling moves focus to it after navigation. Alternative: change MenuPanel (SF-109 file) to accept plain children and close itself on a pathname change; that touches T-WEB-9 tests and is the larger change.",
+      "decidedBy": "owner, in chat, 2026-10-30 (chose the new client file apps/web/src/ui/ShellNav.tsx over changing MenuPanel)",
+      "newDecision": "pending: the planning session records it in the brief or decisions"
+    },
+    {
+      "date": "2026-10-30",
+      "task": "SF-109",
+      "from": "no task lists .gitignore",
+      "proposal": "Add apps/web/storybook-static/, apps/web/test-results/ and apps/web/playwright-report/ to .gitignore so build and test output cannot be committed. Also apps/web/.lighthouseci/ (Lighthouse CI output, SF-113), under the same owner approval.",
+      "decidedBy": "owner, in chat, 2026-10-30",
+      "newDecision": "pending: the planning session records it"
+    },
+    {
+      "date": "2026-10-30",
+      "task": "SF-111",
+      "from": "pr-smart-finances.md SF-111 Verify (npm run e2e runs Playwright against next dev, SF-103 playwright.config.ts) with the SF-107 content policy (Contracts \"Response headers\": script-src 'self' 'nonce-<n>' 'strict-dynamic', no 'unsafe-eval')",
+      "proposal": "next dev cannot run client code under the contract's policy: it evaluates strings, so pages never hydrate in dev and the shell e2e (menu panel, focus after client navigation, language form) fails, while it passes 12/12 against next build + next start. Option A (recommended): apps/web/playwright.config.ts webServer runs a production server (next build && next start -p 3000, STAGE=test), so the e2e and its policy checks test what ships; slower e2e start. Option B: apps/web/src/middleware.ts adds 'unsafe-eval' to script-src only when NODE_ENV === 'development' (Next's documented pattern), production unchanged; also needed for local next dev to work at all. Both touch a file outside SF-111 Files; A and B can be combined.",
+      "decidedBy": "owner, in chat, 2026-10-30 (option 2: browser tests run against a production build, next build + next start; no 'unsafe-eval' in development)",
+      "newDecision": "pending: the planning session records it; apps/web/playwright.config.ts webServer changed"
+    },
+    {
+      "date": "2026-10-30",
+      "task": "SF-107",
+      "from": "pr-smart-finances.md SF-107 Verify (npm run e2e against next dev, SF-103 playwright.config.ts) with the contract's script-src (no 'unsafe-eval')",
+      "proposal": "Same decision as the SF-111 next dev deviation: the conformance fix made T-WEB-8's own-scripts test collect thrown errors and policy events on real pages, and under next dev it now fails on the blocked eval (as the shell tests do). Option A (production webServer in playwright.config.ts) or Option B ('unsafe-eval' only when NODE_ENV is development, in middleware.ts, with a middleware test that production policies never contain it) turns both green; both touch files outside SF-107 and SF-111 Files.",
+      "decidedBy": "owner, in chat, 2026-10-30 (option 2: browser tests run against a production build, next build + next start; no 'unsafe-eval' in development)",
+      "newDecision": "pending: the planning session records it; apps/web/playwright.config.ts webServer changed"
+    }
+  ],
+  "surprises": [
+    "feature/web-foundation was cut from origin/feature/web-ui, which held only the draft spec; locked-v1 was merged in from origin/claude/intent-web-ui-spec-ssm5mn at the owner's request (commit 923c1f8).",
+    "Owner merged spec PR #6 mid-session: brief re-locked at locked-v2 (adds D-140 to D-143; SF-104, SF-109, SF-111 text changed; SF-101 unchanged; D-17 dropped from the brief copy but still accepted in decisions.md, so followed). SF-100 baseline was taken under locked-v1; origin/feature/web-ui merged into the branch.",
+    "apps/web/design/shots/ is not git-ignored and .gitignore is outside SF-101 Files, so the shots are left untracked and unstaged. Needs a .gitignore line (a person or a later task).",
+    "The prototype already had a red \"Delete everything\" button on Your data (.btn.danger), which reads against D-13/D-63 (red only for errors and failed statuses). The new delete-account screen uses an ink button instead. Owner to decide on the old one.",
+    "The prototype had imports in 7 of the 9 import states; two synthetic imports (waiting for file, replaced) were added so the sample covers every state.",
+    "Prototype values to confirm before build: confirm-code lifetime \"15 minutes\" and lost-authenticator reply time \"a day or two\" are copy guesses, not settings.",
+    "Brief said \"npm run dev\" cannot show this work: apps/web has no dev script until SF-103; the owner asked to see progress, so the working copy was served locally at 127.0.0.1:8765 for the browser pane.",
+    "Acceptance path decision made by the executor to resolve the audit finding: terms are accepted once on sign-up; the Privacy and terms screen is the read-only full text and the re-accept step when the notice changes. Needs recording as a decision by the planning session (the executor cannot write a D-n).",
+    "SF-102: the data-architecture table does not say whether ars_per_usd is a number or a string; the schema takes a positive number with at most two decimals. The data PRs that adopt the package (D-133) should confirm. Brief rule: \"csv\" source added next to mercadopago (both .csv, 5 MiB) as the brief lists it.",
+    "SF-103: @types/node, @types/react and @types/react-dom were added although the brief Values name only react, typescript and next; strict TypeScript cannot build without them (ASK FIRST item, judged part of the named packages).",
+    "SF-103: versions pinned exact and at least two weeks old: next 15.5.28, react 19.3.1, typescript 5.9.3 (7.x skipped for tooling support), @types/node 24.19.2 (26.x is 2 days old), vitest 5.0.5, @playwright/test 1.64.1.",
+    "SF-103: apps/web/next-env.d.ts is generated by next and is not git-ignored (outside Files), so it stays untracked and uncommitted; a .gitignore line is needed. Playwright uses the installed Chrome locally (channel chrome) so no browser download was run; CI must run playwright install chromium.",
+    "SF-103: apps/web/package.json is \"type\": \"module\" so Vite configs load without the CommonJS warning; npm run lint is called with --if-present in amplify.yml until SF-104 adds the script.",
+    "SF-104: Prettier printWidth is 150, chosen so SF-103 route.ts (one 141-character line) passes without editing a file outside this task. Rules apply to src/ only; the app/ to adapters rule from architecture.md (\"through container.ts only\") was not in the brief and is not enforced yet.",
+    "SF-104: @eslint/eslintrc (already ESLint's own dependency, 3.3.7) is imported by eslint.config.mjs for Next 15's documented FlatCompat setup, and plugins come through eslint-config-next; only eslint, eslint-config-next, eslint-plugin-import, eslint-plugin-jsx-a11y and prettier were added to package.json.",
+    "SF-105 GAP: nothing in the brief wires tokens.css, base.css and fonts.ts into the root layout. apps/web/src/app/layout.tsx is SF-103's file and not in SF-105's Files; SF-111 lists only the (app) layout. The files exist and were proven to build when wired temporarily. The root layout needs imports of ../styles/tokens.css, ../styles/base.css and className={fontVariables} on <html>; the planning session should add layout.tsx to a task (SF-106 or SF-111).",
+    "SF-105: tokens.css was reformatted by Prettier (required by the lint script); values are identical to the prototype. Tabler icons are not installed yet; the Icon primitive arrives in SF-109.",
+    "SF-106 GAP: next-intl is not connected yet. It needs createNextIntlPlugin('./src/i18n/request.ts') in next.config.ts (SF-103 file) and a NextIntlClientProvider and html lang in the root layout; together with the SF-105 gap (tokens, base styles, fonts) the root layout.tsx and next.config.ts need an owner task. Neither file is in SF-106's Files.",
+    "SF-106: messages exclude what the app does not build (prototype controls, design-system page, assistant screens per D-46); empty-state copy is stored as title, text and action instead of the prototype's arrays; prototype-only account-screen keys (pick, v, intro) are left out.",
+    "SF-106: the Ask nav entry and the assistant copy are not in the catalogues; they arrive with Epic 4.",
+    "Brief re-locked at locked-v5 (PR #7 merged; origin/feature/web-ui merged into the branch): D-144 gives SF-111 app/layout.tsx and next.config.ts and adds npm run build to its verify, closing the SF-105 and SF-106 gaps; D-146 adds a danger Button variant to SF-109 (T-WEB-9 changed); D-145, D-147, D-148 touch the auth copy, not this PR. From SF-107 the executor is Claude Code in a cloud session on claude-opus-5-5 (checked with get_session); SF-100 to SF-106 ran on the desktop app with claude-sonnet-5-5.",
+    "SF-107: under the contract's 'strict-dynamic', Chrome runs an inline script that a nonced script inserts (CSP3 trust propagation; seen in the e2e probe, case removed). AC-9 still rests on rendering imported text as text, not on the policy alone.",
+    "SF-107: style-src has no 'unsafe-inline', so server-rendered style=\"...\" attributes are blocked; next dev's error page logged 5 inline-style violations. Parts must style through CSS modules (D-57); SF-111's build and e2e should confirm the real pages log none.",
+    "SF-107: with only a cookie-presence check, a stale __Host-sid can loop (/overview -> guard -> /sign-in -> middleware -> /overview) unless the PR 3 guard deletes the cookie when the session is gone. Not in this brief; PR 3 should cover it.",
+    "SF-107: Next.js 15.5 also takes the nonce from the middleware's response policy, so dropping the request-header copy alone does not break the page scripts; both are set, as Next's docs show.",
+    "SF-107: the preinstalled Chromium here (1243) does not match @playwright/test 1.64.1 (1248) and channel chrome is absent; e2e ran through a scratchpad config with executablePath, nothing committed. next dev also tries www.google.com (blocked by the proxy) without failing.",
+    "SF-108: apps/web/package.json gains @smart-finances/contracts (this PR's package) and zod 4.6.7 (in Values; the version contracts already uses) so ports type the data API from the shared Zod schemas. package-lock.json was edited by those two lines only; npm 10 here would also drop the libc fields the owner's newer npm writes.",
+    "SF-108: the Ports table gives method names but not every row or reason shape. Rows follow the Sessions and Accounts tables in camelCase; IdentityProvider results use the reasons exists, not_found, unconfirmed, bad_credentials, bad_code, expired_code, bad_session, revoked, limited, failed; PreAuthRow.step is a plain string. PR 3 may narrow them.",
+    "SF-108: the memory identity fake already uses email code 123456 and authenticator code 000000, which the Interfaces section lists under PR 3; PR 3 should reuse it rather than add a second fake. domain/ holds only result.ts and application/ only a README until PR 3 and PR 4 add code.",
+    "SF-108: the memory data API is seeded with contract-shaped rows; mapping apps/web/fixtures/sample.json (prototype shapes such as rates as strings and review: null) into it is left to PR 4.",
+    "SF-110: added @tanstack/react-query 5.104.3, @tanstack/react-query-devtools 5.104.3, jsdom 30.1.3 and @testing-library/react 16.3.3 (all in Values, pinned exact, released by 2026-10-15). npm also installed @testing-library/dom as its required peer (lockfile only). npm 10 here dropped the lockfile's libc fields; they were restored so the lockfile diff is only the new packages.",
+    "SF-110: the provider test uses a per-file jsdom environment comment; vitest.config.ts keeps node as the default environment.",
+    "HUMAN gate before SF-111 (review the extended prototype and say go): after being told SF-111 waits on that go, the owner said in chat on 2026-10-30 \"Proceed using subagents with everything that's left\"; the executor took this as the go. The earlier T-WEB-1 owner review line in SF-101 evidence is superseded by this.",
+    "SF-109: added react-aria-components 1.22.1, @tabler/icons-react 3.49.0, storybook 10.6.2, @storybook/nextjs 10.6.2, @storybook/addon-a11y 10.6.2, @storybook/test-runner 0.26.0, http-server 14.1.1 and wait-on 9.5.1 (all in Values, pinned exact, newest by 2026-10-16). npm also installed webpack 5.112.2 as the required peer of @storybook/nextjs (lockfile only) and about 900 transitive packages; no existing package changed version. libc fields restored in the lockfile (52 entries).",
+    "SF-109: @storybook/test-runner 0.26.0 prints \"Official support for Test Runner has ended\" (Storybook now points to its Vitest add-on). It still works with Storybook 10.6.2 and fails on a11y violations; the brief names the test runner, so it stays. A later move to @storybook/addon-vitest would be a new decision.",
+    "SF-109: React Aria's Select server-renders its hidden native <select> inside a div with an inline style attribute, which the SF-107 policy (style-src without 'unsafe-inline') blocks, so the native select would show. Field.module.css re-hides [data-testid='hidden-select-container'] with a class rule; the T-WEB-9 server-render test allows only that container. Popovers set their position with inline styles only on the client (CSSOM), which the policy allows. SF-111's e2e should confirm no style violations on real pages.",
+    "SF-109: 'red only for error notes and the danger Button' read together with D-63: failed statuses are red too, so Chip tone 'failed' (failed or never-arrived imports) uses --bad; T-WEB-9 allows exactly four places (danger Button, error Note, Field error, failed Chip). The danger Button hover uses --sunken, not --bad-soft, because --bad on --bad-soft is 4.23:1, under D-22's 4.5:1.",
+    "SF-109: KeptBar and BandStrip are SVG with percentage x and width attributes, because data-driven widths cannot be inline styles under the policy (D-57 already asks for hand-drawn SVG).",
+    "SF-109: apps/web/storybook-static/ (the test-storybook build) is not git-ignored and .gitignore is outside SF-109 Files, so it is left untracked and uncommitted; it needs a .gitignore line. The test runner here uses /opt/pw-browsers/chromium through CHROME_PATH, read by the committed .storybook/test-runner-jest.config.mjs only when set; CI leaves it unset and needs playwright install chromium.",
+    "SF-109: the brief named a storybook script under SF-103 but package.json had none; SF-109 added storybook, build-storybook and test-storybook. Stories set the language and scheme through Storybook globals (locale, theme); the preview decorator sets html lang and data-theme and wraps NextIntlClientProvider. Fonts in Storybook come from the @fontsource CSS files, not next/font.",
+    "SF-109: one new message key, ui.typeToConfirm (\"Type {word} to confirm\" / \"Escribe {word} para confirmar\"), in both files; everything else reuses existing keys (shell.month, shell.noRateKey, shell.menu, states.loading, states.retry, auth.common.cancel).",
+    "SF-111: the brief's 'MenuPanel as the only client island' cannot hold with SF-109's MenuPanel API (render-function children) under the React Server Components rules; and a server layout cannot mark the current screen because App Router layouts get no pathname and do not re-render between sibling pages. Recorded as a deviation; the task is blocked until the owner picks the extra client file (ui/ShellNav.tsx) or a MenuPanel change. Also seen: the Icon primitive has no nav icons (prototype uses Tabler layout-dashboard, arrows-exchange, list-check, upload, coin, database); Icon.tsx is SF-109's file, so the shell would import those Tabler icons directly or Icon.tsx needs adding to Files too.",
+    "SF-114: the repo markdown (README.md, docs/adr/*.md) does not follow prettier at HEAD (no blank line after headings), and markdown is outside the web lint glob; the new ADR follows the existing ADR house style instead of prettier formatting.",
+    "SF-114: conformance review reported 1 failed | 211 passed (212) in the web suite at f7ad6ff; at 5197445 (214 tests) four runs all passed, so the failure looks flaky under load and was not identified.",
+    "SF-107: the conformance fix changes next for percent-encoded paths: /%6Fverview now redirects with next=/%6Fverview (as requested) instead of /overview.",
+    "Owner confirmed explicitly in chat on 2026-10-30 that the extended prototype is a go (T-WEB-1 manual gate passed), replacing the earlier inferred go.",
+    "SF-111: Referrer-Policy no-referrer (Contracts \"Response headers\") makes Chrome send \"Origin: null\" on every POST from the page (Fetch spec: origin serialisation follows the referrer policy), and Contracts \"Cookies\" refuses a null Origin. A plain <form method=post action=/api/lang> got 403 (probe: origin header \"null\"). Inside Files the language row's form (ShellNav LangForm) posts through fetch with referrerPolicy 'same-origin', then router.refresh(); without JavaScript the native post is refused. PR 3's posts (sign-out, server actions through guarded(), D-115) will meet the same conflict and need a decision: a per-request referrer policy as here, a <meta name=referrer content=same-origin>, or Referrer-Policy same-origin/strict-origin in the middleware.",
+    "SF-111: React Aria injects small <style> elements in the browser (usePress, usePreventScroll); under style-src without 'unsafe-inline' Chrome blocked them (style-src-elem violation per page). React Aria reads a nonce from <meta name=\"csp-nonce\" nonce>, so the root layout renders that meta with the x-nonce value; no violation since.",
+    "SF-111: Next 15.5 moves focus to the first element of the changed segment after a client navigation, so each placeholder page starts with <h1 tabIndex={-1}> and no extra focus code exists; the shell's h1:focus shows no ring (as the prototype). This only works once client code runs (see the next dev deviation).",
+    "SF-111: Sign out is a plain button with no action until PR 3 (SF-151 makes it a server action); the D-44 review count is wired (Shell reviewCount prop, amber count on the rail link and the menu button) but the (app) layout passes 0 until PR 4 reads the review data, so the e2e checks only that no count shows at 0 (the count itself is covered by T-WEB-9). The address is the synthetic you@example.com; the stage tag shows STAGE unless it is prod.",
+    "SF-111: the Icon primitive has no nav icons; ShellNav imports the six Tabler outline icons (layout-dashboard, arrows-exchange, list-check, upload, coin, database) directly at 2px, so Icon.tsx (SF-109) was not touched. Shell.tsx and ShellNav.tsx share one Shell.module.css.",
+    "SF-111: Playwright cannot add a __Host- cookie for an http URL (Storage.setCookies: Invalid cookie fields); the e2e adds __Host-sid for https://localhost:3000/ with Secure, which Chrome sends to http://localhost because localhost counts as secure.",
+    "SF-112: error.tsx has no automated test. T-WEB-12 covers not-found and the idle notice; no route throws in PR 1, a throwing test page or a unit test file is outside SF-112 Files, and under next dev the retry button would not hydrate anyway. It is covered only by tsc, lint and next build; PR 4's screens (or a later task) should test the failed state and its retry.",
+    "SF-112: no page answers 403 in PR 1, so T-WEB-12's '403 and 404 show the same screen' is tested as a missing page versus a missing resource under a money screen (/transactions/another-persons-row with the session cookie), both 404 with the same screen. PR 3's guard must answer another person's resource with notFound(), not a 403 page, for this to hold.",
+    "SF-112: the sign-in placeholder shows the wordmark in lowercase 'cuenta', as the shell does; with __Host-sid set the middleware sends /sign-in to /overview, so the placeholder is only seen signed out.",
+    "SF-113: @lhci/cli 0.15.1 (2025-06-25, the newest by 2026-10-16) pins lighthouse 12.6.1 and adds 234 lockfile entries; no existing package changed version; npm 10 dropped 52 libc fields, restored.",
+    "SF-113: apps/web/.lighthouseci/ (lhci output) is not git-ignored and .gitignore is outside SF-113 Files; it was deleted after the run. It needs a .gitignore line.",
+    "SF-113: Chromium here runs as root and needs --no-sandbox. Setting it through LHCI_COLLECT__SETTINGS__CHROME_FLAGS replaced lhci's whole settings object, which dropped the Cookie header, so every run silently measured the /sign-in redirect and still passed. The verify used CHROME_PATH pointing at a scratchpad wrapper script (chromium --no-sandbox); nothing local is committed. `lhci collect --settings.chromeFlags=...` on the command line merges correctly. T-WEB-17 cannot see this mistake from synthetic results; the evidence records that every measured page was the money page itself.",
+    "SF-113: the LCP margin is thin. The placeholder money pages measure a 2.27 to 2.31 s median against the 2.5 s budget, with single runs from 1.5 to 2.9 s; Lighthouse attributes about 2.1 s to render delay under simulated slow 4G (the bundled fonts and 170 KB of script). PR 4's real screens will likely need font or script trimming to stay under. '200 KB' is read as 204,800 bytes of script transfer per page (Lighthouse resource-summary); Next's build table reports 103 kB first-load JS per route while Lighthouse counts 170,103 bytes of script transfer per page; the budget is asserted on Lighthouse's figure, the larger of the two.",
+    "Conformance round 2: SF-107 moved from done to blocked. Its strengthened T-WEB-8 test shows that under next dev the app's scripts are blocked by the policy, the same root cause as the SF-111 deviation; one owner decision (Option A or B) unblocks SF-107 and SF-111 together.",
+    "Final review (2026-10-31, 5 fresh-context reviewers, 0 blocker, 0 major, 16 minor). Open for the planning session or later PRs: the matcher's static-asset exclusion versus 'every response'; WEB_ORIGIN must be provisioned in Amplify for /api/lang until PR 3; @eslint/eslintrc is used by eslint.config.mjs but only hoisted, not declared; @types/* were added in SF-103 without an explicit ask; SF-104 changed the root package.json (its Do asks for it, its Files do not list it); error.tsx untested; LCP headroom thin.",
+    "PR 3 must decide how form posts pass the Origin check: Referrer-Policy no-referrer makes Chrome send Origin: null on page posts, which Contracts 'Cookies' refuses. SF-111 posts through fetch with a same-origin referrer policy, so the language switch needs JavaScript."
+  ]
 }

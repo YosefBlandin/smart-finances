@@ -1,0 +1,51 @@
+/* KeptBar, from the prototype's .kbar: field tokens only; the solid part is --field-ink, the rest the pale track. */
+.bar {
+  --fbg: var(--field-good);
+  max-width: 440px;
+  background: var(--fbg);
+  color: var(--field-soft);
+}
+
+.bar[data-field='bad'] {
+  --fbg: var(--field-bad);
+}
+
+.bar[data-field='none'] {
+  --fbg: var(--field-none);
+}
+
+.svg {
+  display: block;
+  overflow: visible;
+}
+
+.track {
+  fill: var(--field-track);
+}
+
+.solid {
+  fill: var(--field-ink);
+}
+
+/* The marker has a 2px ring in the field colour so it shows on the solid part. */
+.ring {
+  stroke: var(--fbg);
+  stroke-width: 6px;
+}
+
+.marker {
+  stroke: var(--field-ink);
+  stroke-width: 2px;
+}
+
+.text {
+  fill: var(--field-soft);
+  font-family: var(--font-display);
+  font-size: var(--t-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.strong {
+  fill: var(--field-ink);
+  font-weight: var(--w-head);
+}

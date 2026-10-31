@@ -1,27 +1,10 @@
 // The one table every importer writes into. Amounts are integer cents in memory and fixed
 // two-decimal strings on disk, so no float ever touches money.
 import { createHash } from 'node:crypto';
+import { FIELDS, KINDS } from '@smart-finances/contracts/fields';
 
-export const FIELDS = [
-  'id', // stable hash of the source identity, so re-importing never double-counts
-  'date', // YYYY-MM-DD; for month-precision rows it is the 1st of the month
-  'date_precision', // 'day' | 'month'
-  'kind', // see KINDS
-  'amount', // signed, money out is negative
-  'currency', // ISO code as recorded at the source (ARS, USD)
-  'category',
-  'merchant', // cleaned name when the source has one, else empty
-  'description_raw', // source text, kept for audit
-  'source', // 'mercadopago' | 'notion'
-  'source_ref', // where in the source the row came from
-  'country', // where the money was spent (VE, AR)
-  'flags', // '|'-separated notes for review, e.g. bcv_rate, summed, needs_review
-  'import_batch', // hash of the source file, so one bad import can be rolled back
-];
-
-// Only `expense` counts as spending and only `income` as earnings. The rest move money
-// between pockets or people and are kept so balances still add up.
-export const KINDS = ['expense', 'income', 'inflow', 'refund', 'interest', 'transfer_out', 'loan_out'];
+// The field list and the kinds live in the shared contracts package so the web app can use them too.
+export { FIELDS, KINDS };
 
 export const hashId = (...parts) => createHash('sha256').update(parts.join('␟')).digest('hex').slice(0, 16);
 export const batchId = (source, text) => `${source}:${createHash('sha256').update(text).digest('hex').slice(0, 12)}`;

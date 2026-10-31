@@ -1,0 +1,5 @@
+/* Icons take the colour of the text beside them and never shrink in a flex row. */
+.icon {
+  display: block;
+  flex: 0 0 auto;
+}

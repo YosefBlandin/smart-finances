@@ -1,5 +1,57 @@
 {
   "name": "@smart-finances/web",
   "private": true,
-  "version": "0.0.0"
+  "version": "0.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "test": "vitest run",
+    "e2e": "playwright test",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build --quiet -o storybook-static",
+    "test-storybook": "storybook build --quiet -o storybook-static && (http-server storybook-static -p 6007 -a 127.0.0.1 --silent & SERVER=$!; wait-on -t 120000 tcp:127.0.0.1:6007 && test-storybook --url http://127.0.0.1:6007; CODE=$?; kill $SERVER; exit $CODE)",
+    "lhci": "node --test scripts/lhci.test.mjs && next build && lhci collect && lhci assert",
+    "lint": "eslint . && prettier --check --no-error-on-unmatched-pattern \"{src,e2e,scripts,.storybook}/**/*.{ts,tsx,mjs,css}\" \"*.{ts,mjs,json}\""
+  },
+  "dependencies": {
+    "@fontsource/chivo": "5.3.0",
+    "@fontsource/chivo-mono": "5.3.0",
+    "@smart-finances/contracts": "0.0.0",
+    "@tabler/icons-react": "3.49.0",
+    "@tanstack/react-query": "5.104.3",
+    "@tanstack/react-query-devtools": "5.104.3",
+    "next": "15.5.28",
+    "next-intl": "4.14.9",
+    "react": "19.3.1",
+    "react-aria-components": "1.22.1",
+    "react-dom": "19.3.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@lhci/cli": "0.15.1",
+    "@playwright/test": "1.64.1",
+    "@storybook/addon-a11y": "10.6.2",
+    "@storybook/nextjs": "10.6.2",
+    "@storybook/test-runner": "0.26.0",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "15.5.28",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "http-server": "14.1.1",
+    "jsdom": "30.1.3",
+    "prettier": "3.9.10",
+    "storybook": "10.6.2",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5",
+    "wait-on": "9.5.1"
+  }
 }

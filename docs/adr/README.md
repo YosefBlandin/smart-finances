@@ -12,3 +12,4 @@ Name files `NNNN-short-title.md`. A decision is revisited in a new ADR, not edit
 | 0005 | Chunking | planned |
 | [0006](0006-imports-source-of-record.md) | Imports and the source of record | accepted |
 | [0007](0007-shared-account.md) | Stay in the shared AWS account | accepted |
+| [0008](0008-web-framework-and-host.md) | Web framework and host | accepted |

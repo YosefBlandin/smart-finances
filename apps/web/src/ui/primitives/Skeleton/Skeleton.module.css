@@ -1,0 +1,48 @@
+/* Skeleton, from the prototype's .skel: a pulse, never a spin (D-128). */
+.skeleton {
+  display: block;
+  height: 14px;
+  border-radius: var(--r-xs);
+  background: var(--line);
+  animation: pulse 1.2s infinite ease-in-out alternate;
+}
+
+.skeleton[data-width='full'] {
+  width: 100%;
+}
+
+.skeleton[data-width='wide'] {
+  width: 75%;
+}
+
+.skeleton[data-width='half'] {
+  width: 50%;
+}
+
+.skeleton[data-width='short'] {
+  width: 25%;
+}
+
+.skeleton[data-height='title'] {
+  height: var(--s5);
+}
+
+.skeleton[data-height='block'] {
+  height: var(--s7);
+  border-radius: var(--r-m);
+}
+
+@keyframes pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}

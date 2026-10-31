@@ -37,3 +37,9 @@ Thumbs.db
 # Generated or local-only web files
 apps/web/next-env.d.ts
 apps/web/design/shots/
+
+# Web app build and test output
+apps/web/storybook-static/
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/.lighthouseci/
