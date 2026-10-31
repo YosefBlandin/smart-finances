@@ -7,8 +7,9 @@
 import { IconArrowsExchange, IconCoin, IconDatabase, IconLayoutDashboard, IconListCheck, IconUpload } from '@tabler/icons-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useRef, useTransition, type FormEvent, type ReactNode } from 'react';
+import { Suspense, useRef, useState, useTransition, type FormEvent, type ReactNode } from 'react';
 import { MenuPanel } from './patterns/MenuPanel/MenuPanel';
+import { Note } from './primitives/Note/Note';
 import styles from './Shell.module.css';
 
 // Tabler outline icons at a 2px stroke, as in the prototype's rail (D-17, D-58).
@@ -119,14 +120,21 @@ function PathOnly() {
  * refuses (Contracts "Cookies"), so the post goes through fetch with a same-origin referrer policy, and the server
  * components are then rendered again in the new language. The button is server-rendered and comes in as children.
  */
-export function LangForm({ lang, children }: { lang: string; children: ReactNode }) {
+export function LangForm({ lang, failed, children }: { lang: string; failed: string; children: ReactNode }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
+  const [error, setError] = useState(false);
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
-    const res = await fetch(form.action, { method: 'POST', body: new FormData(form), referrerPolicy: 'same-origin', redirect: 'manual' });
-    if (res.type === 'opaqueredirect' || res.ok) startTransition(() => router.refresh());
+    setError(false);
+    try {
+      const res = await fetch(form.action, { method: 'POST', body: new FormData(form), referrerPolicy: 'same-origin', redirect: 'manual' });
+      if (res.type === 'opaqueredirect' || res.ok) return startTransition(() => router.refresh());
+    } catch {
+      // A network failure is reported the same way as a refusal.
+    }
+    setError(true);
   }
   return (
     <form method="post" action="/api/lang" onSubmit={onSubmit}>
@@ -135,6 +143,11 @@ export function LangForm({ lang, children }: { lang: string; children: ReactNode
         <PathAndSearch />
       </Suspense>
       {children}
+      {error ? (
+        <Note tone="error" role="alert">
+          {failed}
+        </Note>
+      ) : null}
     </form>
   );
 }

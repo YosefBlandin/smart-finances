@@ -24,7 +24,8 @@
     "inDollars": "All in dollars",
     "noRateKey": "No dollar rate yet",
     "waiting": "Waiting for you",
-    "screens": "Screens"
+    "screens": "Screens",
+    "langFailed": "The language didn’t change. Try again."
   },
   "overview": {
     "sub": "Where the money went, and what you kept.",

@@ -24,7 +24,8 @@
     "inDollars": "Todo en dólares",
     "noRateKey": "Sin cotización todavía",
     "waiting": "Te está esperando",
-    "screens": "Pantallas"
+    "screens": "Pantallas",
+    "langFailed": "El idioma no cambió. Intenta de nuevo."
   },
   "overview": {
     "sub": "En qué se fue la plata y con cuánto te quedaste.",

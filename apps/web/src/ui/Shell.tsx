@@ -49,7 +49,7 @@ export async function Shell({ address, stage, reviewCount, children }: ShellProp
         </span>
         <small>{t('shell.mfaOn')}</small>
       </p>
-      <LangForm lang={other}>
+      <LangForm lang={other} failed={t('shell.langFailed')}>
         <button type="submit" className={styles.row} lang={other}>
           <span className={styles.rowLabel}>
             <Icon name="language" size="lg" />

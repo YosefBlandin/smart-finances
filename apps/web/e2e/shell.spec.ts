@@ -258,6 +258,21 @@ test.describe('language', () => {
     expect(violations).toEqual([]);
   });
 
+  test('T-WEB-11: a refused or failed language switch says so and keeps the page as it was', async ({ page }) => {
+    await page.goto('/transactions?month=2026-05');
+    await page.route('**/api/lang', (route) => route.fulfill({ status: 403, contentType: 'application/json', body: '{}' }));
+    await page.locator('[data-account]').first().getByRole('button', { name: 'Español' }).click();
+    await expect(page.locator('[data-account]').first().getByRole('alert')).toHaveText('The language didn’t change. Try again.');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page).toHaveURL(/\/transactions\?month=2026-05$/);
+
+    await page.unroute('**/api/lang');
+    await page.route('**/api/lang', (route) => route.abort('failed'));
+    await page.locator('[data-account]').first().getByRole('button', { name: 'Español' }).click();
+    await expect(page.locator('[data-account]').first().getByRole('alert')).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  });
+
   test('T-WEB-11: the menu panel switches language too, on a tablet', async ({ page }) => {
     await page.setViewportSize({ width: 800, height: 900 });
     await page.goto('/rates');
