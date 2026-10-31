@@ -129,7 +129,7 @@
         "Status set to blocked: SF-107's verify as the brief states it (npm run e2e with next dev) is red until the owner decides the next dev deviation (deviations: SF-111, Verify, and the SF-107 entry of 2026-10-30).",
         "Owner decision (option 2) applied in c1f4fb9: playwright.config.ts webServer runs next build && next start -p 3000 with STAGE=test, never reuses a running server, timeout 300 s; .gitignore also ignores apps/web/.lighthouseci/. npm run e2e --workspace @smart-finances/web (all specs, through the scratchpad config that only sets the Chromium path) -> 22 passed (36.1s): headers 4 (T-WEB-7/8), shell 12 (T-WEB-10/11), states 6 (T-WEB-12). tsc --noEmit exit 0; lint clean; root npm test exit 0 (37 api+contracts, 214 web in 23 files, 11 infra); npm run build infra and web exit 0."
       ],
-      "review": "findings (1 major, 2 minor; all fixed in a66ca7f before commit)"
+      "review": "pass at final review (fresh context, 2026-10-31): 1 minor (matcher skips _next/static, _next/image, favicon.ico, so static files get no security headers; stock Next.js pattern, left for the planning session)"
     },
     {
       "id": "SF-108",
@@ -188,9 +188,10 @@
         "git status after the code commit: clean except ignored build output (.next, storybook-static, next-env.d.ts, tsconfig.tsbuildinfo)",
         "Conformance round 2 (2026-10-30): still blocked. The fix the findings ask for (Option A: a production webServer in playwright.config.ts; Option B: 'unsafe-eval' in script-src only when NODE_ENV is development, in middleware.ts) touches files outside SF-111 Files and needs the owner's decision on the open deviation (deviations: SF-111, Verify; decidedBy empty). Not applied.",
         "Re-run under next dev (pw.local.config.ts, the brief's verify), whole suite after the SF-112 and SF-113 fixes: 9 failed, 13 passed. The 8 SF-111 failures are unchanged (shell.spec.ts:34, 96, 132, 152, 175, 192, 234, 261, all from the blocked eval), plus the strengthened SF-107 test. Against a production build (pw.prod.config.ts) the whole suite passes: 22 passed (headers 4, shell 12, states 6).",
-        "Owner decision (option 2) applied in c1f4fb9: playwright.config.ts webServer runs next build && next start -p 3000 with STAGE=test, never reuses a running server, timeout 300 s; .gitignore also ignores apps/web/.lighthouseci/. npm run e2e --workspace @smart-finances/web (all specs, through the scratchpad config that only sets the Chromium path) -> 22 passed (36.1s): headers 4 (T-WEB-7/8), shell 12 (T-WEB-10/11), states 6 (T-WEB-12). tsc --noEmit exit 0; lint clean; root npm test exit 0 (37 api+contracts, 214 web in 23 files, 11 infra); npm run build infra and web exit 0."
+        "Owner decision (option 2) applied in c1f4fb9: playwright.config.ts webServer runs next build && next start -p 3000 with STAGE=test, never reuses a running server, timeout 300 s; .gitignore also ignores apps/web/.lighthouseci/. npm run e2e --workspace @smart-finances/web (all specs, through the scratchpad config that only sets the Chromium path) -> 22 passed (36.1s): headers 4 (T-WEB-7/8), shell 12 (T-WEB-10/11), states 6 (T-WEB-12). tsc --noEmit exit 0; lint clean; root npm test exit 0 (37 api+contracts, 214 web in 23 files, 11 infra); npm run build infra and web exit 0.",
+        "Final review fix cae1606: LangForm reported nothing when /api/lang refused or the network failed. Test first: new T-WEB-11 e2e 'a refused or failed language switch says so' failed (no alert); after: an error Note (role=alert, key shell.langFailed in en and es) shows and the page stays as it was. All e2e against the production build: 23 passed; lint clean; tsc 0; root npm test exit 0 (37, 214 web, 11); web and infra builds exit 0."
       ],
-      "review": ""
+      "review": "findings at final review (fresh context, 2026-10-31): 3 minor; silent language-switch failure fixed in cae1606; WEB_ORIGIN must be set on non-test hosts until PR 3 moves the route to the settings port; the shell.screens key and Shell.module.css fall under the brief's always-allowed extras"
     },
     {
       "id": "SF-112",
@@ -205,7 +206,7 @@
         "npm run lint --workspace @smart-finances/web -> eslint clean, Prettier clean; cd apps/web && npx tsc --noEmit -> exit 0",
         "Final profile verify (after all conformance fixes): root npm test -> exit 0 (api+contracts 37 pass, web lint clean, web vitest 23 files 214 tests pass, infra 11 pass); npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0 (/_not-found 103 kB, /sign-in 103 kB first load)"
       ],
-      "review": ""
+      "review": "findings at final review (fresh context, 2026-10-31): 5 minor, none fixed: error.tsx has no automated test; the someone-else's-resource case is simulated until PR 3's guard; the placeholder shows sign-in copy without a form and the idle footer; error.tsx always names a timeout as the cause"
     },
     {
       "id": "SF-113",
@@ -221,7 +222,7 @@
         "npm run lint --workspace @smart-finances/web -> eslint clean, Prettier clean (scripts/ and lighthouserc.json included); cd apps/web && npx tsc --noEmit -> exit 0; .lighthouseci/ output deleted after the run (not git-ignored)",
         "Final profile verify: root npm test -> exit 0; npm run build --workspace @smart-finances/infra -> exit 0; npm run build --workspace @smart-finances/web -> exit 0"
       ],
-      "review": ""
+      "review": "findings at final review (fresh context, 2026-10-31): 2 minor: no committed check proves the session cookie reaches every audited page; LCP medians 2.27 to 2.31 s against 2.5 s leave little headroom for CI noise"
     },
     {
       "id": "SF-114",
@@ -351,6 +352,8 @@
     "SF-113: apps/web/.lighthouseci/ (lhci output) is not git-ignored and .gitignore is outside SF-113 Files; it was deleted after the run. It needs a .gitignore line.",
     "SF-113: Chromium here runs as root and needs --no-sandbox. Setting it through LHCI_COLLECT__SETTINGS__CHROME_FLAGS replaced lhci's whole settings object, which dropped the Cookie header, so every run silently measured the /sign-in redirect and still passed. The verify used CHROME_PATH pointing at a scratchpad wrapper script (chromium --no-sandbox); nothing local is committed. `lhci collect --settings.chromeFlags=...` on the command line merges correctly. T-WEB-17 cannot see this mistake from synthetic results; the evidence records that every measured page was the money page itself.",
     "SF-113: the LCP margin is thin. The placeholder money pages measure a 2.27 to 2.31 s median against the 2.5 s budget, with single runs from 1.5 to 2.9 s; Lighthouse attributes about 2.1 s to render delay under simulated slow 4G (the bundled fonts and 170 KB of script). PR 4's real screens will likely need font or script trimming to stay under. '200 KB' is read as 204,800 bytes of script transfer per page (Lighthouse resource-summary); Next's build table reports 103 kB first-load JS per route while Lighthouse counts 170,103 bytes of script transfer per page; the budget is asserted on Lighthouse's figure, the larger of the two.",
-    "Conformance round 2: SF-107 moved from done to blocked. Its strengthened T-WEB-8 test shows that under next dev the app's scripts are blocked by the policy, the same root cause as the SF-111 deviation; one owner decision (Option A or B) unblocks SF-107 and SF-111 together."
+    "Conformance round 2: SF-107 moved from done to blocked. Its strengthened T-WEB-8 test shows that under next dev the app's scripts are blocked by the policy, the same root cause as the SF-111 deviation; one owner decision (Option A or B) unblocks SF-107 and SF-111 together.",
+    "Final review (2026-10-31, 5 fresh-context reviewers, 0 blocker, 0 major, 16 minor). Open for the planning session or later PRs: the matcher's static-asset exclusion versus 'every response'; WEB_ORIGIN must be provisioned in Amplify for /api/lang until PR 3; @eslint/eslintrc is used by eslint.config.mjs but only hoisted, not declared; @types/* were added in SF-103 without an explicit ask; SF-104 changed the root package.json (its Do asks for it, its Files do not list it); error.tsx untested; LCP headroom thin.",
+    "PR 3 must decide how form posts pass the Origin check: Referrer-Policy no-referrer makes Chrome send Origin: null on page posts, which Contracts 'Cookies' refuses. SF-111 posts through fetch with a same-origin referrer policy, so the language switch needs JavaScript."
   ]
 }
