@@ -306,3 +306,88 @@ test('T-WINF-2 web-server client: secret, password flow and refresh, 60-minute a
     }
   }
 });
+
+// Every Ref, GetAtt and DependsOn edge between resources; a path back to the start is a cycle.
+function findCycle(resources: Resources & Record<string, { DependsOn?: string | string[] }>): string[] | undefined {
+  const edges = new Map<string, string[]>();
+  for (const [id, r] of Object.entries(resources)) {
+    const deps = new Set([...refsIn(r.Properties ?? {})].filter((t) => t in resources));
+    for (const d of [r.DependsOn ?? []].flat()) deps.add(d);
+    edges.set(id, [...deps]);
+  }
+  const state = new Map<string, 'open' | 'done'>();
+  const path: string[] = [];
+  const visit = (id: string): string[] | undefined => {
+    if (state.get(id) === 'done') return undefined;
+    if (state.get(id) === 'open') return [...path.slice(path.indexOf(id)), id];
+    state.set(id, 'open');
+    path.push(id);
+    for (const next of edges.get(id) ?? []) {
+      const cycle = visit(next);
+      if (cycle) return cycle;
+    }
+    path.pop();
+    state.set(id, 'done');
+    return undefined;
+  };
+  for (const id of edges.keys()) {
+    const cycle = visit(id);
+    if (cycle) return cycle;
+  }
+  return undefined;
+}
+
+test('T-WINF-4 pre-sign-up trigger: wired to the pool, its environment holds no pool or client reference, it may read only web-client-id and signup-open, and the data stack has no cycle', () => {
+  for (const stage of STAGES) {
+    const json = synth(stage).toJSON() as { Resources: Resources };
+    const resources = json.Resources;
+
+    const fns = Object.entries(resources).filter(
+      ([, r]) => r.Type === 'AWS::Lambda::Function' && r.Properties.FunctionName === `smart-finances-${stage}-pre-sign-up`,
+    );
+    assert.equal(fns.length, 1, `${stage}: one pre-sign-up function`);
+    const [fnId, fn] = fns[0];
+    assert.equal(fn.Properties.Runtime, 'nodejs22.x');
+
+    const pool = resources[PINNED.pool.logicalId].Properties;
+    assert.deepEqual(pool.LambdaConfig?.PreSignUp, { 'Fn::GetAtt': [fnId, 'Arn'] }, 'the pool calls the trigger before sign-up');
+
+    // D-109: no pool or client id from the environment; the trigger reads its stage's parameters at run time.
+    const variables = fn.Properties.Environment?.Variables ?? {};
+    assert.deepEqual(variables, { STAGE: stage }, 'the environment holds the stage only');
+    assert.equal(refsIn(fn.Properties.Environment ?? {}).size, 0, 'no Ref or GetAtt in the environment');
+
+    // The function's role may read exactly the two parameters, named as strings (no Ref to the client or pool).
+    const roleId = (fn.Properties.Role as { 'Fn::GetAtt': [string, string] })['Fn::GetAtt'][0];
+    const policies = Object.values(resources).filter(
+      (r) => r.Type === 'AWS::IAM::Policy' && (r.Properties.Roles as Array<{ Ref: string }>).some((x) => x.Ref === roleId),
+    );
+    const statements = policies.flatMap((p) => p.Properties.PolicyDocument.Statement as Array<Record<string, any>>);
+    const ssmStatements = statements.filter((s) => [s.Action].flat().some((a: string) => a.startsWith('ssm:')));
+    assert.equal(ssmStatements.length, 1, 'one SSM statement');
+    const [ssmStatement] = ssmStatements;
+    assert.equal(ssmStatement.Effect, 'Allow');
+    assert.deepEqual([ssmStatement.Action].flat(), ['ssm:GetParameters']);
+    const arns = [ssmStatement.Resource].flat().map((r) => JSON.stringify(r));
+    assert.equal(arns.length, 2, 'two parameters');
+    assert.ok(arns.some((a) => a.includes(`:parameter/smart-finances/${stage}/web-client-id`)), 'web-client-id');
+    assert.ok(arns.some((a) => a.includes(`:parameter/smart-finances/${stage}/signup-open`)), 'signup-open');
+    const arnTargets = [...refsIn(ssmStatement.Resource)].filter((t) => !t.startsWith('AWS::'));
+    assert.deepEqual(arnTargets, [], 'parameter ARNs reference no resource of the stack (pseudo parameters only)');
+    for (const s of statements) {
+      for (const action of [s.Action].flat() as string[]) {
+        assert.ok(action.startsWith('logs:') || action === 'ssm:GetParameters', `${stage}: no other right (${action})`);
+      }
+    }
+
+    // Cognito may invoke the trigger, from this pool only.
+    const permissions = Object.values(resources).filter(
+      (r) => r.Type === 'AWS::Lambda::Permission' && JSON.stringify(r.Properties.FunctionName).includes(fnId),
+    );
+    assert.equal(permissions.length, 1);
+    assert.equal(permissions[0].Properties.Principal, 'cognito-idp.amazonaws.com');
+    assert.deepEqual(permissions[0].Properties.SourceArn, { 'Fn::GetAtt': [PINNED.pool.logicalId, 'Arn'] });
+
+    assert.equal(findCycle(resources), undefined, `${stage}: no dependency cycle`);
+  }
+});

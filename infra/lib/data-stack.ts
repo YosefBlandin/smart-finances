@@ -1,10 +1,12 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
+import { makeFunction } from './function';
 
 export interface DataStackProps extends cdk.StackProps {
   stage: string;
@@ -17,6 +19,7 @@ export interface DataStackProps extends cdk.StackProps {
  * using a value without blocking a deploy of this stack.
  */
 export class DataStack extends cdk.Stack {
+  readonly stage: string;
   readonly table: dynamodb.Table;
   readonly uploads: s3.Bucket;
   readonly userPool: cognito.UserPool;
@@ -26,6 +29,7 @@ export class DataStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props: DataStackProps) {
     super(scope, id, props);
+    this.stage = props.stage;
 
     // Real data lives in staging and prod: keep it if the stack or resource is removed.
     const keep = props.stage === 'staging' || props.stage === 'prod';
@@ -87,6 +91,28 @@ export class DataStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
+    const prefix = `/smart-finances/${props.stage}`;
+
+    // Who may sign up (D-98, D-109, D-118): the web-server client only, while signup-open is
+    // "true", and no disposable domain. The trigger reads web-client-id and signup-open at run
+    // time; its environment holds no pool or client id and its grant names the two parameters
+    // as plain ARNs, so the pool, the client and the trigger do not depend on each other.
+    const preSignUp = makeFunction(this, {
+      name: 'pre-sign-up',
+      entry: 'infra/lambda/pre-sign-up.mjs',
+      memoryMb: 256,
+      timeoutSeconds: 5,
+    });
+    preSignUp.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['ssm:GetParameters'],
+        resources: ['web-client-id', 'signup-open'].map((name) =>
+          this.formatArn({ service: 'ssm', resource: 'parameter', resourceName: `${prefix.slice(1)}/${name}` }),
+        ),
+      }),
+    );
+    this.userPool.addTrigger(cognito.UserPoolOperation.PRE_SIGN_UP, preSignUp);
+
     // Public client for the web app: no secret, SRP sign-in and refresh only, no hosted UI or OAuth.
     this.webClient = this.userPool.addClient('WebClient', {
       generateSecret: false,
@@ -115,7 +141,6 @@ export class DataStack extends cdk.Stack {
       secretStringValue: this.webServerClient.userPoolClientSecret,
     });
 
-    const prefix = `/smart-finances/${props.stage}`;
     new ssm.StringParameter(this, 'TableNameParam', {
       parameterName: `${prefix}/table-name`,
       stringValue: this.table.tableName,

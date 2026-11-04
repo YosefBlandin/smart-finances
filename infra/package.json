@@ -12,8 +12,10 @@
     "diff:dev:personal": "cdk diff smart-finances-api-dev --profile personal -c stage=dev"
   },
   "dependencies": {
+    "@aws-sdk/client-ssm": "3.1152.0",
     "aws-cdk-lib": "^2.170.0",
-    "constructs": "^10.4.2"
+    "constructs": "^10.4.2",
+    "disposable-email-domains": "1.0.62"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
