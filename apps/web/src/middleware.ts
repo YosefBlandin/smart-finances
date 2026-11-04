@@ -73,7 +73,9 @@ function withHeaders(res: NextResponse, policy: string, path: string): NextRespo
   res.headers.set('Content-Security-Policy', policy);
   res.headers.set('Strict-Transport-Security', 'max-age=31536000');
   res.headers.set('X-Content-Type-Options', 'nosniff');
-  res.headers.set('Referrer-Policy', 'no-referrer');
+  // same-origin, not no-referrer: with no-referrer Chrome sends Origin: null on our own form posts and server actions,
+  // which guarded()'s exact Origin check refuses; same-origin keeps the real Origin and sends no referrer elsewhere (D-153).
+  res.headers.set('Referrer-Policy', 'same-origin');
   res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   if (under(path, SIGNED_IN_ROUTES)) res.headers.set('Cache-Control', 'no-store');
   return res;

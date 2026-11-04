@@ -13,7 +13,7 @@ import type { SessionStore } from '@/ports/session-store';
 import type { Settings } from '@/ports/settings';
 import { MemoryAccountStore } from './memory/account-store';
 import { MemoryBreachChecker } from './memory/breach-checker';
-import { MemoryClock } from './memory/clock';
+import { MemoryClock, SystemClock } from './memory/clock';
 import { MemoryCounter } from './memory/counter';
 import { MemoryDataApi } from './memory/data-api';
 import { MemoryIdentityProvider } from './memory/identity-provider';
@@ -59,8 +59,7 @@ export const PORT_NAMES = [
   'dataApi',
 ] as const satisfies readonly (keyof Container)[];
 
-export function memoryContainer(settings: Settings = new MemorySettings()): Container {
-  const clock = new MemoryClock(Date.now());
+export function memoryContainer(settings: Settings = new MemorySettings(), clock: Clock = new MemoryClock(Date.now())): Container {
   return {
     clock,
     settings,
@@ -83,4 +82,18 @@ export function createContainer(): Container {
   // STAGE=test: the test defaults, with any setting the environment names (a local port, say) taking precedence.
   if (process.env.STAGE === 'test') return memoryContainer(new MemorySettings(parseSettings(process.env)));
   throw new Error(`No real adapters yet for STAGE=${process.env.STAGE ?? ''}; PR 3 and PR 4 add them.`);
+}
+
+const SHARED = Symbol.for('smart-finances.container');
+type WithShared = typeof globalThis & { [SHARED]?: Container };
+
+// One container per server process, for server actions (guarded()): under STAGE=test the memory stores must keep a
+// proof-of-work claim or a counter from one request to the next, and real adapters reuse their SDK clients. It lives on
+// globalThis so every bundle of the app sees the same one. A failed build is not kept, so the next call tries again.
+export function getContainer(): Container {
+  const g = globalThis as WithShared;
+  if (!g[SHARED]) {
+    g[SHARED] = process.env.STAGE === 'test' ? memoryContainer(new MemorySettings(parseSettings(process.env)), new SystemClock()) : createContainer();
+  }
+  return g[SHARED];
 }

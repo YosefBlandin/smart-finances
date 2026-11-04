@@ -12,7 +12,7 @@ test('T-WEB-8: every page response carries the content policy with a fresh nonce
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
     expect(res.headers()['x-content-type-options']).toBe('nosniff');
-    expect(res.headers()['referrer-policy']).toBe('no-referrer');
+    expect(res.headers()['referrer-policy']).toBe('same-origin');
   }
   expect(nonceOf(a.headers()['content-security-policy'] ?? '')).not.toBe(nonceOf(b.headers()['content-security-policy'] ?? ''));
 });

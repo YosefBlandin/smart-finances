@@ -62,9 +62,22 @@ describe('T-WEB-7: headers on every response', () => {
     for (const res of [run('/sign-in'), run('/overview', '__Host-sid=x'), run('/overview'), run('/api/health')]) {
       expect(res.headers.get('strict-transport-security')).toBe('max-age=31536000');
       expect(res.headers.get('x-content-type-options')).toBe('nosniff');
-      expect(res.headers.get('referrer-policy')).toBe('no-referrer');
+      expect(res.headers.get('referrer-policy')).toBe('same-origin');
       expect(res.headers.get('permissions-policy')).toBe('camera=(), microphone=(), geolocation=()');
       expect(res.headers.get('content-security-policy')).toMatch(/'nonce-[^']+'/);
+    }
+  });
+
+  it('T-WAUTH-7: Referrer-Policy is same-origin on pages, redirects and route handlers, so our own posts carry the real Origin (D-153)', () => {
+    for (const res of [
+      run('/sign-in'),
+      run('/sign-up'),
+      run('/overview'),
+      run('/overview', '__Host-sid=x'),
+      run('/api/auth/pow'),
+      run('/api/lang'),
+    ]) {
+      expect(res.headers.get('referrer-policy')).toBe('same-origin');
     }
   });
 

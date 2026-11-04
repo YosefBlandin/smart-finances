@@ -459,7 +459,12 @@
     },
     "idle": {
       "banner": "You were signed out after 30 minutes without activity. Sign in to pick up where you left off."
-    }
+    },
+    "forbidden": "This form didn’t come from this site, so we didn’t send it. Reload the page and try again.",
+    "proofFailed": "The automatic check didn’t pass. Reload the page and try again.",
+    "limited": "Too many tries from this connection. Try again in {minutes} minutes.",
+    "invalid": "Some of what you typed isn’t valid. Check it and try again.",
+    "unavailable": "Something went wrong on our side. Reload the page and try again."
   },
   "ui": {
     "typeToConfirm": "Type {word} to confirm"

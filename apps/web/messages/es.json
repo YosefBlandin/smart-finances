@@ -459,7 +459,12 @@
     },
     "idle": {
       "banner": "Cerramos tu sesión tras 30 minutos sin actividad. Entra de nuevo para seguir donde lo dejaste."
-    }
+    },
+    "forbidden": "Este formulario no vino de este sitio, así que no lo enviamos. Recarga la página y vuelve a intentar.",
+    "proofFailed": "La verificación automática no pasó. Recarga la página y vuelve a intentar.",
+    "limited": "Hubo demasiados intentos desde esta conexión. Vuelve a intentar en {minutes} minutos.",
+    "invalid": "Algo de lo que escribiste no es válido. Revísalo y vuelve a intentar.",
+    "unavailable": "Algo falló de nuestro lado. Recarga la página y vuelve a intentar."
   },
   "ui": {
     "typeToConfirm": "Escribe {word} para confirmar"
