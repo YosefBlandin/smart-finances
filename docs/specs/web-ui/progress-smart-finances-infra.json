@@ -65,9 +65,19 @@
     },
     {
       "id": "SF-123",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "9bdbdb6",
+      "evidence": [
+        "Tests first: T-WINF-5 (7 tests) in infra/lambda/custom-message.test.mjs: sign-up, resent and reset code emails in en and es from clientMetadata.lang, subjects \"Your Cuenta code\" / \"Tu código de Cuenta\", one sentence with {####} exactly once, tú in Spanish, English fallback for missing/unknown/non-string lang, es-ES/ES/es-419 as Spanish, codeParameter used, other trigger sources (AdminCreateUser, UpdateUserAttribute, VerifyUserAttribute, Authentication) returned unchanged, no SMS text, nothing logged",
+        "Fail first: node --test infra/lambda/custom-message.test.mjs: 0 pass, 1 fail, Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/user/smart-finances/infra/lambda/custom-message.mjs'",
+        "Implementation: infra/lambda/custom-message.mjs exports MESSAGES, languageOf and handler (no AWS client, nothing to inject); handles CustomMessage_SignUp, CustomMessage_ResendCode and CustomMessage_ForgotPassword; en \"Your Cuenta code is {####}.\", es \"Tu código de Cuenta es {####}.\"; no logging. DataStack: makeFunction 'custom-message' (128 MB, 5 s, environment { STAGE } only, role with its log writes only) and userPool.addTrigger(CUSTOM_MESSAGE)",
+        "Scratch synth check (not committed, qa stage): pool LambdaConfig has CustomMessage GetAtt CustomMessage7D2CB8D5 next to PreSignUp; Lambda permission from this pool's ARN; CustomMessageRoleDefaultPolicy only logs:CreateLogStream, logs:PutLogEvents; esbuild bundled the trigger locally to 789 bytes, no Docker or network",
+        "Verify: node --test infra/lambda/custom-message.test.mjs exit 0: # tests 7 # pass 7 # fail 0",
+        "npm test --workspace @smart-finances/infra exit 0: # tests 14 # pass 14 # fail 0 (T-WINF-4 cycle check still green with the second trigger)",
+        "npm run build --workspace @smart-finances/infra (tsc --noEmit) exit 0",
+        "Profile verify: npm test (root) exit 0: api+contracts 37/37 pass; web lint clean; web vitest 23 files, 214/214 pass; infra 14/14 pass; no stray next-server",
+        "Profile verify: npm run lint --workspace @smart-finances/web exit 0: \"All matched files use Prettier code style!\""
+      ],
       "review": ""
     },
     {
@@ -149,6 +159,8 @@
     "SF-121: Cognito's password policy cannot express the 128-character upper bound from Contracts \"Password and code rules\"; the pool sets only the minimum of 12, so the web server must enforce the maximum (PR 3 domain rules).",
     "SF-122: neither root npm test nor the infra workspace's test script (test/*.test.ts) runs infra/lambda/*.test.mjs, so T-WINF-3 runs only through the brief's explicit `node --test infra/lambda/pre-sign-up.test.mjs`; CI will not run it unless a script or the SF-132 workflow adds it. Changing infra/package.json scripts is outside this task's Files and the package-only allowance, so it was left as is.",
     "SF-122: disposable-email-domains' newest release is 1.0.62 from 2022-09-28 (unmaintained on npm since), so the list is about four years old; it inlines into a 2.6 MB bundle. Per D-118 there is no qa allow-list: qa needs signup-open set to \"true\" by a person, and a missing parameter means closed.",
-    "SF-122: the trigger refuses every sign-up whose callerContext.clientId is not web-client-id, including AdminCreateUser (no client id); nothing in the spec creates users that way."
+    "SF-122: the trigger refuses every sign-up whose callerContext.clientId is not web-client-id, including AdminCreateUser (no client id); nothing in the spec creates users that way.",
+    "SF-123: the task's Files list infra/lib/data-stack.ts but not infra/test/data-stack.test.ts, so the CUSTOM_MESSAGE wiring has no committed synth assertion (checked once with a scratch synth); like SF-122's T-WINF-3, T-WINF-5 is not run by root npm test or the infra test script, only by the explicit node --test command.",
+    "SF-123: the email is plain text through Cognito's default sender (SES waits for D-77); the same one-sentence message serves sign-up, resent and reset codes, so the email does not say which flow sent it. Admin invites, attribute-change and sign-in code messages keep Cognito's English defaults."
   ]
 }
