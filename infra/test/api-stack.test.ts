@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { makeFunction } from '../lib/function';
 import { addStage } from '../lib/stage';
+import { apiAccessLogGroupName } from '../lib/api-stack';
 
 const env = { account: '111111111111', region: 'us-east-1' };
 const STAGES = ['dev', 'qa', 'staging', 'prod'];
@@ -245,5 +246,35 @@ test('T-WINF-6 the API serves many people: both clients in the audience, throttl
     const buckets = ofType(resources(data), 'AWS::S3::Bucket');
     assert.equal(buckets.length, 1);
     assert.equal(buckets[0][1].Properties.CorsConfiguration, undefined, `${stage}: the data stack sets no bucket browser rule (D-88)`);
+  }
+});
+
+test('T-WINF-12 the API stage writes a JSON access log (status, route key, request time, request id only) kept one month', () => {
+  for (const stage of STAGES) {
+    const { api } = addStage(new cdk.App({ context }), stage, env);
+    const json = Template.fromStack(api).toJSON();
+    const all = json.Resources as Record<string, Resource & { DeletionPolicy?: string }>;
+
+    assert.equal(apiAccessLogGroupName(stage), `/aws/apigateway/smart-finances-${stage}-api-access`);
+    const groups = ofType(all, 'AWS::Logs::LogGroup').filter(([, g]) => g.Properties.LogGroupName === apiAccessLogGroupName(stage));
+    assert.equal(groups.length, 1, `${stage}: one access log group by its fixed name`);
+    const [[groupId, group]] = groups;
+    assert.equal(group.Properties.RetentionInDays, 30, 'one month');
+    assert.equal(all[groupId].DeletionPolicy, 'Delete', 'removed with the stack, so the fixed name can be created again');
+
+    const [[, apiStage]] = ofType(all, 'AWS::ApiGatewayV2::Stage');
+    const settings = apiStage.Properties.AccessLogSettings;
+    assert.ok(settings, `${stage}: the stage has access logging`);
+    assert.deepEqual(settings.DestinationArn, { 'Fn::GetAtt': [groupId, 'Arn'] });
+    assert.deepEqual(JSON.parse(settings.Format), {
+      requestId: '$context.requestId',
+      requestTime: '$context.requestTime',
+      routeKey: '$context.routeKey',
+      status: '$context.status',
+    });
+    // No source IP, identity, user agent, path or path parameters, authorizer claims or errors with values.
+    for (const banned of ['identity', 'sourceIp', 'userAgent', 'path', 'authorizer', 'requestTimeEpoch']) {
+      assert.ok(!settings.Format.includes(`$context.${banned}`), `${stage}: no $context.${banned}`);
+    }
   }
 });

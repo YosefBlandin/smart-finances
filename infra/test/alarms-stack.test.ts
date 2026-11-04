@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { AlarmsStack, SECURITY_EVENTS, STAGE_FUNCTIONS } from '../lib/alarms-stack';
+import { apiAccessLogGroupName } from '../lib/api-stack';
 
 const env = { account: '111111111111', region: 'us-east-1' };
 const STAGES = ['qa', 'staging', 'prod'];
@@ -104,7 +105,7 @@ test('T-WINF-12 alarms: one metric filter per security event on the Amplify app 
   for (const stage of STAGES) {
     const { resources } = synth(stage);
     const names = stageValueNames(resources, stage);
-    const filters = ofType(resources, 'AWS::Logs::MetricFilter');
+    const filters = ofType(resources, 'AWS::Logs::MetricFilter').filter(([, f]) => f.Properties.LogGroupName !== apiAccessLogGroupName(stage));
     assert.equal(filters.length, SECURITY_EVENTS.length, `${stage}: one filter per event`);
     const byEvent = new Map<string, any>();
     for (const [, f] of filters) {
@@ -118,6 +119,19 @@ test('T-WINF-12 alarms: one metric filter per security event on the Amplify app 
       byEvent.set(t.MetricName, f.Properties.FilterPattern);
     }
     for (const event of SECURITY_EVENTS) assert.equal(byEvent.get(event), `{ $.event = "${event}" }`, `${stage}: filter for ${event}`);
+  }
+});
+
+test('T-WINF-12 alarms: a metric filter counts status 429 in the API access log', () => {
+  for (const stage of STAGES) {
+    const { resources } = synth(stage);
+    const filters = ofType(resources, 'AWS::Logs::MetricFilter').filter(([, f]) => f.Properties.LogGroupName === apiAccessLogGroupName(stage));
+    assert.equal(filters.length, 1, `${stage}: one filter on ${apiAccessLogGroupName(stage)}`);
+    const p = filters[0][1].Properties;
+    assert.equal(p.FilterPattern, '{ $.status = "429" }');
+    assert.deepEqual(p.MetricTransformations, [{ MetricNamespace: `SmartFinances/${stage}`, MetricName: 'Api429', MetricValue: '1' }]);
+    const created = ofType(resources, 'AWS::Logs::LogGroup').filter(([, g]) => g.Properties.LogGroupName === apiAccessLogGroupName(stage));
+    assert.equal(created.length, 0, 'the API stack owns the log group');
   }
 });
 
@@ -150,6 +164,7 @@ test('T-WINF-12 alarms: every contract alarm exists, the heartbeat treats missin
           'AWS/ApiGateway/Count Sum 300 [ApiId=select(2,split(/,select(0,split(.,{{api-url}}))))]',
         ],
       },
+      [name('api-throttles')]: { op: 'GreaterThanThreshold', threshold: 0, metrics: [`${ns}/Api429 Sum 300 []`] },
       [name('log-heartbeat')]: { op: 'LessThanThreshold', threshold: 1, missing: 'breaching', metrics: [`${ns}/health Sum 3600 []`] },
       [name('stuck-deletion')]: { op: 'GreaterThanThreshold', threshold: 0, metrics: [`${ns}/StuckDeletions Maximum 3600 []`] },
       [name('ses-bounce-rate')]: { op: 'GreaterThanThreshold', threshold: 0.05, metrics: ['AWS/SES/Reputation.BounceRate Maximum 300 []'] },

@@ -1,11 +1,15 @@
 import * as cdk from 'aws-cdk-lib';
 import * as apigw from 'aws-cdk-lib/aws-apigatewayv2';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { Construct } from 'constructs';
 import { makeFunction } from './function';
 import { readStageValues } from './stage-values';
+
+/** The HTTP API's access log group, by fixed name so the alarms stack can filter it without a reference. */
+export const apiAccessLogGroupName = (stage: string) => `/aws/apigateway/smart-finances-${stage}-api-access`;
 
 export interface ApiStackProps extends cdk.StackProps {
   stage: string;
@@ -46,6 +50,23 @@ export class ApiStack extends cdk.Stack {
     // Throttle the default stage for many people, still bounded so a loop or abuse cannot run up cost (D-81).
     const stage = this.httpApi.defaultStage?.node.defaultChild as apigw.CfnStage;
     stage.defaultRouteSettings = { throttlingRateLimit: 50, throttlingBurstLimit: 100 };
+
+    // JSON access log, so the alarms stack can count 429s (HTTP APIs publish no throttle metric).
+    // Request id, time, route key and status only: no source IP, identity, user agent or path values.
+    const accessLogs = new logs.LogGroup(this, 'AccessLogs', {
+      logGroupName: apiAccessLogGroupName(props.stage),
+      retention: logs.RetentionDays.ONE_MONTH,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+    stage.accessLogSettings = {
+      destinationArn: accessLogs.logGroupArn,
+      format: JSON.stringify({
+        requestId: '$context.requestId',
+        requestTime: '$context.requestTime',
+        routeKey: '$context.routeKey',
+        status: '$context.status',
+      }),
+    };
 
     // Tokens must come from this stage's pool, issued to the public client or the web-server
     // client (D-53, D-73); the public client leaves once the web server signs in on qa (D-98).

@@ -7,6 +7,7 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import { Construct } from 'constructs';
+import { apiAccessLogGroupName } from './api-stack';
 import { readStageValues } from './stage-values';
 
 /** Stages with a web stack, and so with alarms (dev has neither). */
@@ -45,6 +46,9 @@ export interface AlarmsStackProps extends cdk.StackProps {
  * Amplify app's existing log group, /aws/amplify/<app id> (D-112); the heartbeat alarm breaches
  * when the hourly job's health line is missing for an hour (D-107). The qa stack alone creates
  * the account-wide monthly cost budget, at 50, 80 and 100% to its topic.
+ *
+ * Data API 429s are counted from the API stack's access log (by its fixed name), since HTTP APIs
+ * publish no throttle metric; that log group must exist before this stack deploys.
  *
  * Values are read from SSM at deploy time (D-33): alarm-email, amplify-app-id, api-url (the HTTP
  * API's id is its host's first label) and, on qa, monthly-budget-usd. A missing one fails the
@@ -147,6 +151,16 @@ export class AlarmsStack extends cdk.Stack {
       }),
       2,
     );
+
+    // HTTP APIs publish no 429 metric, so the API stack's access log is counted instead.
+    new logs.MetricFilter(this, 'Api429', {
+      logGroup: logs.LogGroup.fromLogGroupName(this, 'ApiAccessLogs', apiAccessLogGroupName(stage)),
+      filterPattern: logs.FilterPattern.stringValue('$.status', '=', '429'),
+      metricNamespace: namespace,
+      metricName: 'Api429',
+      metricValue: '1',
+    });
+    add('api-throttles', 'Any data API 429 in 5 minutes', new cloudwatch.Metric({ namespace, metricName: 'Api429', statistic: 'Sum', period: five }), 0);
 
     for (const fn of STAGE_FUNCTIONS) {
       const functionName = `smart-finances-${stage}-${fn}`;
