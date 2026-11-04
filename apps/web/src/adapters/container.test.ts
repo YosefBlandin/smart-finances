@@ -176,7 +176,8 @@ describe('T-WEB-14: memory adapters keep the port rules', () => {
     const assoc = await idp.associate(first.session);
     if (!assoc.ok) throw new Error('associate failed');
     expect(assoc.secret).toMatch(/^[A-Z2-7]+$/);
-    expect(await idp.verifySetup(assoc.session, '000000')).toEqual({ ok: true });
+    const setUp = await idp.verifySetup(email, assoc.session, '000000');
+    expect(setUp.ok && 'tokens' in setUp).toBe(true);
     const second = await idp.passwordAuth(email, 'a long enough password');
     if (!second.ok || !('challenge' in second)) throw new Error('expected a challenge');
     expect(second.challenge).toBe('SOFTWARE_TOKEN_MFA');
