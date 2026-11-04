@@ -98,5 +98,9 @@ jobs:
 
       # Amplify auto-build is off (D-93): start the job for this commit, wait for it and for /api/health to report
       # the commit, then compare the headers with the contract (RK-2, RK-3).
+      # Ordering: the header check expects Referrer-Policy same-origin (D-153), which the middleware sends only once
+      # SF-145 (auth PR) lands, so this step goes green only when infra ships with or after that change (D-121).
+      # IAM: the OIDC stack grants Amplify job rights for qa only by default; once the staging and prod apps exist,
+      # a person redeploys it with -c amplifyStages=qa,staging,prod, or this step gets AccessDenied there.
       - name: Release the web app
         run: node scripts/amplify-release.mjs --stage "${STAGE}" --branch "${GITHUB_REF_NAME}" --sha "${GITHUB_SHA}"
