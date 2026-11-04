@@ -457,3 +457,89 @@ test('T-WINF-9 upload bucket rule: POST from the branch address and the stage cd
     'https://a.example.test',
   ]);
 });
+
+/** The housekeeping function of a stage's template, with its role id. */
+function housekeeping(all: Record<string, Resource>, stage: string) {
+  const fns = ofType(all, 'AWS::Lambda::Function').filter(([, f]) => f.Properties.FunctionName === `smart-finances-${stage}-housekeeping`);
+  assert.equal(fns.length, 1, `${stage}: one housekeeping function`);
+  const [id, fn] = fns[0];
+  return { id, fn, roleId: fn.Properties.Role['Fn::GetAtt'][0] as string };
+}
+
+test('T-WINF-10 T-WINF-11 housekeeping runs hourly with the pool, the tables, the branch health address and the delete-function-name parameter name', () => {
+  for (const stage of STAGES) {
+    const { stack, resources } = synth(stage);
+    const names = stageValueNames(resources, stage);
+    // delete-function-name may be missing until data PR 3, so it is never read at deploy time:
+    // the deploy-time reader still asks for the same names only.
+    assert.deepEqual([...names.values()].sort(), STAGE_VALUES);
+
+    const { id, fn } = housekeeping(resources, stage);
+    assert.equal(fn.Properties.Runtime, 'nodejs22.x');
+    const env = Object.fromEntries(Object.entries(fn.Properties.Environment.Variables).map(([k, v]) => [k, flat(v, names)]));
+    assert.deepEqual(env, {
+      STAGE: stage,
+      USER_POOL_ID: '{{user-pool-id}}',
+      SESSIONS_TABLE: `{{Ref:${stack.resolve(stack.sessionsTable.tableName).Ref}}}`,
+      ACCOUNTS_TABLE: `{{Ref:${stack.resolve(stack.accountsTable.tableName).Ref}}}`,
+      HEALTH_URL: `https://${BRANCH[stage]}.{{amplify-app-id}}.amplifyapp.com/api/health`,
+      DELETE_FUNCTION_PARAMETER: `/smart-finances/${stage}/delete-function-name`,
+    });
+    // Up to a few deletions of 25 s each, well inside the hour.
+    assert.ok(fn.Properties.Timeout >= 120 && fn.Properties.Timeout <= 900, `timeout ${fn.Properties.Timeout}`);
+
+    // Hourly, and one run means one health call: no automatic retry of a failed run.
+    const rules = ofType(resources, 'AWS::Events::Rule');
+    assert.equal(rules.length, 1, `${stage}: one schedule`);
+    const rule = rules[0][1].Properties;
+    assert.equal(rule.ScheduleExpression, 'rate(1 hour)');
+    assert.equal(rule.State, 'ENABLED');
+    assert.deepEqual(rule.Targets.map((t: any) => t.Arn['Fn::GetAtt'][0]), [id]);
+    const invokeConfigs = ofType(resources, 'AWS::Lambda::EventInvokeConfig').filter(([, c]) => c.Properties.FunctionName.Ref === id);
+    assert.equal(invokeConfigs.length, 1);
+    assert.equal(invokeConfigs[0][1].Properties.MaximumRetryAttempts, 0);
+    const permissions = ofType(resources, 'AWS::Lambda::Permission').filter(([, p]) => p.Properties.FunctionName['Fn::GetAtt']?.[0] === id);
+    assert.deepEqual(permissions.map(([, p]) => p.Properties.Principal), ['events.amazonaws.com'], 'only the schedule may invoke it');
+  }
+});
+
+test('T-WINF-10 T-WINF-11 housekeeping grants: ListUsers and two admin calls on this pool, that one delete function, that one parameter, the tables', () => {
+  for (const stage of STAGES) {
+    const { stack, resources } = synth(stage);
+    const names = stageValueNames(resources, stage);
+    const { roleId } = housekeeping(resources, stage);
+    const role = resources[roleId];
+    assert.deepEqual(role.Properties.AssumeRolePolicyDocument.Statement, [
+      { Action: 'sts:AssumeRole', Effect: 'Allow', Principal: { Service: 'lambda.amazonaws.com' } },
+    ]);
+    assert.equal(role.Properties.ManagedPolicyArns, undefined, 'no managed policies');
+
+    const sessions = stack.resolve(stack.sessionsTable.tableArn)['Fn::GetAtt'][0];
+    const accounts = stack.resolve(stack.accountsTable.tableArn)['Fn::GetAtt'][0];
+    assert.deepEqual(
+      grants(resources, roleId, names).filter((g) => !/^logs:(CreateLogStream|PutLogEvents) /.test(g)),
+      [
+        ...cross(
+          ['cognito-idp:AdminDeleteUser', 'cognito-idp:AdminUserGlobalSignOut', 'cognito-idp:ListUsers'],
+          ['arn:aws:cognito-idp:us-east-1:111111111111:userpool/{{user-pool-id}}'],
+        ),
+        // D-104: one function, one grant. The data service's delete function (api-delete).
+        `lambda:InvokeFunction arn:aws:lambda:us-east-1:111111111111:function:smart-finances-${stage}-api-delete`,
+        `ssm:GetParameter arn:aws:ssm:us-east-1:111111111111:parameter/smart-finances/${stage}/delete-function-name`,
+        // Deleting accounts rows are found by a scan of that one table; sessions by the bySub index.
+        `dynamodb:DeleteItem {{${accounts}.Arn}}`,
+        `dynamodb:Scan {{${accounts}.Arn}}`,
+        `dynamodb:DeleteItem {{${sessions}.Arn}}`,
+        `dynamodb:Query {{${sessions}.Arn}}/index/bySub`,
+      ].sort(),
+      `${stage}: housekeeping grants exactly as listed`,
+    );
+    // Its log writes go to its own group only.
+    for (const g of grants(resources, roleId, names).filter((g) => /^logs:/.test(g))) {
+      assert.match(g, /^logs:(CreateLogStream|PutLogEvents) \{\{HousekeepingLogs[0-9A-F]+\.Arn\}\}$/, g);
+    }
+    // The compute role gains nothing from this task: ListUsers and invoke stay with housekeeping.
+    const computeId = stack.resolve(stack.computeRole.roleArn)['Fn::GetAtt'][0];
+    assert.ok(!grants(resources, computeId, names).some((g) => /ListUsers|lambda:/.test(g)));
+  }
+});

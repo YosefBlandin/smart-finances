@@ -1,5 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
@@ -31,9 +33,11 @@ export interface WebStackProps extends cdk.StackProps {
  * on the app's existing log group, D-112) and the compute role the web server runs as, and sets
  * the app's platform and roles, the branch's auto-build, compute role and variables through custom
  * resources that may pass only those two roles and clear them on delete (D-93, D-110, D-111), and
- * puts the upload bucket's browser rule with the branch address (D-88).
+ * puts the upload bucket's browser rule with the branch address (D-88). It also runs the hourly
+ * housekeeping function (D-104, D-106, D-107).
  * Values from the data stack and from people are read from SSM at deploy time (D-33), so synth
- * needs no stage values and there are no CloudFormation exports.
+ * needs no stage values and there are no CloudFormation exports; delete-function-name alone is
+ * read by housekeeping at run time, since it may not exist yet.
  */
 export class WebStack extends cdk.Stack {
   readonly stage: string;
@@ -213,6 +217,77 @@ export class WebStack extends cdk.Stack {
 
     const contextOrigins = (this.node.tryGetContext('webOrigins') ?? {}) as Record<string, string[]>;
     this.setUploadBucketRule(props.webOrigins ?? contextOrigins[props.stage] ?? []);
+
+    this.addHousekeeping();
+  }
+
+  /**
+   * The hourly job (D-104, D-106, D-107; infra/lambda/housekeeping.mjs): removes unconfirmed
+   * sign-ups after 24 hours, finishes stuck account deletions through the data service's delete
+   * function, puts StuckDeletions, and calls the branch's /api/health once.
+   *
+   * delete-function-name may not exist until data PR 3, so it is read by the function at run time,
+   * never by the deploy-time reader (a missing parameter would fail the deploy). Its grants: list
+   * users and the two admin calls it makes on this pool, invoke that one delete function (D-104:
+   * one function, one grant; the data service's smart-finances-<stage>-api-delete), read that one
+   * parameter, scan and delete accounts rows, query bySub and delete session rows. A failed run is
+   * not retried, so each hour calls /api/health once; its errors alarm (D-107).
+   */
+  private addHousekeeping() {
+    const parameterName = `/smart-finances/${this.stage}/delete-function-name`;
+    const fn = makeFunction(this, {
+      name: 'housekeeping',
+      entry: 'infra/lambda/housekeeping.mjs',
+      memoryMb: 256,
+      timeoutSeconds: 300,
+      environment: {
+        USER_POOL_ID: this.values.userPoolId,
+        SESSIONS_TABLE: this.sessionsTable.tableName,
+        ACCOUNTS_TABLE: this.accountsTable.tableName,
+        HEALTH_URL: `${this.webOrigin}/api/health`,
+        DELETE_FUNCTION_PARAMETER: parameterName,
+      },
+    });
+    fn.configureAsyncInvoke({ retryAttempts: 0 });
+
+    fn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['cognito-idp:ListUsers', 'cognito-idp:AdminDeleteUser', 'cognito-idp:AdminUserGlobalSignOut'],
+        resources: [
+          this.formatArn({ service: 'cognito-idp', resource: 'userpool', resourceName: this.values.userPoolId, arnFormat: cdk.ArnFormat.SLASH_RESOURCE_NAME }),
+        ],
+      }),
+    );
+    fn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['lambda:InvokeFunction'],
+        resources: [
+          this.formatArn({
+            service: 'lambda',
+            resource: 'function',
+            resourceName: `smart-finances-${this.stage}-api-delete`,
+            arnFormat: cdk.ArnFormat.COLON_RESOURCE_NAME,
+          }),
+        ],
+      }),
+    );
+    fn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['ssm:GetParameter'],
+        resources: [
+          this.formatArn({ service: 'ssm', resource: 'parameter', resourceName: parameterName.slice(1), arnFormat: cdk.ArnFormat.SLASH_RESOURCE_NAME }),
+        ],
+      }),
+    );
+    fn.addToRolePolicy(new iam.PolicyStatement({ actions: ['dynamodb:Scan', 'dynamodb:DeleteItem'], resources: [this.accountsTable.tableArn] }));
+    fn.addToRolePolicy(new iam.PolicyStatement({ actions: ['dynamodb:DeleteItem'], resources: [this.sessionsTable.tableArn] }));
+    fn.addToRolePolicy(new iam.PolicyStatement({ actions: ['dynamodb:Query'], resources: [`${this.sessionsTable.tableArn}/index/bySub`] }));
+
+    new events.Rule(this, 'HousekeepingSchedule', {
+      description: `Hourly housekeeping of smart-finances ${this.stage}`,
+      schedule: events.Schedule.rate(cdk.Duration.hours(1)),
+      targets: [new targets.LambdaFunction(fn)],
+    });
   }
 
   /**
