@@ -235,7 +235,7 @@
     },
     {
       "id": "SF-132",
-      "status": "blocked",
+      "status": "todo",
       "commit": "",
       "evidence": [
         "Conformance fix: commit 9d76280 adds a 'Lambda tests' step (node --test infra/lambda/*.test.mjs) to .github/workflows/deploy.yml after 'Test' and before any AWS credentials, so CI runs T-WINF-3, T-WINF-5, T-WINF-8 (amplify-vars half), T-WINF-10 and T-WINF-11 (G-merge). Before: root npm test output had none of the four lambda files (37 api/contracts, 214 web, 36 infra; only the two T-WINF-10/11 synth tests in infra/test). The rest of SF-132 is still to do; status stays todo",
@@ -294,8 +294,8 @@
       "task": "SF-132",
       "from": "SF-132 Files (.github/workflows/deploy.yml, infra/lib/github-oidc-stack.ts, scripts/amplify-release.mjs, scripts/amplify-release.test.mjs); D-93, D-113; existing test T-CI-1 (apps/api/test/ci.test.mjs, SF-10)",
       "proposal": "T-CI-1 asserts that deploy.yml has exactly two 'cdk deploy' lines, so deploying the web and alarms stacks as SF-132 requires turns root npm test red. Allow SF-132 to also edit apps/api/test/ci.test.mjs T-CI-1: keep its existing order checks (npm ci < npm test < credentials < data < API), add web and alarms deploy lines after API and the 'node scripts/amplify-release.mjs' release line after alarms, and change the count to exactly four cdk deploy lines. Tried in a scratch copy: passes against the trial deploy.yml. No other change outside the task's Files. Trial patch kept outside the repo (see SF-132 evidence)",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "owner, in chat, 2026-11-04: SF-132 may update T-CI-1 in apps/api/test/ci.test.mjs; standing rule for PRs 2 to 4: an existing test that asserts behaviour a task's decisions change may be updated in that task and recorded as a surprise; production code outside a task's Files still stops",
+      "newDecision": "pending: the planning session records the standing rule as a decision"
     }
   ],
   "surprises": [
