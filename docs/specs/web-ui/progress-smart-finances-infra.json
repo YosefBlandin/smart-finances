@@ -209,9 +209,17 @@
     },
     {
       "id": "SF-133",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "3d1f8e6",
+      "evidence": [
+        "Tests first: none listed (docs task); the existing T-DOC-2 (apps/api/test/docs.test.mjs) guards the threat model",
+        "Changes: docs/threat-model.md v3 (assets: sessions and accounts tables, web client secret, counter HMAC key, compute role, RUM monitor and guest pool; B1 now browser to web server (opaque __Host- cookies, exact Origin) and web server to API (Bearer access token); new boundaries B9 open sign-up, B10 web server compute role, B11 both tables, B12 secrets, B13 RUM, each with STRIDE rows; **done** only where code and a test exist (T-WINF-1..15, T-WEB-7, T-INF-4); abuse cases AC9 to AC12; LLM08 multi-user; 'Single user' removed from Out of scope, no-WAF floods and qa strangers' data added); docs/adr/0009-sessions-and-sign-up.md (D-72, D-73, D-87, D-91, D-92, D-93, D-98, D-104, D-115, D-117, D-120, with narrowings D-109, D-118, D-122, D-153 named) and its row in docs/adr/README.md; docs/runbooks/lost-authenticator.md (identity proof from the account email plus details only the person knows, 72-hour wait, admin MFA reset, global sign-out, session rows removed via bySub, notice per D-122 until SES); docs/specs/data-architecture/decisions.md rows D-35 (D-81), D-36 (D-95), D-37 (D-133), source 'web-ui spec, 2026-11-04', proposed, no existing row edited",
+        "Fix round 1: first root npm test exit 1, T-DOC-2 failed: 'The input did not match the regular expression /self sign-up/' (the B1 spoofing row's 'self sign-up off' wording was removed); the B9 row now says the pool's self sign-up is on (T-WINF-1, D-61); node --test apps/api/test/docs.test.mjs: 2 pass, 0 fail",
+        "Verify: npm test (root) exit 0: api+contracts 37/37 pass; web lint clean; web vitest 23 files, 214/214 pass; infra 36/36 pass; no stray next-server",
+        "Profile verify: npm run build --workspace @smart-finances/infra (tsc --noEmit) exit 0",
+        "Profile verify: npm run lint --workspace @smart-finances/web exit 0: \"All matched files use Prettier code style!\"",
+        "npm test --workspace @smart-finances/infra exit 0: # tests 36 # pass 36 # fail 0"
+      ],
       "review": ""
     },
     {
@@ -287,6 +295,10 @@
     "SF-129: the alarms stack is not yet wired into a stage (SF-131); it throws for dev, matching 'dev gets no web or alarms stack'. The topic has no KMS key (CloudWatch and Budgets would need a key policy).",
     "SF-130: the content policy (architecture.md Response headers) allows connect-src dataplane.rum and cognito-identity but not sts.amazonaws.com, so the browser must use the identity pool's enhanced flow (GetId + GetCredentialsForIdentity); the pool keeps classic flow off. aws-rum-web switches to the basic (classic) flow, which calls STS, when guestRoleArn is passed in its config, so SF-172 should pass identityPoolId but not guestRoleArn even though rum-guest-role-arn is published (the brief asks for it). Not verifiable offline.",
     "SF-130: the Web server settings contract (D-110) has no RUM names, and T-WINF-8 pins the branch variables to exactly the 12 contract names, so the RUM ids are only stage parameters; how the browser bundle gets them (build-time variables via amplify.yml, or the server rendering them into the page) is left to SF-172 and may need a contract row.",
-    "SF-130: the app monitor's domain is <branch>.<app id>.amplifyapp.com from the deploy-time amplify-app-id; RUM rejects events from other origins, so localhost and the STAGE=test production build send nothing that counts (T-WSCR-20 turns RUM off under STAGE=test anyway). The identity pool and app monitor go with the stack on qa rollback (c). sessionSampleRate is 1 (every session); cost per D-135 is about 1 dollar per 100,000 events."
+    "SF-130: the app monitor's domain is <branch>.<app id>.amplifyapp.com from the deploy-time amplify-app-id; RUM rejects events from other origins, so localhost and the STAGE=test production build send nothing that counts (T-WSCR-20 turns RUM off under STAGE=test anyway). The identity pool and app monitor go with the stack on qa rollback (c). sessionSampleRate is 1 (every session); cost per D-135 is about 1 dollar per 100,000 events.",
+    "SF-133: architecture.md Docs also asks for README.md \"Layout\" and \"Status\" updates, and D-104 asks for a data-architecture follow-up row (the hourly job invokes the data service's delete function); neither README.md nor a D-104 row is in SF-133's Files or Do list, so both were left out. README \"Layout\" does not list docs/runbooks yet.",
+    "SF-133: apps/api/test/docs.test.mjs T-DOC-2 asserts the threat model contains the literal phrase 'self sign-up' (written when it was off); the v3 text keeps it by saying the pool's self sign-up is on.",
+    "SF-133: the runbook's authenticator reset (admin-set-user-mfa-preference with the software token disabled, on a pool where TOTP is required) is expected to send the next sign-in to the setup step, but that was not checked against AWS (no AWS calls); the runbook asks the owner to confirm it once on qa with a synthetic account first.",
+    "SF-133: apps/web/messages/en.json auth.lost.wait still says 'A person answers, so it can take a day or two', which D-148 replaces with the 72-hour wording, and apps/web/src/middleware.ts still sets Referrer-Policy no-referrer where D-153 says same-origin; both are outside SF-133 (left for the auth and screens PRs)."
   ]
 }
