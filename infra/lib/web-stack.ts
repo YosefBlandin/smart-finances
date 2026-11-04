@@ -472,10 +472,10 @@ export class WebStack extends cdk.Stack {
     branch.node.addDependency(app);
 
     // Contracts "Web server settings": the names WebStack writes. Only ARNs of secrets, never a
-    // value; COMMIT_SHA comes from amplify.yml.
+    // value; COMMIT_SHA comes from amplify.yml. No AWS_REGION: Amplify reserves the AWS_ prefix
+    // (owner decision on SF-126); the web server reads the region from its runtime (D-89).
     const variables: Record<string, string> = {
       STAGE: this.stage,
-      AWS_REGION: this.region,
       API_URL: this.values.apiUrl,
       USER_POOL_ID: this.values.userPoolId,
       WEB_CLIENT_ID: this.values.webClientId,

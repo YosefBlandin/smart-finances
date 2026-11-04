@@ -135,6 +135,14 @@ test('T-WINF-8 no secret value: a secret-like name must be an _ARN, refused befo
   }
 });
 
+test('T-WINF-8 Amplify reserves the AWS_ prefix: such a name is refused before any call', async () => {
+  for (const name of ['AWS_REGION', 'AWS_DEFAULT_REGION', 'AWS_ANYTHING']) {
+    const amplify = fakeAmplify();
+    await assert.rejects(makeHandler({ amplify })(event('Create', { Variables: { ...ours, [name]: 'us-east-1' } })), /AWS_/, name);
+    assert.equal(amplify.calls.length, 0, `${name}: nothing sent`);
+  }
+});
+
 test('T-WINF-8 refuses a value that is not a string, a bad name, no variables or a missing app or branch', async () => {
   const bad = [
     { Variables: { STAGE: 1 } },

@@ -335,7 +335,6 @@ test('T-WINF-8 branch variables: one merging custom resource with exactly the co
     // Contracts "Web server settings": every name WebStack writes (COMMIT_SHA is amplify.yml's).
     assert.deepEqual(variables, {
       STAGE: stage,
-      AWS_REGION: 'us-east-1',
       API_URL: '{{api-url}}',
       USER_POOL_ID: '{{user-pool-id}}',
       WEB_CLIENT_ID: '{{web-client-id}}',
@@ -347,6 +346,9 @@ test('T-WINF-8 branch variables: one merging custom resource with exactly the co
       WEB_ORIGIN: `https://${BRANCH[stage]}.{{amplify-app-id}}.amplifyapp.com`,
       SUPPORT_ADDRESS: '{{support-address}}',
     });
+    // Amplify reserves the AWS_ prefix: no branch variable may start with it (owner decision on
+    // SF-126; the web server reads the region from its runtime, D-89).
+    assert.deepEqual(Object.keys(p.Variables).filter((k) => k.startsWith('AWS_')), [], 'no AWS_ variable');
     // No secret value: the only secret in the stack is referenced by its ARN (Ref), never resolved.
     assert.ok(!JSON.stringify(p).includes('resolve:secretsmanager'), 'no dynamic secret reference');
     assert.ok(!JSON.stringify(p).includes('SecretString'), 'no secret string');

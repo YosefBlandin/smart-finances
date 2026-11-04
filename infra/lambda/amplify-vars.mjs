@@ -5,7 +5,7 @@
 // update it removes only keys it owned before and owns no longer; on delete only its own keys.
 //
 // No secret value is ever a variable: a name that looks like a secret must be an ARN (…_ARN), and
-// is refused before any call otherwise. Nothing is logged and nothing is returned as Data, since
+// is refused before any call otherwise. Amplify reserves the AWS_ prefix, so such a name is refused too. Nothing is logged and nothing is returned as Data, since
 // the branch map may hold values people set by hand.
 import { AmplifyClient, GetBranchCommand, UpdateBranchCommand } from '@aws-sdk/client-amplify';
 
@@ -20,6 +20,7 @@ export function ownedVariables(variables) {
   for (const [name, value] of entries) {
     if (!NAME.test(name)) throw new Error(`amplify-vars: bad variable name ${JSON.stringify(name)}`);
     if (typeof value !== 'string') throw new Error(`amplify-vars: ${name} must be a string`);
+    if (name.startsWith('AWS_')) throw new Error(`amplify-vars: ${name}: Amplify reserves the AWS_ prefix`);
     if (SECRET_LIKE.test(name) && !name.endsWith('_ARN')) {
       throw new Error(`amplify-vars: ${name} looks like a secret; only its ARN may be a variable`);
     }
