@@ -129,9 +129,18 @@
     },
     {
       "id": "SF-127",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "bc3cb8f",
+      "evidence": [
+        "Tests first: T-WINF-9 in infra/test/web-stack.test.ts for qa, staging and prod with cdk.json's context: one S3 SDK-call custom resource; Create and Update putBucketCors { Bucket: {{bucket-name}}, CORSConfiguration: { CORSRules: [{ AllowedMethods: ['POST'], AllowedOrigins: [https://<branch>.{{amplify-app-id}}.amplifyapp.com, ...cdk.json webOrigins[stage]] }] } }; physical id bucket-cors/{{bucket-name}}; Delete deleteBucketCors { Bucket } ignoring NoSuchBucket; the provider role's only s3 grant is s3:PutBucketCORS on arn:aws:s3:::{{bucket-name}}; no bucket created; a context override shows the stage's origins pass through unchanged and in order. T-WINF-8's whole provider-role grant set gains that one s3 grant (SdkCall test type gains physicalResourceId)",
+        "Fail first: node --require ts-node/register --test test/web-stack.test.ts: 9 pass, 2 fail. T-WINF-9 'qa: one bucket rule custom resource' 0 !== 1; T-WINF-8 PassRole/provider grant set: actual lacks 's3:PutBucketCORS arn:aws:s3:::{{bucket-name}}'",
+        "Implementation: WebStackProps gains optional webOrigins (defaults to the webOrigins context entry for the stage, the list addStage passes the data stack); WebStack.setUploadBucketRule: AwsCustomResource UploadBucketCors on the shared provider, installLatestAwsSdk false, fromStatements s3:PutBucketCORS on the bucket ARN (S3 authorizes DeleteBucketCors with the same action)",
+        "Mutation checks (each reverted): dropping the cdk.json origins and adding PUT to AllowedMethods each fail T-WINF-9",
+        "Verify: npm test --workspace @smart-finances/infra exit 0: # tests 25 # pass 25 # fail 0",
+        "npm run build --workspace @smart-finances/infra (tsc --noEmit) exit 0",
+        "Profile verify: npm test (root) exit 0: api+contracts 37/37 pass; web lint clean; web vitest 23 files, 214/214 pass; infra 25/25 pass; no stray next-server",
+        "Profile verify: npm run lint --workspace @smart-finances/web exit 0: \"All matched files use Prettier code style!\""
+      ],
       "review": ""
     },
     {
@@ -206,6 +215,8 @@
     "SF-126: the web stack now reads api-url, bucket-name, support-address and web-client-id at deploy time; a missing parameter fails the deploy. api-url is published by SF-124's ApiStack change, which is blocked (deviation pending), and support-address is set by a person; release.md lists support-address as blocking only the auth tasks' qa check, but it now also blocks the first web stack deploy.",
     "SF-126: the contract table has the web stack write AWS_REGION as a branch variable, and the stack does. Amplify Hosting has been reported to refuse environment variable names starting with AWS_ (reserved prefix); not verifiable offline. If the first qa deploy fails on the variables resource, the likely fix is to drop AWS_REGION from the variables (the compute runtime sets AWS_REGION itself) and change the contract row; the reviewer may want to decide that before the deploy.",
     "SF-126: clearing the roles on delete sends iamServiceRoleArn '' and computeRoleArn '' to UpdateApp/UpdateBranch; the SDK model allows empty strings but whether Amplify treats '' as remove is not verifiable offline (rollback (c) on qa would show it). The app and branch calls run on the Lambda runtime's bundled SDK (installLatestAwsSdk false); computeRoleArn exists in client-amplify since early 2025.",
-    "SF-126: the app and branch updates share CDK's AwsCustomResource singleton provider, so its role (StageValuesRole) now also holds amplify:UpdateApp, amplify:UpdateBranch and the conditioned iam:PassRole; T-WINF-8 pins that role's whole grant set. The variables custom resource uses cr.Provider, which adds CDK's framework onEvent function and role (invoke on amplify-vars only). Delete of the variables resource with an empty resulting map would send UpdateBranch with {}; whether Amplify then clears the map is not verifiable offline."
+    "SF-126: the app and branch updates share CDK's AwsCustomResource singleton provider, so its role (StageValuesRole) now also holds amplify:UpdateApp, amplify:UpdateBranch and the conditioned iam:PassRole; T-WINF-8 pins that role's whole grant set. The variables custom resource uses cr.Provider, which adds CDK's framework onEvent function and role (invoke on amplify-vars only). Delete of the variables resource with an empty resulting map would send UpdateBranch with {}; whether Amplify then clears the map is not verifiable offline.",
+    "SF-127: SF-124 is still blocked, so the data stack still sets the bucket's CorsConfiguration from webOrigins; once the web stack is wired (SF-131) two writers manage the same bucket rule. The web stack's putBucketCors replaces the whole rule, and a later data stack update that touches the bucket's Cors property would overwrite it (dropping the branch address), while deleting the web stack (qa) runs deleteBucketCors and removes the rule the data stack set too. SF-124 removing the data stack's rule ends both; it should land before SF-131 wires the web stack.",
+    "SF-127: WebStack takes the stage's extra origins from an optional webOrigins prop, falling back to the webOrigins context entry, because infra/lib/stage.ts is SF-131's file; SF-131 can pass the list addStage already computes. dev still gets no web stack, so the dev bucket has a rule only while the data stack sets one (see SF-124's surprise)."
   ]
 }
