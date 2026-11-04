@@ -82,7 +82,7 @@
     },
     {
       "id": "SF-124",
-      "status": "blocked",
+      "status": "todo",
       "commit": "",
       "evidence": [
         "Tests first: T-WINF-6 written in infra/test/api-stack.test.ts (per stage: the API reader reads web-client-id, the JWT audience is [user-pool-client-id, web-client-id], no CorsConfiguration on the HTTP API, DefaultRouteSettings 50/100, an SSM parameter /smart-finances/<stage>/api-url, no CorsConfiguration on the data stack's bucket)",
@@ -204,8 +204,8 @@
       "task": "SF-124",
       "from": "SF-124 Files (infra/lib/api-stack.ts, infra/lib/data-stack.ts, infra/test/api-stack.test.ts); D-81, D-88, T-WINF-6",
       "proposal": "Allow SF-124 to also edit two existing tests that assert the behaviour D-81/D-88 remove: infra/test/data-stack.test.ts T-INF-3 (drop the bucket CorsConfiguration POST-from-webOrigins assertion and the 'no CORS when webOrigins is empty' line; assert no CorsConfiguration instead) and infra/test/stacks.test.ts T-INF-6 (reader names gain web-client-id; webOrigins no longer reach the bucket CORS, keep the api.webOrigins assertions or move origins to the web stack in SF-127). No production-code change beyond the task's Files. Also note: dev gets no web stack (SF-131), so after this task the dev bucket has no CORS rule and local uploads from http://localhost:3000 to the dev bucket stop working unless SF-127 or a follow-up covers dev",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "owner, in chat, 2026-11-04: SF-124 may update infra/test/data-stack.test.ts (T-INF-3) and infra/test/stacks.test.ts (T-INF-6) to the new behaviour; the dev bucket's missing browser rule is accepted, since local development points at qa",
+      "newDecision": "pending: the planning session records it"
     }
   ],
   "surprises": [
@@ -235,6 +235,7 @@
     "SF-128: \"put StuckDeletions\" is done with an Embedded Metric Format log line (namespace SmartFinances/<stage>, metric StuckDeletions, Dimensions [[]]), because @aws-sdk/client-cloudwatch is not in the brief's allowed packages; no cloudwatch:PutMetricData grant is needed. SF-129's alarm must use the metric with no dimensions. Whether CloudWatch accepts an empty dimension set from EMF is not verifiable offline; if the metric does not appear on qa, the fallback is one dimension (e.g. Stage) and the alarm follows.",
     "SF-128: the brief's grants say \"the tables\", but finding rows with status deleting needs a Scan of the accounts table (pk only, no index on status), which the compute role does not have; the housekeeping role gets dynamodb:Scan on the accounts table only. The accounts table holds one small row per person, so the hourly scan is cheap at this scale. The job does not read housekeeping-hmac-secret-arn (architecture's parameter table lists housekeeping as a reader for counter keys, D-115, but the task's Do names no counter work; counters expire by TTL).",
     "SF-128: the run is not retried (async MaximumRetryAttempts 0), so a failed run calls /api/health once and the next comes an hour later; the heartbeat alarm (SF-129, missing for 1 hour) can therefore trip on a single failed health call or a run that misses its window. Housekeeping has no grace period before finishing a deleting row, so it may run the same steps as the person's own finishing session; every step is safe to repeat (not found and a changed row count as done).",
-    "SF-128: like the other infra/lambda tests, housekeeping.test.mjs runs only through the explicit node --test command, not root npm test or the infra test script."
+    "SF-128: like the other infra/lambda tests, housekeeping.test.mjs runs only through the explicit node --test command, not root npm test or the infra test script.",
+    "The container restarted during SF-128's review fix round; its half-made edits were stashed (git stash, 'interrupted SF-128 fix round'), and the round was re-run from the committed state."
   ]
 }
