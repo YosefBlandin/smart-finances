@@ -113,6 +113,16 @@ export class DataStack extends cdk.Stack {
     );
     this.userPool.addTrigger(cognito.UserPoolOperation.PRE_SIGN_UP, preSignUp);
 
+    // Code emails in the person's language (D-11): sign-up, resent and reset codes in en or es
+    // from the clientMetadata.lang the web server sends. It reads nothing and needs no grant.
+    const customMessage = makeFunction(this, {
+      name: 'custom-message',
+      entry: 'infra/lambda/custom-message.mjs',
+      memoryMb: 128,
+      timeoutSeconds: 5,
+    });
+    this.userPool.addTrigger(cognito.UserPoolOperation.CUSTOM_MESSAGE, customMessage);
+
     // Public client for the web app: no secret, SRP sign-in and refresh only, no hosted UI or OAuth.
     this.webClient = this.userPool.addClient('WebClient', {
       generateSecret: false,
