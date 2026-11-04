@@ -83,9 +83,20 @@
     },
     {
       "id": "SF-147",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "a60021f",
+      "evidence": [
+        "Tests first: apps/web/src/adapters/cognito.test.ts (T-WAUTH-18 x14: 11 for the Cognito adapter with a hand-written fake SDK client, 3 for the memory fake). First run without the adapter: \"Error: Cannot find module './cognito'\" (no tests). With a stub cognito.ts (secretHash throws, class without methods): \"Tests 14 failed (14)\"; reasons: \"Error: not implemented\" (secret hash), \"TypeError: idp.signUp is not a function\" and the like for every adapter method, and for the memory fake \"AssertionError: 123456: expected { ok: false, reason: 'bad_session' } to deeply equal { ok: false, reason: 'bad_code' }\" (old verifySetup(session, code) signature), \"expected [ …(2) ] to deeply equal [ …(2) ]\" (random subs) and \"expected { ok: true } to deeply equal { ok: false, reason: 'exists' }\" (email not lower-cased).",
+        "Secret hash vectors computed independently with openssl dgst -sha256 -hmac (base64(HMAC-SHA256(secret, username + client id))) for an email and a sub username.",
+        "Verify: npm test --workspace @smart-finances/web -- src/adapters/cognito.test.ts exit 0: \"Test Files 1 passed (1) Tests 14 passed (14)\"; with src/adapters/container.test.ts (T-WEB-14) \"Tests 28 passed (28)\"",
+        "Profile verify: npm test (root) exit 0: node --test api+contracts 37/37 pass; web lint clean; web vitest \"Test Files 25 passed (25) Tests 248 passed (248)\"; infra 41/41 pass; strays killed after",
+        "Profile verify: npm run build --workspace @smart-finances/infra exit 0",
+        "Profile verify: npm run lint --workspace @smart-finances/web exit 0 (eslint clean; \"All matched files use Prettier code style!\" after prettier --write on the touched files)",
+        "Profile verify: apps/web npx tsc --noEmit exit 0",
+        "Profile verify: npm run build --workspace @smart-finances/web exit 0",
+        "Dependency: @aws-sdk/client-cognito-identity-provider 3.1152.0 (Values) in apps/web/package.json; package-lock.json gains one line (the package was already hoisted for infra at the same version); libc fields restored with the brief's script",
+        "No AWS call: the Cognito adapter is tested only with a hand-written fake client that records each command's class name and input and answers from a script; the secret comes from a fake SecretStore"
+      ],
       "review": ""
     },
     {
@@ -140,6 +151,12 @@
     "SF-141: createContainer still refuses outside STAGE=test (T-WEB-14 asserts it) because the other ports have no real adapters yet; EnvSettings, SecretsManagerStore and JsonLogger exist but are wired into createContainer only when every port has one (a later task). Under STAGE=test the container now builds MemorySettings from parseSettings(process.env), so a set variable (for example WEB_ORIGIN) overrides the test default.",
     "SF-141: @aws-sdk/client-secrets-manager is pinned at 3.1152.0, the version every other @aws-sdk client in apps/api and infra uses, not the newest by 2026-10-21 (3.1155.0), so one @aws-sdk/core and smithy set is shared.",
     "SF-141: the logger refuses a field when any word of its name (camelCase, snake_case, kebab-case split) is password, code, secret, token, email or ip, so accessToken, client_ip and emailHash are refused too; zip, codec and description are allowed. The memory logger applies the same check. Event names are not checked against the Contracts list (T-WEB-14's fake still logs 'sign_in').",
-    "SF-141: no fresh-context reviewer ran in this executor (no subagent tool here); review is left empty for the workflow's reviewer."
+    "SF-141: no fresh-context reviewer ran in this executor (no subagent tool here); review is left empty for the workflow's reviewer.",
+    "SF-147: the brief names ports/IdentityProvider.ts and adapters/memory/identity.ts, but PR 1 created ports/identity-provider.ts and adapters/memory/identity-provider.ts (kebab-case, as in SF-141); those existing files were edited, no new files added.",
+    "SF-147: the Contracts port lists verifySetup(session, code) with no result, but Cognito needs RespondToAuthChallenge(MFA_SETUP) with USERNAME and SECRET_HASH after VerifySoftwareToken to finish the first sign-in, and the States table says a valid setup code goes on to consent and a session. The port is now verifySetup(email, session, code) → { tokens }, mirroring respondCode; the memory fake returns tokens too. T-WEB-14 in apps/web/src/adapters/container.test.ts called the old signature and was updated (D-157). SF-149 should use the new signature.",
+    "SF-147: IdentityFailure gains 'bad_password' (InvalidPasswordException at sign-up or reset confirm) and 'refused' (UserLambdaValidationException, the pre-sign-up trigger's refusal: closed, disposable or another client, AC-19) so the use cases can show the plain refusal; no existing code switched on the union.",
+    "SF-147: unverifiable without AWS: the adapter sends the lower-cased email as USERNAME and in the SECRET_HASH for RespondToAuthChallenge (Contracts: the email for sign-in calls). Some pools with email as the username attribute want the internal username (USER_ID_FOR_SRP, the sub) there; the qa walk-through (release.md HUMAN step) should confirm setup and code succeed, else respondCode/verifySetup need the sub from the challenge parameters.",
+    "SF-147: the adapter also sends clientMetadata.lang on resend (a code email the custom message trigger also renders), not only on sign-up and reset. The memory fake now lower-cases emails, gives deterministic subs (00000000-0000-4000-8000-<n in hex>, the nth sign-up of a fake) and records codeEmails { email, kind, lang } for the code-email cap tests of SF-148 and SF-151; forgot for an unknown email records nothing and replies ok.",
+    "SF-147: createContainer still refuses outside STAGE=test (the other real adapters do not exist yet); CognitoIdentityProvider is not wired in. No fresh-context reviewer ran in this executor (no subagent tool); review is left empty for the workflow's reviewer."
   ]
 }
