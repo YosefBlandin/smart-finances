@@ -19,6 +19,7 @@ new GithubOidcStack(app, 'smart-finances-github-oidc', {
   allowedBranches: ['main', 'staging', 'qa'],
 });
 
-// Per-stage data and API stacks: dev (local), qa, staging, prod.
+// Per-stage stacks, deployed in this order: data, API, web, alarms (D-89); dev (local) has only
+// data and API, qa, staging and prod have all four. addStage pins them to us-east-1.
 const stage = app.node.tryGetContext('stage') ?? 'dev';
 addStage(app, stage, env);
