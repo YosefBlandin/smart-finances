@@ -31,9 +31,19 @@
     },
     {
       "id": "SF-141",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "7d25f88",
+      "evidence": [
+        "Tests first: apps/web/src/adapters/adapters.test.ts (T-WAUTH-1 x16, T-WAUTH-2 x4). First run without the adapters: \"Error: Cannot find module './env-settings'\" (Test Files 1 failed, no tests). With throwing stubs in env-settings.ts, secrets.ts and log.ts: \"Tests 19 failed | 1 passed (20)\"; reasons: 'not implemented' throws, e.g. \"AssertionError: API_URL: expected [Function] to throw error matching /\\bAPI_URL\\b/ but got 'not implemented'\", the amplify.yml test failing on AWS_REGION still in the grep line, and T-WAUTH-2 'expected [Function] to throw' / 'expected 0 lines to have length 2'. The one pass was the guard that the test ARNs match the memory secret store (true before and after).",
+        "Verify: npm test --workspace @smart-finances/web -- src/adapters/adapters.test.ts exit 0: \"Test Files 1 passed (1) Tests 20 passed (20)\"; src/adapters (with container.test.ts T-WEB-14) \"Tests 34 passed (34)\"",
+        "Profile verify: npm test (root) exit 0: node --test api+contracts 37/37 pass; web lint clean; web vitest \"Test Files 24 passed (24) Tests 234 passed (234)\"; infra 41/41 pass; strays killed after",
+        "Profile verify: npm run build --workspace @smart-finances/infra exit 0",
+        "Profile verify: npm run lint --workspace @smart-finances/web exit 0 (eslint clean; \"All matched files use Prettier code style!\" after prettier --write on the new test file)",
+        "Profile verify: apps/web npx tsc --noEmit exit 0",
+        "Profile verify: npm run build --workspace @smart-finances/web exit 0",
+        "Dependency: @aws-sdk/client-secrets-manager 3.1152.0 (Values) in apps/web/package.json; package-lock.json gains only its entries (20 lines); npm 10 dropped 52 libc fields, restored with the brief's script",
+        "No AWS call: the Secrets Manager adapter is tested only with a hand-written fake client (send records the SecretId); e2e not run (not in this task's verify; nothing in app/ calls the container yet)"
+      ],
       "review": ""
     },
     {
@@ -124,6 +134,12 @@
   "deviations": [],
   "surprises": [
     "SF-140: drift still reports infra/lib/alarms-stack.ts#AlarmsStack and infra/lib/web-stack.ts#WebStack as NEW (\"a task creates it; not checked\") although both files exist on feature/web-ui after PR 2 merged; drift classifies by the briefs, not by the tree, so they are not verified against the pin (qa 903321c lacks them). Exit 0 under --strict.",
-    "SF-140: the infra test count is 41 at this baseline (11 at PR 2's baseline), from PR 2's infra tests; the progress baseline object had no e2e field, so one was added (23 e2e tests)."
+    "SF-140: the infra test count is 41 at this baseline (11 at PR 2's baseline), from PR 2's infra tests; the progress baseline object had no e2e field, so one was added (23 e2e tests).",
+    "SF-141: the brief names ports/{Settings,SecretStore,Logger}.ts, but PR 1 (SF-108) created them kebab-case as ports/settings.ts, secret-store.ts and logger.ts; those existing files were edited, no new port files added (T-WEB-14 counts 13).",
+    "SF-141: WebSettings.AWS_REGION (SF-108) became REGION, filled from the runtime's AWS_REGION else us-east-1, so the settings no longer look like a branch variable (D-159). The test defaults' secret ARNs changed from arn:test:* to Secrets Manager-shaped ARNs on the all-zero account (arn:aws:secretsmanager:us-east-1:000000000000:secret:test/...), because the schema refuses anything but a Secrets Manager ARN; the memory secret store follows TEST_SETTINGS. No test outside this task asserted the old values.",
+    "SF-141: createContainer still refuses outside STAGE=test (T-WEB-14 asserts it) because the other ports have no real adapters yet; EnvSettings, SecretsManagerStore and JsonLogger exist but are wired into createContainer only when every port has one (a later task). Under STAGE=test the container now builds MemorySettings from parseSettings(process.env), so a set variable (for example WEB_ORIGIN) overrides the test default.",
+    "SF-141: @aws-sdk/client-secrets-manager is pinned at 3.1152.0, the version every other @aws-sdk client in apps/api and infra uses, not the newest by 2026-10-21 (3.1155.0), so one @aws-sdk/core and smithy set is shared.",
+    "SF-141: the logger refuses a field when any word of its name (camelCase, snake_case, kebab-case split) is password, code, secret, token, email or ip, so accessToken, client_ip and emailHash are refused too; zip, codec and description are allowed. The memory logger applies the same check. Event names are not checked against the Contracts list (T-WEB-14's fake still logs 'sign_in').",
+    "SF-141: no fresh-context reviewer ran in this executor (no subagent tool here); review is left empty for the workflow's reviewer."
   ]
 }
