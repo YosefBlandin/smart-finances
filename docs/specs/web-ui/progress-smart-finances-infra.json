@@ -1,20 +1,30 @@
 {
   "spec": "web-ui",
   "repo": "smart-finances-infra",
-  "brief": "",
-  "tool": "",
-  "model": "",
+  "brief": "pr-smart-finances-infra.md@locked-v6",
+  "tool": "Claude Code (cloud session, workflow subagent)",
+  "model": "claude-opus-5-5",
   "baseline": {
-    "tests": "",
-    "lint": "",
-    "typecheck": ""
+    "tests": "root npm test exit 0: node --test api+contracts 37/37 pass; web vitest 23 files, 214/214 pass; infra 11/11 pass",
+    "lint": "npm run lint --workspace @smart-finances/web exit 0: eslint 0 problems, prettier \"All matched files use Prettier code style!\"",
+    "typecheck": "npm run build --workspace @smart-finances/infra (tsc --noEmit) exit 0; apps/web npx tsc --noEmit exit 0"
   },
   "tasks": [
     {
       "id": "SF-120",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "none (no code change; baseline at 15f16c1)",
+      "evidence": [
+        "Tests first: none (baseline task, no code change)",
+        "Branch feature/web-infra at 15f16c1 (Set the web UI spec to executing (locked-v6)); origin/feature/web-ui is an ancestor",
+        "npm ci exit 0: added 1633 packages, audited 1660; 71 vulnerabilities (11 low, 43 moderate, 17 high) reported by npm audit; EBADENGINE warnings for jsdom@30.1.3, w3c-xmlserializer@6.0.0, @asamuzakjp/css-color@7.1.9, @asamuzakjp/dom-selector@10.0.5 (need node ^22.22.2, here v22.22.0); working tree unchanged",
+        "npm test (root) exit 0: node --test apps/api + packages/contracts \"# tests 37 # pass 37 # fail 0\"; web lint clean; web vitest \"Test Files 23 passed (23) Tests 214 passed (214)\"; infra \"# tests 11 # pass 11 # fail 0\"; no stray next-server left",
+        "npm run build --workspace @smart-finances/infra (tsc --noEmit) exit 0",
+        "npm run lint --workspace @smart-finances/web exit 0: eslint clean, \"All matched files use Prettier code style!\"",
+        "apps/web npx tsc --noEmit exit 0",
+        "git fetch origin qa feature/web-ui ok (feature/web-ui b86200f..e5d26ef); drift.mjs docs/specs/web-ui --strict exit 0: 12 references, 2 NEW (infra/lib/alarms-stack.ts#AlarmsStack, infra/lib/web-stack.ts#WebStack, created by later tasks), 10 OK; pins smart-finances@903321c",
+        "Profile verify green: npm test, npm run build --workspace @smart-finances/infra, npm run lint --workspace @smart-finances/web"
+      ],
       "review": ""
     },
     {
@@ -110,5 +120,8 @@
     }
   ],
   "deviations": [],
-  "surprises": []
+  "surprises": [
+    "SF-120: feature/web-infra already existed and was not created by this task: it was cut from the locked-v6 spec branch claude/tender-babbage-2p77gp (15f16c1), which sits on origin/feature/web-ui after PR 1 (#8) merged. During the baseline the owner merged that spec branch into feature/web-ui (PR #9, e5d26ef); its tree equals this branch's HEAD, so nothing needed merging.",
+    "SF-120: npm ci warns EBADENGINE for jsdom@30.1.3 and three of its dependencies (they want node ^22.22.2; this container has v22.22.0); the web tests still pass. npm audit reports 71 vulnerabilities (11 low, 43 moderate, 17 high) at baseline."
+  ]
 }
