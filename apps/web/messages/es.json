@@ -385,7 +385,9 @@
       "step1": "Escribe a {contact} desde el correo con el que te registraste.",
       "step2": "Cuéntanos que perdiste tu autenticador. Nunca envíes tu contraseña ni un código.",
       "step3": "Verificamos que eres tú y lo restablecemos. Configuras uno nuevo la próxima vez que entres.",
-      "wait": "Te responde una persona, así que puede tardar uno o dos días."
+      "wait": "Cuando confirmamos que eres tú, esperamos 72 horas antes de restablecerlo, para que nadie más pueda hacerlo rápido.",
+      "proof": "Respondemos solo a esa dirección y te preguntamos dos o tres cosas que solo tú sabes, como cuándo te registraste más o menos o qué archivos importaste.",
+      "after": "Después del restablecimiento, se cierran todas las sesiones en todos tus dispositivos."
     },
     "consent": {
       "title": "Tus datos, en palabras simples",
@@ -468,5 +470,68 @@
   },
   "ui": {
     "typeToConfirm": "Escribe {word} para confirmar"
+  },
+  "legal": {
+    "common": {
+      "version": "Versión {version}",
+      "readOnly": "Esta página es para leer. La aceptas una sola vez, al crear tu cuenta. Si cambia, Cuenta te muestra la versión nueva y te la pide de nuevo antes de abrir cualquier pantalla con plata.",
+      "testStageTitle": "Esta es una versión de prueba",
+      "testStage": "Esta copia de Cuenta es una etapa de prueba, no el servicio terminado. Lo que se guarde aquí puede borrarse en cualquier momento, así que conserva tu propia copia de tus archivos.",
+      "contactTitle": "Preguntas",
+      "contact": "Escribe a {contact} desde el correo con el que te registraste.",
+      "toTerms": "Leer los términos",
+      "toPrivacy": "Leer el aviso de privacidad",
+      "home": "Volver a Cuenta"
+    },
+    "privacy": {
+      "title": "Aviso de privacidad",
+      "lead": "Qué guarda Cuenta sobre ti, dónde vive, cuánto tiempo lo guardamos y cómo quitarlo.",
+      "keepTitle": "Qué guardamos",
+      "keepAccount": "Tu correo, y lo que el servicio de inicio de sesión necesita para verificar tu contraseña y tu código del autenticador.",
+      "keepFiles": "Los archivos que importas y cada fila que traen, con su texto original.",
+      "keepChoices": "Tus revisiones y tus cotizaciones del dólar.",
+      "keepConsent": "Qué versión de este aviso y de los términos aceptaste, en qué idioma y cuándo.",
+      "keepSession": "Mientras tienes la sesión abierta, una sesión en nuestro servidor. Tu navegador guarda solo un identificador al azar en una cookie, y otra cookie con tu idioma.",
+      "keepSecurity": "Registros de seguridad, como inicios de sesión, intentos fallidos y cambios de contraseña, con el identificador de tu cuenta y la hora. Nunca guardan tu correo, tu contraseña, tus códigos ni tu dirección de red.",
+      "keepLimits": "Para frenar abusos, contamos los intentos por correo y por conexión. Los contadores guardan un código cifrado, no el correo ni la dirección, y vencen en menos de un día.",
+      "keepMonitoring": "Cómo cargan las páginas y los errores que aparecen en ellas, para que el sitio siga funcionando. Esto no usa cookies, ni el identificador de tu cuenta, ni nada de lo que va después del ? en una dirección.",
+      "whereTitle": "Dónde vive",
+      "where": "En Amazon Web Services (AWS), en la región us-east-1 de Estados Unidos, en la cuenta en la nube propia de Cuenta. Tus datos se guardan a nombre de tu inicio de sesión y ninguna otra cuenta puede leerlos.",
+      "leavesTitle": "Qué sale de Cuenta",
+      "leavesEmail": "Los códigos de registro y de cambio de contraseña te llegan por correo desde el servicio de inicio de sesión.",
+      "leavesPwned": "Cuando eliges una contraseña, nuestro servidor le pregunta al servicio gratuito Pwned Passwords si apareció en una filtración de datos conocida. Solo salen de nuestro servidor los primeros 5 caracteres de una forma cifrada de la contraseña (su hash SHA-1), nunca la contraseña ni tu correo.",
+      "leavesNone": "Nada de lo que importas se envía a ningún otro lugar.",
+      "howLongTitle": "Cuánto tiempo lo guardamos",
+      "howLongData": "Tus archivos, filas, revisiones y cotizaciones: hasta que los borres o borres tu cuenta. Después, las copias de seguridad los guardan 35 días y luego desaparecen del todo.",
+      "howLongConsent": "El registro de lo que aceptaste: hasta que borres tu cuenta. Borrar tus datos lo conserva.",
+      "howLongSession": "Una sesión termina cuando la cierras, tras 30 minutos sin actividad, tras 12 horas como máximo o cuando cierras el navegador.",
+      "howLongSignUp": "Un registro que nunca se confirma con el código del correo se quita a las 24 horas.",
+      "howLongLogs": "Registros de seguridad y del servidor: un mes.",
+      "removeTitle": "Lo que puedes hacer",
+      "removeExport": "Mira y exporta todo lo que importaste, cuando quieras, desde Tus datos.",
+      "removeErase": "Borra todos tus datos desde Tus datos. Escribes DELETE para confirmar, y las copias de seguridad los descartan a los 35 días.",
+      "removeDelete": "Borra tu cuenta desde Tus datos. Eso borra tus datos, tu inicio de sesión y el registro de lo que aceptaste, y cierra tu sesión en todos tus dispositivos.",
+      "removeAsk": "Para cualquier otra cosa sobre tus datos, escribe a {contact} desde el correo con el que te registraste."
+    },
+    "terms": {
+      "title": "Términos",
+      "lead": "Las reglas para usar Cuenta, en palabras simples.",
+      "whatTitle": "Qué es Cuenta",
+      "what": "Cuenta muestra en qué se va tu plata, a partir de archivos que traes tú. Lee esos archivos y te muestra tus propias cifras.",
+      "check": "Las cifras salen de tus archivos. Revisa lo importante contra el resumen original.",
+      "notTitle": "Lo que Cuenta no hace",
+      "notAdvice": "Cuenta no da consejos de inversión ni financieros y no te elige productos.",
+      "notMoney": "Cuenta nunca mueve plata ni se conecta a un banco. Los archivos los traes tú.",
+      "accountTitle": "Tu cuenta",
+      "accountOne": "Una cuenta es para una persona. No compartas tu contraseña ni tu autenticador, y cierra la sesión al terminar.",
+      "accountOwn": "Trae solo tus propios archivos: Cuenta es para tu propia plata.",
+      "accountLost": "Si pierdes tu autenticador, no puedes restablecerlo por tu cuenta. Mira <lost>¿Perdiste tu autenticador?</lost>",
+      "limitsTitle": "Uso razonable",
+      "limits": "Para que Cuenta funcione para todos, limita cuántos intentos y pedidos llegan de una persona o de una conexión. Pasado el límite, te pide que esperes antes de volver a intentar.",
+      "leaveTitle": "Irte",
+      "leave": "Puedes borrar tu cuenta cuando quieras desde Tus datos. El aviso de privacidad dice qué se quita y cuándo.",
+      "changesTitle": "Cuando cambian estos términos",
+      "changes": "Si cambian los términos o el aviso de privacidad, Cuenta te muestra la versión nueva y te pide aceptarla antes de abrir cualquier pantalla con plata. La versión está arriba en cada página."
+    }
   }
 }
