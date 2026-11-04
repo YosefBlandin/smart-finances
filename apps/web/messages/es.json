@@ -419,7 +419,11 @@
       "record": "Guardamos que aceptaste, con la fecha y la versión de esta página.",
       "submit": "Aceptar y continuar",
       "saving": "Guardando…",
-      "decline": "No, gracias; cerrar sesión"
+      "decline": "No, gracias; cerrar sesión",
+      "leadFirst": "Léela y acepta para empezar a usar Cuenta.",
+      "errChanged": "Esta página cambió mientras la leías. Léela de nuevo y acepta.",
+      "versions": "Aviso de privacidad {privacy} · Términos {terms}",
+      "declining": "Cerrando sesión…"
     },
     "delete": {
       "reauthTitle": "Confirma que eres tú",
@@ -477,7 +481,15 @@
     "proofFailed": "La verificación automática no pasó. Recarga la página y vuelve a intentar.",
     "limited": "Hubo demasiados intentos desde esta conexión. Vuelve a intentar en {minutes} minutos.",
     "invalid": "Algo de lo que escribiste no es válido. Revísalo y vuelve a intentar.",
-    "unavailable": "Algo falló de nuestro lado. Recarga la página y vuelve a intentar."
+    "unavailable": "Algo falló de nuestro lado. Recarga la página y vuelve a intentar.",
+    "sessionEnded": "Tu sesión terminó. Vuelve a entrar.",
+    "consentNeeded": "Primero acepta el aviso de privacidad y los términos actualizados.",
+    "ended": {
+      "title": "Tu sesión terminó",
+      "lead": "Vuelve a entrar para seguir donde quedaste.",
+      "submit": "Volver a entrar",
+      "leaving": "Cerrando sesión…"
+    }
   },
   "ui": {
     "typeToConfirm": "Escribe {word} para confirmar"

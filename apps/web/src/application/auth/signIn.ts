@@ -1,9 +1,11 @@
 // @ts-expect-error -- qrcode (a package the brief allows, D-73) ships no types and @types/qrcode is not in the brief's
 // Values; the one call used here is typed by QrCore below.
 import QRCode from 'qrcode';
+import { recordFirstConsent } from '@/application/guard';
 import { createLimits } from '@/application/limits';
 import { createSessions } from '@/application/session';
 import type { Stage } from '@/domain/limits';
+import type { AccountStore } from '@/ports/account-store';
 import { tokenClaims } from '@/domain/session-policy';
 import type { Lang, Tokens } from '@/ports/identity-provider';
 import type { PreAuthRow } from '@/ports/pre-auth-store';
@@ -23,6 +25,8 @@ import { emailHash, normalizeEmail, padded, refuse, REPLY_MS, type AuthDeps } fr
 // expired challenge session end the row and send the person back to the password step. Success creates a new session
 // (a new __Host-sid id; the previous session of this browser and the pre-auth row go). No session exists before the
 // code. reauth mode (delete account, D-104) checks that the code belongs to the signed-in sub and creates no session.
+// Before the first session, the versions accepted at sign-up (carried in the pre-auth row) become the account's consent
+// (D-87); an account that has one keeps it, and one without goes to the consent screen (D-145, application/guard.ts).
 
 export const MAX_CODE_ATTEMPTS = 5;
 export const SETUP_STEP = 'setup';
@@ -103,7 +107,9 @@ export function safeNext(next: string | undefined): string {
 
 const isSixDigits = (code: string) => /^\d{6}$/.test(code);
 
-export function createSignIn(deps: AuthDeps) {
+export type SignInDeps = AuthDeps & { accountStore: AccountStore };
+
+export function createSignIn(deps: SignInDeps) {
   const { identityProvider, logger, settings } = deps;
   const limits = createLimits(deps);
   const sessions = createSessions(deps);
@@ -202,6 +208,12 @@ export function createSignIn(deps: AuthDeps) {
       return { ok: true, data: { reauthed: true } };
     }
     if (event === 'mfa_setup') logger.event('mfa_setup', 'ok', { requestId, sub });
+    try {
+      await recordFirstConsent(deps, sub, { versions: row.acceptedVersions, lang: row.lang });
+    } catch {
+      // The code is spent and the pool's challenge with it: a failed write must not undo the sign-in. Without a
+      // consent row the guard sends the person to the consent screen, which asks for the current versions (D-145).
+    }
     const { id } = await sessions.createSession({ sub, tokens, preAuthId: ctx.preAuthId, previousSessionId: ctx.sessionId });
     logger.event('signin', 'ok', { requestId, sub });
     return { ok: true, data: { sessionId: id, sub, next: '/overview' } };

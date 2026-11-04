@@ -419,7 +419,11 @@
       "record": "We record that you accepted, with the date and the version of this page.",
       "submit": "Accept and continue",
       "saving": "Saving…",
-      "decline": "No thanks, sign out"
+      "decline": "No thanks, sign out",
+      "leadFirst": "Read this, then accept to start using Cuenta.",
+      "errChanged": "This page changed while you were reading it. Read it again, then accept.",
+      "versions": "Privacy notice {privacy} · Terms {terms}",
+      "declining": "Signing out…"
     },
     "delete": {
       "reauthTitle": "Confirm it’s you",
@@ -477,7 +481,15 @@
     "proofFailed": "The automatic check didn’t pass. Reload the page and try again.",
     "limited": "Too many tries from this connection. Try again in {minutes} minutes.",
     "invalid": "Some of what you typed isn’t valid. Check it and try again.",
-    "unavailable": "Something went wrong on our side. Reload the page and try again."
+    "unavailable": "Something went wrong on our side. Reload the page and try again.",
+    "sessionEnded": "Your session ended. Sign in again.",
+    "consentNeeded": "Accept the updated privacy notice and terms first.",
+    "ended": {
+      "title": "Your session ended",
+      "lead": "Sign in again to pick up where you left off.",
+      "submit": "Sign in again",
+      "leaving": "Signing out…"
+    }
   },
   "ui": {
     "typeToConfirm": "Type {word} to confirm"

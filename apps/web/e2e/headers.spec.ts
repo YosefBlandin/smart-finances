@@ -58,8 +58,9 @@ test('T-WEB-8: in a browser, an inline script without the nonce does not run', a
 });
 
 test("T-WEB-8: the app's own scripts run under the policy without a script violation", async ({ page, context }) => {
-  // Real app pages: the sign-in placeholder, then a money page behind the dummy session cookie (any value passes the
-  // middleware until PR 3; with it, /sign-in would redirect to /overview). A blocked script shows up three ways: a
+  // Real app pages: the sign-in page, then a money page behind the STAGE=test person's session cookie (TEST_PERSON in
+  // src/adapters/container.ts; the money layout checks the session and consent; with the cookie, /sign-in would
+  // redirect to /overview). A blocked script shows up three ways: a
   // console error, a thrown error (a blocked eval is an EvalError, not a console message) and a securitypolicyviolation
   // event; all three are collected.
   await context.addInitScript(() => {
@@ -78,7 +79,14 @@ test("T-WEB-8: the app's own scripts run under the policy without a script viola
   for (const path of ['/sign-in', '/overview']) {
     if (path === '/overview') {
       await context.addCookies([
-        { name: '__Host-sid', value: 'e2e-dummy-session', url: 'https://localhost:3000/', secure: true, httpOnly: true, sameSite: 'Lax' },
+        {
+          name: '__Host-sid',
+          value: 'e2e-test-person-session-not-a-secret-000000',
+          url: 'https://localhost:3000/',
+          secure: true,
+          httpOnly: true,
+          sameSite: 'Lax',
+        },
       ]);
     }
     const res = await page.goto(path, { waitUntil: 'load' });

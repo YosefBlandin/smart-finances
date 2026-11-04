@@ -1,15 +1,23 @@
 import { expect, test, type Page } from '@playwright/test';
 
 // The shell: rail on desktop (D-35 to D-42), top bar with a menu panel under 960px (D-24, D-43, D-44), the language row
-// (D-37, AC-4) and focus on the main heading after navigation (AC-10). A dummy __Host-sid passes the middleware's
-// cookie-presence check; the session itself is checked from PR 3 on.
+// (D-37, AC-4) and focus on the main heading after navigation (AC-10). The money layout checks the session and consent
+// (D-108, SF-150), so the tests use the STAGE=test person's __Host-sid (TEST_PERSON in src/adapters/container.ts: a live
+// session with the current consent in the test server's memory stores).
 
 const ORIGIN = 'http://localhost:3000';
 
 test.beforeEach(async ({ context }) => {
   // Chrome counts localhost as secure, so a Secure cookie set for the https form of the address is sent over http too.
   await context.addCookies([
-    { name: '__Host-sid', value: 'e2e-dummy-session', url: 'https://localhost:3000/', secure: true, httpOnly: true, sameSite: 'Lax' },
+    {
+      name: '__Host-sid',
+      value: 'e2e-test-person-session-not-a-secret-000000',
+      url: 'https://localhost:3000/',
+      secure: true,
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
   ]);
 });
 

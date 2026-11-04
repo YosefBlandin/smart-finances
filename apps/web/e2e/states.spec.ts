@@ -5,9 +5,10 @@ import { expect, test, type Page } from '@playwright/test';
 // so a stranger cannot tell "not yours" from "not there". PR 1 has no data routes yet, so a missing public page and a
 // missing resource under a money screen stand in for both cases.
 
+// The STAGE=test person's session (TEST_PERSON in src/adapters/container.ts): the money layout checks it (SF-150).
 const SESSION = {
   name: '__Host-sid',
-  value: 'e2e-dummy-session',
+  value: 'e2e-test-person-session-not-a-secret-000000',
   url: 'https://localhost:3000/',
   secure: true,
   httpOnly: true,
