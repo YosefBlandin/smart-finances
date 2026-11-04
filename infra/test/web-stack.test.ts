@@ -172,9 +172,13 @@ test('T-WINF-7 HMAC secret: generated in Secrets Manager, only its ARN published
     assert.equal(secret.Properties.SecretString, undefined, 'the value is generated, never in the template');
     assert.ok(secret.Properties.GenerateSecretString.PasswordLength >= 32);
 
+    // The HMAC secret's ARN is published once; no other parameter refers to the secret (the whole
+    // set of published names is pinned in T-WINF-15).
     const params = ofType(resources, 'AWS::SSM::Parameter').map(([, r]) => r.Properties);
-    assert.deepEqual(params.map((r) => r.Name), [`/smart-finances/${stage}/housekeeping-hmac-secret-arn`]);
-    assert.deepEqual(params[0].Value, { Ref: secretId });
+    const hmac = params.filter((r) => r.Name === `/smart-finances/${stage}/housekeeping-hmac-secret-arn`);
+    assert.equal(hmac.length, 1);
+    assert.deepEqual(hmac[0].Value, { Ref: secretId });
+    for (const r of params) if (r !== hmac[0]) assert.ok(!JSON.stringify(r.Value).includes(secretId), `${r.Name} does not refer to the secret`);
 
     assert.equal(json.Outputs, undefined, 'no outputs');
     assert.deepEqual(Object.keys(json.Parameters ?? {}), ['BootstrapVersion']);
@@ -541,5 +545,98 @@ test('T-WINF-10 T-WINF-11 housekeeping grants: ListUsers and two admin calls on 
     // The compute role gains nothing from this task: ListUsers and invoke stay with housekeeping.
     const computeId = stack.resolve(stack.computeRole.roleArn)['Fn::GetAtt'][0];
     assert.ok(!grants(resources, computeId, names).some((g) => /ListUsers|lambda:/.test(g)));
+  }
+});
+
+test('T-WINF-15 RUM app monitor for the branch domain: errors and performance, no cookies, the guest identity pool and role', () => {
+  for (const stage of STAGES) {
+    const { stack, resources } = synth(stage);
+    const names = stageValueNames(resources, stage);
+
+    const monitors = ofType(resources, 'AWS::RUM::AppMonitor');
+    assert.equal(monitors.length, 1, `${stage}: one RUM app monitor`);
+    const [[monitorId, monitor]] = monitors;
+    const p = monitor.Properties;
+    assert.equal(p.Name, `smart-finances-${stage}`);
+    assert.equal(flat(p.Domain, names), `${BRANCH[stage]}.{{amplify-app-id}}.amplifyapp.com`);
+    assert.equal(p.DomainList, undefined, 'the branch domain only');
+    assert.ok([undefined, false].includes(p.CwLogEnabled), 'no copy of the events in CloudWatch Logs');
+    assert.equal(p.CustomEvents, undefined);
+
+    const c = p.AppMonitorConfiguration;
+    assert.equal(c.AllowCookies, false, 'no cookies (D-135)');
+    assert.deepEqual([...c.Telemetries].sort(), ['errors', 'performance']);
+    assert.equal(c.EnableXRay, false);
+    assert.equal(c.SessionSampleRate, 1);
+    assert.equal(c.MetricDestinations, undefined);
+
+    const pools = ofType(resources, 'AWS::Cognito::IdentityPool');
+    assert.equal(pools.length, 1, `${stage}: one identity pool`);
+    const [[poolId, pool]] = pools;
+    assert.deepEqual(c.IdentityPoolId, { Ref: poolId });
+    assert.equal(pool.Properties.AllowUnauthenticatedIdentities, true, 'guests only');
+    for (const key of ['CognitoIdentityProviders', 'SupportedLoginProviders', 'OpenIdConnectProviderARNs', 'SamlProviderARNs', 'DeveloperProviderName', 'CognitoEvents', 'CognitoStreams', 'PushSync']) {
+      assert.equal(pool.Properties[key], undefined, `no ${key}: nobody signs in to this pool`);
+    }
+    assert.ok([undefined, false].includes(pool.Properties.AllowClassicFlow), 'enhanced flow only: the content policy allows cognito-identity, not sts');
+
+    const guestRoleId = stack.resolve(stack.rumGuestRole.roleArn)['Fn::GetAtt'][0];
+    assert.deepEqual(c.GuestRoleArn, { 'Fn::GetAtt': [guestRoleId, 'Arn'] });
+
+    const attachments = ofType(resources, 'AWS::Cognito::IdentityPoolRoleAttachment');
+    assert.equal(attachments.length, 1);
+    assert.deepEqual(attachments[0][1].Properties, {
+      IdentityPoolId: { Ref: poolId },
+      Roles: { unauthenticated: { 'Fn::GetAtt': [guestRoleId, 'Arn'] } },
+    });
+
+    // The published ids: the monitor's id, the pool's id and the guest role's ARN.
+    const params = Object.fromEntries(ofType(resources, 'AWS::SSM::Parameter').map(([, r]) => [r.Properties.Name, r.Properties.Value]));
+    const base = `/smart-finances/${stage}/`;
+    assert.deepEqual(Object.keys(params).sort(), [
+      `${base}housekeeping-hmac-secret-arn`,
+      `${base}rum-app-monitor-id`,
+      `${base}rum-guest-role-arn`,
+      `${base}rum-identity-pool-id`,
+    ]);
+    assert.deepEqual(params[`${base}rum-app-monitor-id`], { 'Fn::GetAtt': [monitorId, 'Id'] });
+    assert.deepEqual(params[`${base}rum-identity-pool-id`], { Ref: poolId });
+    assert.deepEqual(params[`${base}rum-guest-role-arn`], { 'Fn::GetAtt': [guestRoleId, 'Arn'] });
+  }
+});
+
+test('T-WINF-15 the guest role: assumed only by guests of this identity pool; may only put RUM events to this monitor', () => {
+  for (const stage of STAGES) {
+    const { stack, resources } = synth(stage);
+    const names = stageValueNames(resources, stage);
+    const guestRoleId = stack.resolve(stack.rumGuestRole.roleArn)['Fn::GetAtt'][0];
+    const [[poolId]] = ofType(resources, 'AWS::Cognito::IdentityPool');
+
+    const role = resources[guestRoleId];
+    assert.equal(role.Type, 'AWS::IAM::Role');
+    assert.deepEqual(role.Properties.AssumeRolePolicyDocument.Statement, [
+      {
+        Action: 'sts:AssumeRoleWithWebIdentity',
+        Effect: 'Allow',
+        Principal: { Federated: 'cognito-identity.amazonaws.com' },
+        Condition: {
+          StringEquals: { 'cognito-identity.amazonaws.com:aud': { Ref: poolId } },
+          'ForAnyValue:StringLike': { 'cognito-identity.amazonaws.com:amr': 'unauthenticated' },
+        },
+      },
+    ]);
+    assert.equal(role.Properties.ManagedPolicyArns, undefined, 'no managed policies');
+    assert.equal(role.Properties.Policies, undefined, 'no inline policies on the role itself');
+    assert.deepEqual(grants(resources, guestRoleId, names), [`rum:PutRumEvents arn:aws:rum:us-east-1:111111111111:appmonitor/smart-finances-${stage}`]);
+
+    // No other role in the stack may put RUM events, and no one gets rum:* or a wildcard on RUM.
+    for (const [, policy] of ofType(resources, 'AWS::IAM::Policy')) {
+      const roles = (policy.Properties.Roles as any[]).map((r) => r.Ref);
+      for (const s of policy.Properties.PolicyDocument.Statement) {
+        const actions = [s.Action].flat() as string[];
+        assert.ok(!actions.some((a) => a === '*' || a.startsWith('rum:*')), 'no wildcard RUM grant');
+        if (actions.some((a) => a.startsWith('rum:'))) assert.deepEqual(roles, [guestRoleId], 'only the guest role has RUM rights');
+      }
+    }
   }
 });

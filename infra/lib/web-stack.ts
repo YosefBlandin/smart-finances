@@ -1,9 +1,11 @@
 import * as cdk from 'aws-cdk-lib';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as rum from 'aws-cdk-lib/aws-rum';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as cr from 'aws-cdk-lib/custom-resources';
@@ -34,7 +36,8 @@ export interface WebStackProps extends cdk.StackProps {
  * the app's platform and roles, the branch's auto-build, compute role and variables through custom
  * resources that may pass only those two roles and clear them on delete (D-93, D-110, D-111), and
  * puts the upload bucket's browser rule with the branch address (D-88). It also runs the hourly
- * housekeeping function (D-104, D-106, D-107).
+ * housekeeping function (D-104, D-106, D-107) and the CloudWatch RUM app monitor with its guest
+ * identity pool (D-135).
  * Values from the data stack and from people are read from SSM at deploy time (D-33), so synth
  * needs no stage values and there are no CloudFormation exports; delete-function-name alone is
  * read by housekeeping at run time, since it may not exist yet.
@@ -62,6 +65,8 @@ export class WebStack extends cdk.Stack {
   readonly amplifyLogGroupName: string;
   readonly serviceRole: iam.Role;
   readonly computeRole: iam.Role;
+  /** The role RUM's guest identities get: it may only put RUM events to this stage's monitor (D-135). */
+  readonly rumGuestRole: iam.Role;
 
   constructor(scope: Construct, id: string, props: WebStackProps) {
     super(scope, id, props);
@@ -219,6 +224,72 @@ export class WebStack extends cdk.Stack {
     this.setUploadBucketRule(props.webOrigins ?? contextOrigins[props.stage] ?? []);
 
     this.addHousekeeping();
+
+    this.rumGuestRole = this.addRum(branchName);
+  }
+
+  /**
+   * D-135: browser monitoring with CloudWatch RUM. One app monitor for the branch domain records
+   * JavaScript errors and page loads with web vitals, sets no cookies and keeps no copy in
+   * CloudWatch Logs. Browsers get credentials as guests of an identity pool nobody signs in to,
+   * through the enhanced flow (cognito-identity only, which the content policy allows), and the
+   * guest role may only put RUM events to this monitor. The role's grant names the monitor by its
+   * fixed name, so the role does not depend on the monitor. The web client reads the three ids from
+   * the published stage parameters; what it sends (no person ids, no search values) is its job.
+   */
+  private addRum(branchName: string): iam.Role {
+    const monitorName = `smart-finances-${this.stage}`;
+
+    const pool = new cognito.CfnIdentityPool(this, 'RumIdentityPool', {
+      identityPoolName: `smart_finances_${this.stage}_rum`,
+      allowUnauthenticatedIdentities: true,
+      allowClassicFlow: false,
+    });
+
+    const guestRole = new iam.Role(this, 'RumGuestRole', {
+      description: `RUM guest role for smart-finances ${this.stage}: put RUM events only`,
+      assumedBy: new iam.FederatedPrincipal(
+        'cognito-identity.amazonaws.com',
+        {
+          StringEquals: { 'cognito-identity.amazonaws.com:aud': pool.ref },
+          'ForAnyValue:StringLike': { 'cognito-identity.amazonaws.com:amr': 'unauthenticated' },
+        },
+        'sts:AssumeRoleWithWebIdentity',
+      ),
+    });
+    guestRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['rum:PutRumEvents'],
+        resources: [this.formatArn({ service: 'rum', resource: 'appmonitor', resourceName: monitorName, arnFormat: cdk.ArnFormat.SLASH_RESOURCE_NAME })],
+      }),
+    );
+
+    new cognito.CfnIdentityPoolRoleAttachment(this, 'RumIdentityPoolRoles', {
+      identityPoolId: pool.ref,
+      roles: { unauthenticated: guestRole.roleArn },
+    });
+
+    const monitor = new rum.CfnAppMonitor(this, 'RumAppMonitor', {
+      name: monitorName,
+      domain: `${branchName}.${this.values.amplifyAppId}.amplifyapp.com`,
+      cwLogEnabled: false,
+      appMonitorConfiguration: {
+        allowCookies: false,
+        enableXRay: false,
+        sessionSampleRate: 1,
+        telemetries: ['errors', 'performance'],
+        identityPoolId: pool.ref,
+        guestRoleArn: guestRole.roleArn,
+      },
+    });
+
+    const publish = (name: string, value: string, id: string) =>
+      new ssm.StringParameter(this, id, { parameterName: `/smart-finances/${this.stage}/${name}`, stringValue: value });
+    publish('rum-app-monitor-id', monitor.attrId, 'RumAppMonitorIdParam');
+    publish('rum-identity-pool-id', pool.ref, 'RumIdentityPoolIdParam');
+    publish('rum-guest-role-arn', guestRole.roleArn, 'RumGuestRoleArnParam');
+
+    return guestRole;
   }
 
   /**
