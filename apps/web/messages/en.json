@@ -363,7 +363,8 @@
       "errWrong": "That email and password don’t match. Check both and try again.",
       "signingIn": "Signing in…",
       "errExpired": "Your sign-in timed out. Sign in again.",
-      "errLocked": "Too many wrong codes. Sign in again."
+      "errLocked": "Too many wrong codes. Sign in again.",
+      "passwordChanged": "Your password was changed, and every session on every device was signed out. Sign in with your new password."
     },
     "code": {
       "title": "Enter your code",
@@ -379,7 +380,8 @@
       "submit": "Send code",
       "sentTitle": "Check your email",
       "sentLead": "If {email} has an account, a code is on its way. It can take a minute.",
-      "next": "Enter the code"
+      "next": "Enter the code",
+      "sending": "Sending…"
     },
     "resetConfirm": {
       "title": "Choose a new password",
@@ -388,7 +390,11 @@
       "newPassword": "New password",
       "submit": "Save new password",
       "resend": "Send a new code",
-      "errWrong": "That code doesn’t match or has expired. Check your email, or ask for a new one."
+      "errWrong": "That code doesn’t match or has expired. Check your email, or ask for a new one.",
+      "saving": "Saving…",
+      "resent": "If there’s an account, a new code is on its way. The old one no longer works.",
+      "errLocked": "Too many wrong codes. Ask for a new code and start again.",
+      "errStart": "This reset has expired. Start again."
     },
     "lost": {
       "title": "Lost your authenticator?",

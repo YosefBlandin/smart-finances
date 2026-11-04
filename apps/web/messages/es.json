@@ -363,7 +363,8 @@
       "errWrong": "El correo y la contraseña no coinciden. Revisa ambos y vuelve a intentar.",
       "signingIn": "Entrando…",
       "errExpired": "Se acabó el tiempo para entrar. Entra de nuevo.",
-      "errLocked": "Demasiados códigos incorrectos. Entra de nuevo."
+      "errLocked": "Demasiados códigos incorrectos. Entra de nuevo.",
+      "passwordChanged": "Cambiamos tu contraseña y cerramos todas las sesiones en todos tus dispositivos. Entra con tu contraseña nueva."
     },
     "code": {
       "title": "Ingresa tu código",
@@ -379,7 +380,8 @@
       "submit": "Enviar código",
       "sentTitle": "Revisa tu correo",
       "sentLead": "Si {email} tiene una cuenta, el código va en camino. Puede tardar un minuto.",
-      "next": "Ingresar el código"
+      "next": "Ingresar el código",
+      "sending": "Enviando…"
     },
     "resetConfirm": {
       "title": "Elige una contraseña nueva",
@@ -388,7 +390,11 @@
       "newPassword": "Contraseña nueva",
       "submit": "Guardar contraseña nueva",
       "resend": "Enviar un código nuevo",
-      "errWrong": "Ese código no coincide o venció. Revisa tu correo o pide uno nuevo."
+      "errWrong": "Ese código no coincide o venció. Revisa tu correo o pide uno nuevo.",
+      "saving": "Guardando…",
+      "resent": "Si hay una cuenta, el código nuevo va en camino. El anterior ya no sirve.",
+      "errLocked": "Demasiados códigos incorrectos. Pide un código nuevo y empieza de nuevo.",
+      "errStart": "Este restablecimiento venció. Empieza de nuevo."
     },
     "lost": {
       "title": "¿Perdiste tu autenticador?",
