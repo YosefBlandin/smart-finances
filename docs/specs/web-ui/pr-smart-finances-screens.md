@@ -63,6 +63,8 @@ status: executing
 - D-135: Browser monitoring with CloudWatch RUM: page loads, web vitals and JavaScript errors, client bundled from npm, no cookies, addresses stripped of search values, no person ids; a guest identity pool may only put RUM events; about 1 dollar per 100,000 events.
 - D-138: Code architecture: the web server's logic is hexagonal (domain, application use cases, ports, adapters, with in-memory adapters for tests and Storybook); Next.js app/ only delivers (pages, layouts, server actions, JSON routes) and calls use cases through one container; presentation (ui, screens, queries, i18n) follows Next.js conventions. ESLint import rules enforce the dependency direction.
 - D-151: Browser tests run against a production build (next build, then next start with STAGE=test), never next dev. The content policy has no 'unsafe-eval' in any mode, so pages served by next dev do not hydrate; the dev server is only for looking at static layout.
+- D-157: An existing test that asserts behaviour a task's decisions change may be updated in that task and recorded as a surprise. Production code outside a task's Files still stops.
+- D-162: Browser monitoring ids (rum-app-monitor-id, rum-identity-pool-id, rum-guest-role-arn) stay stage parameters: the web server reads them through ParameterStore and passes them to the client component; they are not branch variables.
 - Values:
   - Each screen section: View.tsx (props only) and Container.tsx (hooks, actions), built from ui/patterns and ui/primitives.
   - Packages allowed: aws-rum-web, plus those of PRs 1 and 3.
@@ -195,12 +197,12 @@ status: executing
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/a11y.spec.ts` and `npm run test-storybook --workspace @smart-finances/web` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-172 · Limit page and browser monitoring
-- Implements: AC-17, D-120, D-135 · After: SF-163 · Judgment: normal
+- Implements: AC-17, D-120, D-135, D-162 · After: SF-163 · Judgment: normal
 - Files: apps/web/src/app/(app)/too-many/ (new), apps/web/src/app/rum.tsx (new client component, mounted in app/layout.tsx), apps/web/e2e/limit.spec.ts (new), apps/web/src/app/rum.test.ts (new)
 - Tests first: T-WSCR-17, T-WSCR-20
 - Do:
   - Past the person limit (5 a minute under STAGE=test) the 429 page shows with the wait; a second signed-in test person is still served.
-  - aws-rum-web initialised from the rum-* settings: no cookies, page ids without search values, no person id; disabled under STAGE=test.
+  - aws-rum-web initialised from the rum-* stage parameters, read on the server through ParameterStore and passed to the client component (D-162): no cookies, page ids without search values, no person id; disabled under STAGE=test.
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/limit.spec.ts` and `npm test --workspace @smart-finances/web -- src/app/rum.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 
