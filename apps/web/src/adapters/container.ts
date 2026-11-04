@@ -23,6 +23,7 @@ import { MemoryPowStore } from './memory/pow-store';
 import { MemoryPreAuthStore } from './memory/pre-auth-store';
 import { MemorySecretStore } from './memory/secret-store';
 import { MemorySessionStore } from './memory/session-store';
+import { parseSettings } from './env-settings';
 import { MemorySettings } from './memory/settings';
 
 // One adapter per port (architecture.md Contracts "Ports"). app/ reaches application/ through this file only (D-138).
@@ -58,11 +59,11 @@ export const PORT_NAMES = [
   'dataApi',
 ] as const satisfies readonly (keyof Container)[];
 
-export function memoryContainer(): Container {
+export function memoryContainer(settings: Settings = new MemorySettings()): Container {
   const clock = new MemoryClock(Date.now());
   return {
     clock,
-    settings: new MemorySettings(),
+    settings,
     secretStore: new MemorySecretStore(),
     parameterStore: new MemoryParameterStore(),
     logger: new MemoryLogger(),
@@ -79,6 +80,7 @@ export function memoryContainer(): Container {
 
 // The only place that reads STAGE to choose behaviour. Real adapters are added by PR 3 and PR 4.
 export function createContainer(): Container {
-  if (process.env.STAGE === 'test') return memoryContainer();
+  // STAGE=test: the test defaults, with any setting the environment names (a local port, say) taking precedence.
+  if (process.env.STAGE === 'test') return memoryContainer(new MemorySettings(parseSettings(process.env)));
   throw new Error(`No real adapters yet for STAGE=${process.env.STAGE ?? ''}; PR 3 and PR 4 add them.`);
 }

@@ -1,9 +1,10 @@
 import type { SecretStore } from '@/ports/secret-store';
+import { TEST_SETTINGS } from './settings';
 
 export class MemorySecretStore implements SecretStore {
   private readonly values = new Map<string, string>([
-    ['arn:test:web-client-secret', 'test-client-secret'],
-    ['arn:test:hmac-secret', 'test-hmac-secret'],
+    [TEST_SETTINGS.WEB_CLIENT_SECRET_ARN, 'test-client-secret'],
+    [TEST_SETTINGS.HMAC_SECRET_ARN, 'test-hmac-secret'],
   ]);
   set(arn: string, value: string) {
     this.values.set(arn, value);
