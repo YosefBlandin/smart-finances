@@ -35,6 +35,11 @@ jobs:
       - name: Test
         run: npm test
 
+      # The Lambda unit tests (sign-up gate, emails, Amplify variables,
+      # housekeeping) run with injected fakes; npm test does not pick them up.
+      - name: Lambda tests
+        run: node --test infra/lambda/*.test.mjs
+
       - name: Type check
         run: npm run build --workspace @smart-finances/infra
 
