@@ -204,6 +204,21 @@
       "commit": "",
       "evidence": [],
       "review": ""
+    },
+    {
+      "id": "SF-129",
+      "status": "blocked",
+      "commit": "7a47d11",
+      "evidence": [
+        "Tests first: T-WINF-12 in infra/test/alarms-stack.test.ts (6 tests, each titled T-WINF-12): topic and email subscription, one metric filter per security event on /aws/amplify/<app id>, every contract alarm with operator/threshold/periods/missing-data/metrics (heartbeat breaching), one dashboard widget per alarm, qa-only budget at 50/80/100% to the topic with a budgets.amazonaws.com publish statement, dev refused",
+        "Fail first (cd infra && node --require ts-node/register --test test/alarms-stack.test.ts): not ok 1 - test/alarms-stack.test.ts; error TS2307: Cannot find module '../lib/alarms-stack' (# pass 0 # fail 1)",
+        "Implementation: infra/lib/alarms-stack.ts AlarmsStack (qa, staging, prod; throws for dev). Reads alarm-email, amplify-app-id, api-url and on qa monthly-budget-usd with readStageValues. Topic smart-finances-<stage>-alarms with an email subscription to alarm-email. 12 metric filters { $.event = \"<name>\" } on /aws/amplify/<app id> into SmartFinances/<stage>/<event name>, value 1, no default. Alarms smart-finances-<stage>-: signup-spike (signup Sum 1 h > 50), signin-failures (signin_fail Sum 15 min > 100), rate-limit-refusals (rate_limited Sum 5 min > 500), web-server-errors (100*AWS/AmplifyHosting 5xxErrors/Requests, App=<app id>, > 2 for 2x5 min), api-errors (100*AWS/ApiGateway 5xx/Count, ApiId from the api-url host, > 2 in 5 min), function-errors-<fn> for health, pre-sign-up, custom-message, housekeeping, amplify-vars (Errors+Throttles > 0 in 5 min), log-heartbeat (health Sum 1 h < 1, missing data breaching), stuck-deletion (StuckDeletions Maximum 1 h > 0, no dimensions), ses-bounce-rate (> 0.05), ses-complaint-rate (> 0.001); every alarm actions the topic, all but the heartbeat treat missing data as not breaching. Dashboard smart-finances-<stage> with one AlarmWidget per alarm. qa only: CfnBudget smart-finances-monthly COST MONTHLY USD from monthly-budget-usd, ACTUAL GREATER_THAN 50/80/100 PERCENTAGE to the topic. Rollup failures alarm left for data PR 3 (brief). The 429 half of 'API errors and throttles' is NOT built: see deviation SF-129",
+        "node --require ts-node/register --test test/alarms-stack.test.ts: # pass 6 # fail 0",
+        "npm test --workspace @smart-finances/infra: exit 0, # tests 34 # pass 34 # fail 0 (no esbuild or Docker runs for this stack: no makeFunction in it)",
+        "npm run build --workspace @smart-finances/infra (tsc --noEmit): exit 0",
+        "Profile verify: root npm test exit 0 (api+contracts 37/37; web vitest 23 files 214/214; infra 34/34); npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0 (eslint clean, Prettier clean); no stray next-server"
+      ],
+      "review": ""
     }
   ],
   "deviations": [
@@ -214,6 +229,14 @@
       "proposal": "Allow SF-124 to also edit two existing tests that assert the behaviour D-81/D-88 remove: infra/test/data-stack.test.ts T-INF-3 (drop the bucket CorsConfiguration POST-from-webOrigins assertion and the 'no CORS when webOrigins is empty' line; assert no CorsConfiguration instead) and infra/test/stacks.test.ts T-INF-6 (reader names gain web-client-id; webOrigins no longer reach the bucket CORS, keep the api.webOrigins assertions or move origins to the web stack in SF-127). No production-code change beyond the task's Files. Also note: dev gets no web stack (SF-131), so after this task the dev bucket has no CORS rule and local uploads from http://localhost:3000 to the dev bucket stop working unless SF-127 or a follow-up covers dev",
       "decidedBy": "owner, in chat, 2026-11-04: SF-124 may update infra/test/data-stack.test.ts (T-INF-3) and infra/test/stacks.test.ts (T-INF-6) to the new behaviour; the dev bucket's missing browser rule is accepted, since local development points at qa",
       "newDecision": "pending: the planning session records it"
+    },
+    {
+      "date": "2026-11-04",
+      "task": "SF-129",
+      "from": "architecture.md Contracts \"Alarms\" row 'API errors and throttles | HTTP API 5xx and 429 | over 2%, or any 429 for 5 minutes' (D-80); SF-129 Files (infra/lib/alarms-stack.ts, infra/test/alarms-stack.test.ts)",
+      "proposal": "HTTP APIs publish no 429 or throttle metric to CloudWatch (only Count, 4xx, 5xx, Latency, IntegrationLatency, DataProcessed), and the API stack has no access log, so 'any 429 for 5 minutes' cannot be built inside SF-129's Files. Committed (7a47d11) everything else, including the 5xx-over-2% half as smart-finances-<stage>-api-errors. Options: (a) let SF-129 (or SF-131) also edit infra/lib/api-stack.ts and infra/test/api-stack.test.ts to add a JSON access log on the default stage (one-month log group; fields requestId, status, routeKey only: no IP, no identity, no path values) and add to AlarmsStack a metric filter { $.status = 429 } and an api-throttles alarm (Sum 5 min > 0), reading the log group name from a new api-access-log-group stage parameter or the fixed name; (b) alarm on 4xx instead (noisy: every 401 counts); (c) drop the 429 half and change the contract row. Recommend (a).",
+      "decidedBy": "",
+      "newDecision": ""
     }
   ],
   "surprises": [
@@ -246,6 +269,12 @@
     "SF-128: like the other infra/lambda tests, housekeeping.test.mjs runs only through the explicit node --test command, not root npm test or the infra test script.",
     "The container restarted during SF-128's review fix round; its half-made edits were stashed (git stash, 'interrupted SF-128 fix round'), and the round was re-run from the committed state.",
     "SF-124: ApiStack and DataStack still take the webOrigins prop (infra/lib/stage.ts, which passes it, is not in SF-124's Files); the data stack no longer uses it and the API keeps it only as a field T-INF-6 reads. SF-131 (stage wiring) can drop it from both or pass the list to the web stack. With SF-124 in, the two-writer bucket rule SF-127 noted is gone: only the web stack's custom resource sets it.",
-    "SF-124: the api-url parameter is created by the API stack, so the first deploy of an existing stage replaces nothing but adds a new SSM parameter; the web stack (SF-126) reads it at deploy time, so the API stack must deploy before the web stack on each stage (stage.ts dependency order, SF-131)."
+    "SF-124: the api-url parameter is created by the API stack, so the first deploy of an existing stage replaces nothing but adds a new SSM parameter; the web stack (SF-126) reads it at deploy time, so the API stack must deploy before the web stack on each stage (stage.ts dependency order, SF-131).",
+    "SF-129: AWS::Budgets::Budget is account-wide but lives in the qa alarms stack; destroying the qa alarms stack (rollback (c) on qa) deletes the budget too. The amount is the deploy-time GetAtt of monthly-budget-usd passed as Token.asNumber, so CloudFormation receives a string for the Number Amount; whether it coerces is not verifiable offline (fallback: a number in cdk.json context). The budget notifies on ACTUAL spend only (no forecast).",
+    "SF-129: the sign-in failures alarm uses a 15-minute period (the table's window) rather than the Values' default 5 minutes, since 'over 100 in 15 minutes' cannot be expressed as 5-minute datapoints without a running sum; the sign-up spike, heartbeat and stuck deletion use 1 hour.",
+    "SF-129: the Amplify 5xx alarm assumes namespace AWS/AmplifyHosting, metrics 5xxErrors and Requests with dimension App=<app id>; the security-event filters assume the web server's console JSON lines arrive in /aws/amplify/<app id> as bare JSON messages (a prefix would make the JSON filter pattern match nothing, and the heartbeat would then alarm every hour). Neither is verifiable offline: the qa check after the first alarms deploy should look at one log line and the AmplifyHosting metrics.",
+    "SF-129: Lambda alarms are per function by fixed name (STAGE_FUNCTIONS in alarms-stack.ts: health, pre-sign-up, custom-message, housekeeping, amplify-vars), one alarm each, because a metric-math alarm takes at most 10 metrics; functions added by the data PRs must join that list. CDK's own provider functions (AwsCustomResource singleton, cr.Provider framework) have generated names and get no alarm.",
+    "SF-129: SES reputation metrics are account-wide, so each stage's alarms stack alarms on the same AWS/SES metrics and every stage's topic hears a bounce or complaint alarm; before SES is set up (D-77) the metrics do not exist and the alarms stay OK (missing data not breaching). The data API's id comes from splitting api-url's host at deploy time.",
+    "SF-129: the alarms stack is not yet wired into a stage (SF-131); it throws for dev, matching 'dev gets no web or alarms stack'. The topic has no KMS key (CloudWatch and Budgets would need a key policy)."
   ]
 }
