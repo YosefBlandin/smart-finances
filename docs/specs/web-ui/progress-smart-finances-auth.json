@@ -117,9 +117,18 @@
     },
     {
       "id": "SF-146",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "dc6da4e",
+      "evidence": [
+        "Tests first: apps/web/src/adapters/pwned.test.ts (T-WAUTH-8 x16: GET https://api.pwnedpasswords.com/range/<first 5 upper-case SHA-1 chars> with Add-Padding: true and an AbortSignal, nothing else of the password or its hash in the URL or headers, no body; UTF-8 hashing for a non-ASCII password; a suffix with a count is refused (true) whatever the case or line ending; an absent suffix or a padding line with count 0 is accepted (false); HTTP 503 and 429, a network failure, an empty reply, a reply that is not a range and a body that fails to read each return 'unavailable' and log exactly one breach_check_unavailable event (outcome http_503, http_429, network, bad_reply) with the caller's request id and sub and no part of the password or hash; no answer by 2000 ms aborts and logs timeout (still pending at 1999 ms), the 2 s also cover the body read and a fetch that ignores the abort; an answer in time leaves no timer; the memory fake logs breach_check_unavailable the same way). First run: \"Error: Cannot find module './pwned' imported from .../src/adapters/pwned.test.ts\", \"Test Files 1 failed (1) Tests no tests\", the expected reason.",
+        "Verify: npm test --workspace @smart-finances/web -- src/adapters/pwned.test.ts exit 0: \"Test Files 1 passed (1) Tests 16 passed (16)\"; src/adapters/container.test.ts (T-WEB-14, updated) passes with it: \"Test Files 2 passed (2) Tests 30 passed (30)\"",
+        "Profile verify: npm test (root) exit 0: node --test api+contracts 37/37 pass; web lint clean; web vitest \"Test Files 31 passed (31) Tests 372 passed (372)\"; infra 41/41 pass; strays killed after",
+        "Profile verify: npm run build --workspace @smart-finances/infra exit 0",
+        "Profile verify: npm run lint --workspace @smart-finances/web exit 0 (eslint clean; \"All matched files use Prettier code style!\")",
+        "Profile verify: apps/web npx tsc --noEmit exit 0",
+        "Profile verify: npm run build --workspace @smart-finances/web exit 0",
+        "No new dependency (node:crypto and the runtime's fetch). No network call: the adapter is tested with a hand-written fetch fake only."
+      ],
       "review": ""
     },
     {
@@ -218,6 +227,9 @@
     "SF-145: new message keys auth.forbidden, auth.proofFailed, auth.limited ({minutes}, no plural: T-WEB-5 asserts exactly 7 plurals in the catalogue), auth.invalid and auth.unavailable in en.json and es.json. guarded returns retryAfterSeconds; the screens turn it into {minutes} (round up).",
     "SF-145: a shared container was needed: createContainer() builds new memory stores per call, so under STAGE=test a proof-of-work claim or an ip-auth count would not survive to the next request, and MemoryClock is frozen. adapters/container.ts gains getContainer(), one container per process on globalThis (a failed build is not kept), using a new SystemClock from adapters/memory/clock.ts under STAGE=test; memoryContainer(settings, clock?) takes an optional clock. /api/auth/pow still uses createContainer() per request (issuing is stateless), so it was not changed.",
     "SF-145: the ip-auth counter is hit only after a valid proof-of-work answer (the brief's order), so posts without an answer are not counted; the check order means an Origin refusal uses up no answer. The Origin and proof-of-work refusals log no security event (Contracts lists none for them); the ip-auth refusal logs rate_limited with outcome ip-auth. An unexpected failure is not logged either (no event in the Contracts list fits); SF-148 on may want one.",
-    "SF-145: apps/web/src/ui/ShellNav.tsx (outside the Files) still says in a comment that the page's Referrer-Policy is no-referrer and sends the language post with fetch referrerPolicy same-origin for that reason; with D-153 that workaround is no longer needed but harmless. Left unchanged. No fresh-context reviewer ran in this executor (no subagent tool here); review is left empty for the workflow's reviewer."
+    "SF-145: apps/web/src/ui/ShellNav.tsx (outside the Files) still says in a comment that the page's Referrer-Policy is no-referrer and sends the language post with fetch referrerPolicy same-origin for that reason; with D-153 that workaround is no longer needed but harmless. Left unchanged. No fresh-context reviewer ran in this executor (no subagent tool here); review is left empty for the workflow's reviewer.",
+    "SF-146: ports/BreachChecker.ts named in Files is ports/breach-checker.ts from PR 1 (kebab-case, as in SF-141, SF-144 and SF-147); it was edited, no new port file added.",
+    "SF-146: the Contracts port is isBreached(password), but the checker must log breach_check_unavailable and the Logger needs a request id, so the port is now isBreached(password, { sub?, requestId }) → boolean | 'unavailable': on 'unavailable' the checker has already logged breach_check_unavailable and the caller accepts the password; the breached_password event stays the caller's (SF-148, SF-151), so a use case must not log the miss again. MemoryBreachChecker takes an optional Logger and logs the same event (outcome 'unavailable'); memoryContainer now builds one MemoryLogger and passes it to the breach fake. T-WEB-14 in apps/web/src/adapters/container.test.ts called the old signature and asserted only the sign_in event on the container's logger; both were updated (D-157).",
+    "SF-146: PwnedPasswordsChecker({ logger, fetch?, timeoutMs = 2000 }) hashes the UTF-8 bytes as given (no Unicode normalisation, like the pool), sends cache: 'no-store' (never Next.js's data cache) and redirect: 'error'; the 2 seconds cover the reply and its body and the request is aborted when they run out. Padding lines (count 0) never refuse; a 200 reply with no range line at all counts as unavailable (outcome bad_reply). Outcomes: timeout, http_<status>, network, bad_reply. It is not wired into createContainer (it still refuses outside STAGE=test until every port has a real adapter). The server's outbound call to api.pwnedpasswords.com is already in docs/threat-model.md B9; the Amplify compute's egress to it is unverified until qa. No fresh-context reviewer ran in this executor (no subagent tool here); review is left empty for the workflow's reviewer."
   ]
 }
