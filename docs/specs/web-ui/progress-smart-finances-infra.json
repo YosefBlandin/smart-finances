@@ -177,7 +177,7 @@
     },
     {
       "id": "SF-129",
-      "status": "blocked",
+      "status": "in_progress",
       "commit": "7a47d11",
       "blocker": "The 429 half of the Alarms contract row 'API errors and throttles' (HTTP API 5xx and 429, 'any 429 for 5 minutes', D-80) is not built: HTTP APIs publish no 429 or throttle metric and the API stack has no access log, so it cannot be built inside SF-129's Files. Waiting on the owner's answer to deviation SF-129 (recommended option (a): access log on the API stack plus a metric filter and an api-throttles alarm). Everything else in the task is committed in 7a47d11 and verified below.",
       "evidence": [
@@ -255,8 +255,16 @@
       "task": "SF-129",
       "from": "architecture.md Contracts \"Alarms\" row 'API errors and throttles | HTTP API 5xx and 429 | over 2%, or any 429 for 5 minutes' (D-80); SF-129 Files (infra/lib/alarms-stack.ts, infra/test/alarms-stack.test.ts)",
       "proposal": "HTTP APIs publish no 429 or throttle metric to CloudWatch (only Count, 4xx, 5xx, Latency, IntegrationLatency, DataProcessed), and the API stack has no access log, so 'any 429 for 5 minutes' cannot be built inside SF-129's Files. Committed (7a47d11) everything else, including the 5xx-over-2% half as smart-finances-<stage>-api-errors. Options: (a) let SF-129 (or SF-131) also edit infra/lib/api-stack.ts and infra/test/api-stack.test.ts to add a JSON access log on the default stage (one-month log group; fields requestId, status, routeKey only: no IP, no identity, no path values) and add to AlarmsStack a metric filter { $.status = 429 } and an api-throttles alarm (Sum 5 min > 0), reading the log group name from a new api-access-log-group stage parameter or the fixed name; (b) alarm on 4xx instead (noisy: every 401 counts); (c) drop the 429 half and change the contract row. Recommend (a).",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "owner, in chat, 2026-11-04: option (a), SF-129 adds a JSON access log to the HTTP API in infra/lib/api-stack.ts (status, route, request time; no IP, identity or user agent), one-month retention, a metric filter on status 429 and the any-429-for-5-minutes alarm",
+      "newDecision": "pending: the planning session records it"
+    },
+    {
+      "date": "2026-11-04",
+      "task": "SF-126",
+      "from": "architecture.md Contracts 'Web server settings' (AWS_REGION as a branch variable)",
+      "proposal": "Amplify reserves the AWS_ prefix for environment variables, so the branch-variables resource must not write AWS_REGION; the web server reads the region from the runtime and falls back to us-east-1 (D-89).",
+      "decidedBy": "owner, in chat, 2026-11-04",
+      "newDecision": "pending: the planning session updates the settings table"
     }
   ],
   "surprises": [
