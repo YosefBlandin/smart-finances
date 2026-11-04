@@ -1,8 +1,7 @@
 export interface BreachChecker {
   /**
-   * The range check (D-117): true when the password is breached. 'unavailable' when the service cannot answer; the
-   * checker has then logged breach_check_unavailable with this context, and the caller accepts the password. The
-   * breached_password event is the caller's.
+   * The range check (D-117); 'unavailable' when the service cannot answer. On 'unavailable' the caller accepts the
+   * password and logs breach_check_unavailable with its request id; the checker itself logs nothing.
    */
-  isBreached(password: string, context: { sub?: string; requestId: string }): Promise<boolean | 'unavailable'>;
+  isBreached(password: string): Promise<boolean | 'unavailable'>;
 }
