@@ -179,9 +179,18 @@
     },
     {
       "id": "SF-130",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "d7fa630",
+      "evidence": [
+        "Tests first: T-WINF-15 (2 tests) in infra/test/web-stack.test.ts for qa, staging and prod: one AWS::RUM::AppMonitor smart-finances-<stage> on Domain <branch>.{{amplify-app-id}}.amplifyapp.com (no DomainList), CwLogEnabled off, AllowCookies false, Telemetries errors+performance, EnableXRay false, SessionSampleRate 1, IdentityPoolId and GuestRoleArn of this stack's pool and role; one AWS::Cognito::IdentityPool with unauthenticated identities only (no providers of any kind, classic flow off); one role attachment with only the unauthenticated role; the published parameters are exactly housekeeping-hmac-secret-arn, rum-app-monitor-id (GetAtt Id), rum-identity-pool-id (Ref) and rum-guest-role-arn (GetAtt Arn); the guest role is assumed only via sts:AssumeRoleWithWebIdentity from cognito-identity.amazonaws.com with aud = this pool and amr unauthenticated, has no managed or inline policies, and its whole grant set is rum:PutRumEvents on arn:aws:rum:us-east-1:<account>:appmonitor/smart-finances-<stage>; no other role has any rum: action and nobody gets rum:* or *. T-WINF-7's HMAC test changed to find its parameter by name (the full name set moved to T-WINF-15)",
+        "Fail first: node --require ts-node/register --test test/web-stack.test.ts: TS2339 Property 'rumGuestRole' does not exist on type 'WebStack' (lines 583, 612); with TS_NODE_TRANSPILE_ONLY=1: 13 pass, 2 fail (T-WINF-15 'one RUM app monitor' expected 1 actual 0; T-WINF-15 guest role TypeError, no rumGuestRole)",
+        "Implementation: WebStack.addRum: CfnIdentityPool RumIdentityPool smart_finances_<stage>_rum (AllowUnauthenticatedIdentities true, AllowClassicFlow false); iam.Role RumGuestRole (FederatedPrincipal cognito-identity.amazonaws.com, aud/amr conditions) with rum:PutRumEvents on the monitor ARN built from its fixed name (no dependency on the monitor); CfnIdentityPoolRoleAttachment unauthenticated only; CfnAppMonitor smart-finances-<stage> for the branch domain; SSM rum-app-monitor-id, rum-identity-pool-id, rum-guest-role-arn; WebStack.rumGuestRole exposed",
+        "Mutation checks (each reverted): AllowCookies true, PutRumEvents on appmonitor/* and dropping the amr unauthenticated condition each fail one T-WINF-15 test",
+        "Verify: npm test --workspace @smart-finances/infra exit 0: # tests 36 # pass 36 # fail 0 (no new bundling: the RUM resources need no function)",
+        "npm run build --workspace @smart-finances/infra (tsc --noEmit) exit 0",
+        "Profile verify: npm test (root) exit 0: api+contracts 37/37 pass; web lint clean; web vitest 23 files, 214/214 pass; infra 36/36 pass; no stray next-server",
+        "Profile verify: npm run lint --workspace @smart-finances/web exit 0: \"All matched files use Prettier code style!\""
+      ],
       "review": ""
     },
     {
@@ -275,6 +284,9 @@
     "SF-129: the Amplify 5xx alarm assumes namespace AWS/AmplifyHosting, metrics 5xxErrors and Requests with dimension App=<app id>; the security-event filters assume the web server's console JSON lines arrive in /aws/amplify/<app id> as bare JSON messages (a prefix would make the JSON filter pattern match nothing, and the heartbeat would then alarm every hour). Neither is verifiable offline: the qa check after the first alarms deploy should look at one log line and the AmplifyHosting metrics.",
     "SF-129: Lambda alarms are per function by fixed name (STAGE_FUNCTIONS in alarms-stack.ts: health, pre-sign-up, custom-message, housekeeping, amplify-vars), one alarm each, because a metric-math alarm takes at most 10 metrics; functions added by the data PRs must join that list. CDK's own provider functions (AwsCustomResource singleton, cr.Provider framework) have generated names and get no alarm.",
     "SF-129: SES reputation metrics are account-wide, so each stage's alarms stack alarms on the same AWS/SES metrics and every stage's topic hears a bounce or complaint alarm; before SES is set up (D-77) the metrics do not exist and the alarms stay OK (missing data not breaching). The data API's id comes from splitting api-url's host at deploy time.",
-    "SF-129: the alarms stack is not yet wired into a stage (SF-131); it throws for dev, matching 'dev gets no web or alarms stack'. The topic has no KMS key (CloudWatch and Budgets would need a key policy)."
+    "SF-129: the alarms stack is not yet wired into a stage (SF-131); it throws for dev, matching 'dev gets no web or alarms stack'. The topic has no KMS key (CloudWatch and Budgets would need a key policy).",
+    "SF-130: the content policy (architecture.md Response headers) allows connect-src dataplane.rum and cognito-identity but not sts.amazonaws.com, so the browser must use the identity pool's enhanced flow (GetId + GetCredentialsForIdentity); the pool keeps classic flow off. aws-rum-web switches to the basic (classic) flow, which calls STS, when guestRoleArn is passed in its config, so SF-172 should pass identityPoolId but not guestRoleArn even though rum-guest-role-arn is published (the brief asks for it). Not verifiable offline.",
+    "SF-130: the Web server settings contract (D-110) has no RUM names, and T-WINF-8 pins the branch variables to exactly the 12 contract names, so the RUM ids are only stage parameters; how the browser bundle gets them (build-time variables via amplify.yml, or the server rendering them into the page) is left to SF-172 and may need a contract row.",
+    "SF-130: the app monitor's domain is <branch>.<app id>.amplifyapp.com from the deploy-time amplify-app-id; RUM rejects events from other origins, so localhost and the STAGE=test production build send nothing that counts (T-WSCR-20 turns RUM off under STAGE=test anyway). The identity pool and app monitor go with the stack on qa rollback (c). sessionSampleRate is 1 (every session); cost per D-135 is about 1 dollar per 100,000 events."
   ]
 }
