@@ -348,7 +348,10 @@
       "keyNote": "(ejemplo)",
       "qrLabel": "Código QR, ejemplo",
       "submit": "Activar autenticador",
-      "errWrong": "Ese código no funcionó. Los códigos cambian cada 30 segundos; escribe el más reciente."
+      "errWrong": "Ese código no funcionó. Los códigos cambian cada 30 segundos; escribe el más reciente.",
+      "errExpired": "Se acabó el tiempo de la configuración. Borra la entrada de Cuenta que agregaste en tu app autenticadora y entra de nuevo.",
+      "qrAlt": "Código QR con la clave de tu autenticador",
+      "turningOn": "Activando…"
     },
     "signIn": {
       "title": "Entrar",
@@ -357,14 +360,18 @@
       "forgot": "¿Olvidaste tu contraseña?",
       "newHere": "¿Primera vez?",
       "create": "Crear una cuenta",
-      "errWrong": "El correo y la contraseña no coinciden. Revisa ambos y vuelve a intentar."
+      "errWrong": "El correo y la contraseña no coinciden. Revisa ambos y vuelve a intentar.",
+      "signingIn": "Entrando…",
+      "errExpired": "Se acabó el tiempo para entrar. Entra de nuevo.",
+      "errLocked": "Demasiados códigos incorrectos. Entra de nuevo."
     },
     "code": {
       "title": "Ingresa tu código",
       "lead": "Abre tu app autenticadora y escribe el código de 6 dígitos de Cuenta.",
       "submit": "Entrar",
       "errWrong": "Ese código no funcionó. Escribe el más reciente de tu app.",
-      "lost": "¿Perdiste tu autenticador?"
+      "lost": "¿Perdiste tu autenticador?",
+      "checking": "Revisando…"
     },
     "reset": {
       "title": "Restablece tu contraseña",

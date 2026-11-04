@@ -348,7 +348,10 @@
       "keyNote": "(example)",
       "qrLabel": "QR code, example",
       "submit": "Turn on authenticator",
-      "errWrong": "That code didn’t work. Codes change every 30 seconds, so type the newest one."
+      "errWrong": "That code didn’t work. Codes change every 30 seconds, so type the newest one.",
+      "errExpired": "Your setup timed out. Delete the Cuenta entry you just added in your authenticator app, then sign in again.",
+      "qrAlt": "QR code with your authenticator key",
+      "turningOn": "Turning on…"
     },
     "signIn": {
       "title": "Sign in",
@@ -357,14 +360,18 @@
       "forgot": "Forgot your password?",
       "newHere": "New here?",
       "create": "Create an account",
-      "errWrong": "That email and password don’t match. Check both and try again."
+      "errWrong": "That email and password don’t match. Check both and try again.",
+      "signingIn": "Signing in…",
+      "errExpired": "Your sign-in timed out. Sign in again.",
+      "errLocked": "Too many wrong codes. Sign in again."
     },
     "code": {
       "title": "Enter your code",
       "lead": "Open your authenticator app and type the 6-digit code for Cuenta.",
       "submit": "Sign in",
       "errWrong": "That code didn’t work. Type the newest one from your app.",
-      "lost": "Lost your authenticator?"
+      "lost": "Lost your authenticator?",
+      "checking": "Checking…"
     },
     "reset": {
       "title": "Reset your password",
