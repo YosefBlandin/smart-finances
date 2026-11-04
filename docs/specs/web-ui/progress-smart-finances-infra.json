@@ -94,9 +94,18 @@
     },
     {
       "id": "SF-125",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "8e63374",
+      "evidence": [
+        "Tests first: T-WINF-7 (5 tests) in infra/test/web-stack.test.ts, synthing WebStack for qa, staging and prod with cdk.json's context: sessions table (pk, GSI bySub on sub KEYS_ONLY, TTL expires_at, on-demand, Delete), accounts table (pk only, no TTL; Retain + PITR + deletion protection on staging and prod, removable without either on qa), generated HMAC secret with only its ARN in /smart-finances/<stage>/housekeeping-hmac-secret-arn (no outputs, no template parameters), compute role and Amplify service role grants compared as exact (action, resource) pair sets with stage values resolved by name from the reader's GetParameters call, the /aws/amplify group never created, one retention custom resource (putRetentionPolicy 30 days on create and update, nothing on delete), and the shared provider role's grants",
+        "Fail first: node --require ts-node/register --test test/web-stack.test.ts: 0 pass, 1 fail, test/web-stack.test.ts(7,26): error TS2307: Cannot find module '../lib/web-stack' or its corresponding type declarations",
+        "Implementation: infra/lib/web-stack.ts WebStack({ stage }): readStageValues amplify-app-id, user-pool-id, web-client-secret-arn; Sessions and Accounts tables (AWS-owned key); HmacSecret (Secrets Manager generated, 64 chars, no punctuation) + StringParameter housekeeping-hmac-secret-arn; AmplifyServiceRole (amplify.amazonaws.com) logs:CreateLogStream, logs:PutLogEvents on log-group:/aws/amplify/<app id>:*; AmplifyComputeRole (amplify.amazonaws.com) secretsmanager:GetSecretValue on the client secret ARN and the HMAC secret, ssm:GetParameter(s) on parameter/smart-finances/<stage>/*, dynamodb BatchGetItem, BatchWriteItem, ConditionCheckItem, DeleteItem, GetItem, PutItem, Query, UpdateItem on both tables and the sessions indexes (no Scan), cognito-idp AdminGetUser, AdminDeleteUser, AdminUserGlobalSignOut on userpool/<user-pool-id>; AwsCustomResource AmplifyLogRetention (CloudWatchLogs putRetentionPolicy 30) on the shared provider, logs:PutRetentionPolicy on that group only. No managed policies, no trust conditions. Not wired into addStage (SF-131)",
+        "First run after implementing: 5/5 pass. Mutation checks (each reverted): adding dynamodb:Scan, scoping SSM to smart-finances/* and retention 14 days each fail their test; prod not kept fails the accounts test; dropping KEYS_ONLY fails the sessions test",
+        "Verify: npm test --workspace @smart-finances/infra exit 0: # tests 19 # pass 19 # fail 0 (no esbuild bundling in this stack: it has no makeFunction yet)",
+        "npm run build --workspace @smart-finances/infra (tsc --noEmit) exit 0",
+        "Profile verify: npm test (root) exit 0: api+contracts 37/37 pass; web lint clean; web vitest 23 files, 214/214 pass; infra 19/19 pass; no stray next-server",
+        "Profile verify: npm run lint --workspace @smart-finances/web exit 0: \"All matched files use Prettier code style!\""
+      ],
       "review": ""
     },
     {
@@ -177,6 +186,9 @@
     "SF-123: the task's Files list infra/lib/data-stack.ts but not infra/test/data-stack.test.ts, so the CUSTOM_MESSAGE wiring has no committed synth assertion (checked once with a scratch synth); like SF-122's T-WINF-3, T-WINF-5 is not run by root npm test or the infra test script, only by the explicit node --test command.",
     "SF-123: the email is plain text through Cognito's default sender (SES waits for D-77); the same one-sentence message serves sign-up, resent and reset codes, so the email does not say which flow sent it. Admin invites, attribute-change and sign-in code messages keep Cognito's English defaults.",
     "SF-124: T-WINF-6 requires removing the data stack's bucket CORS, which PR 1-era tests T-INF-3 (infra/test/data-stack.test.ts) and T-INF-6 (infra/test/stacks.test.ts) assert, and the new web-client-id read breaks T-INF-6's exact four-name list; neither file is in SF-124's Files. Trial diff kept outside the repo; the full change is about 15 lines in api-stack.ts and 4 in data-stack.ts.",
-    "SF-124: with the bucket rule moving to the web stack (D-88) and dev getting no web stack (SF-131), the dev bucket would have no CORS rule at all, so browser uploads from localhost to the dev bucket would fail; SF-127 sets the rule only where a web stack exists."
+    "SF-124: with the bucket rule moving to the web stack (D-88) and dev getting no web stack (SF-131), the dev bucket would have no CORS rule at all, so browser uploads from localhost to the dev bucket would fail; SF-127 sets the rule only where a web stack exists.",
+    "SF-125: readStageValues gives each stack one reader (fixed construct id StageValues), so later web stack tasks (SF-126 api-url, web-client-id, support-address, bucket-name; SF-128 delete-function-name, which may be missing and would fail the deploy) must add their names to the same call in web-stack.ts rather than call it again. The retention custom resource passes no role: AwsCustomResource's provider is a per-stack singleton, so its policy attaches to the role readStageValues created (StageValuesRole); the test pins that role's grants.",
+    "SF-125: the Amplify service role gets only logs:CreateLogStream and logs:PutLogEvents on /aws/amplify/<app id>:* as the brief says; AWS's own examples for SSR logging also grant logs:CreateLogGroup and logs:DescribeLogGroups. If compute logs stop arriving on qa, that is the first thing to check (HUMAN qa check, RK-4). Neither Amplify role has confused-deputy trust conditions (aws:SourceArn/SourceAccount): not verifiable offline whether Amplify sets them for the compute role, so the trust is the plain service principal; the reviewer may want a follow-up.",
+    "SF-125: bySub is a KEYS_ONLY index (pk and sub only) so no token is copied into it; PR 3's session adapter must Query it for pks and then delete by pk. Sessions table and HMAC secret are Delete on every stage (only the accounts table is retained, D-111); the accounts table has no PITR on qa (the decisions name staging and prod only)."
   ]
 }
