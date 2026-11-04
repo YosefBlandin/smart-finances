@@ -139,7 +139,8 @@ describe('T-WEB-13 Prettier', () => {
     expect(await prettier.check('const a   =  {b:1}\n', { ...options, filepath: 'x.ts' })).toBe(false);
   });
 
-  it('T-WEB-13 passes on the app sources', () => {
+  // The Prettier CLI over every app source takes about 3 s alone and nears vitest's 5 s default in the parallel run.
+  it('T-WEB-13 passes on the app sources', { timeout: 30_000 }, () => {
     const bin = path.join(root, '../../node_modules/prettier/bin/prettier.cjs');
     expect(() =>
       execFileSync(
