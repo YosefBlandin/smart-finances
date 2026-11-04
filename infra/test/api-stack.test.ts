@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { makeFunction } from '../lib/function';
 import { addStage } from '../lib/stage';
+import { apiAccessLogGroupName } from '../lib/api-stack';
 
 const env = { account: '111111111111', region: 'us-east-1' };
 const STAGES = ['dev', 'qa', 'staging', 'prod'];
@@ -21,7 +22,7 @@ type Resource = { Type: string; Properties: Record<string, any>; DependsOn?: str
 const resources = (stack: cdk.Stack) => Template.fromStack(stack).toJSON().Resources as Record<string, Resource>;
 const ofType = (all: Record<string, Resource>, type: string) => Object.entries(all).filter(([, r]) => r.Type === type);
 
-test('T-INF-7 GET /health has no authorizer, there is no default route, throttling is 10 and 20, functions are named per stage', () => {
+test('T-INF-7 GET /health has no authorizer, there is no default route, throttling is 50 and 100 (D-81), functions are named per stage', () => {
   for (const stage of STAGES) {
     const { api } = addStage(new cdk.App({ context }), stage, env);
     const all = resources(api);
@@ -33,12 +34,10 @@ test('T-INF-7 GET /health has no authorizer, there is no default route, throttli
 
     const [[, httpApi]] = ofType(all, 'AWS::ApiGatewayV2::Api');
     assert.equal(httpApi.Properties.Name, `smart-finances-${stage}`);
-    const origins = context.webOrigins[stage as keyof typeof context.webOrigins];
-    if (origins.length) assert.deepEqual(httpApi.Properties.CorsConfiguration.AllowOrigins, origins);
-    else assert.equal(httpApi.Properties.CorsConfiguration, undefined, 'no CORS without web origins');
+    assert.equal(httpApi.Properties.CorsConfiguration, undefined, 'no API browser rule, even with web origins (D-81)');
 
     const [[, apiStage]] = ofType(all, 'AWS::ApiGatewayV2::Stage');
-    assert.deepEqual(apiStage.Properties.DefaultRouteSettings, { ThrottlingRateLimit: 10, ThrottlingBurstLimit: 20 });
+    assert.deepEqual(apiStage.Properties.DefaultRouteSettings, { ThrottlingRateLimit: 50, ThrottlingBurstLimit: 100 });
 
     const functions = ofType(all, 'AWS::Lambda::Function').filter(([id]) => !id.startsWith(CR_SINGLETON)).map(([, r]) => r.Properties);
     assert.deepEqual(functions.map((f) => f.FunctionName), [`smart-finances-${stage}-health`]);
@@ -59,7 +58,7 @@ test('T-INF-7 GET /health has no authorizer, there is no default route, throttli
   assert.equal(fn.Properties.ReservedConcurrentExecutions, 5);
 });
 
-test('T-INF-7 the JWT authorizer trusts the stage pool as issuer and its app client as audience', () => {
+test('T-INF-7 the JWT authorizer trusts the stage pool as issuer and both its clients as audience', () => {
   const { api } = addStage(new cdk.App({ context }), 'qa', env);
   // No route binds the authorizer in this PR; bind it to a probe route to see what it synthesizes.
   const probe = new cdk.aws_lambda.Function(api, 'Probe', {
@@ -80,7 +79,7 @@ test('T-INF-7 the JWT authorizer trusts the stage pool as issuer and its app cli
 
   const [[readerId]] = ofType(all, 'Custom::AWS');
   assert.deepEqual(authorizer.Properties.JwtConfiguration, {
-    Audience: [{ 'Fn::GetAtt': [readerId, 'Parameters.2.Value'] }],
+    Audience: [{ 'Fn::GetAtt': [readerId, 'Parameters.2.Value'] }, { 'Fn::GetAtt': [readerId, 'Parameters.4.Value'] }],
     Issuer: { 'Fn::Join': ['', ['https://cognito-idp.us-east-1.amazonaws.com/', { 'Fn::GetAtt': [readerId, 'Parameters.3.Value'] }]] },
   });
   const probeRoute = ofType(all, 'AWS::ApiGatewayV2::Route').find(([, r]) => r.Properties.RouteKey === 'GET /probe')![1];
@@ -141,12 +140,12 @@ test('T-INF-7 makeFunction bundles the pinned AWS SDK instead of using the runti
   assert.ok(bundle.length > 100_000, 'the SDK is inside the bundle');
 });
 
-const NAMES = ['bucket-name', 'table-name', 'user-pool-client-id', 'user-pool-id'];
+const NAMES = ['bucket-name', 'table-name', 'user-pool-client-id', 'user-pool-id', 'web-client-id'];
 const ssmArn = (stage: string, name: string) => ({
   'Fn::Join': ['', ['arn:', { Ref: 'AWS::Partition' }, `:ssm:us-east-1:111111111111:parameter/smart-finances/${stage}/${name}`]],
 });
 
-test('T-INF-13 one custom resource reads the four SSM values; no SSM template parameters; its policy names only their ARNs', () => {
+test('T-INF-13 one custom resource reads the five SSM values; no SSM template parameters; its policy names only their ARNs', () => {
   for (const stage of STAGES) {
     const { api } = addStage(new cdk.App({ context }), stage, env);
     const json = Template.fromStack(api).toJSON();
@@ -175,7 +174,7 @@ test('T-INF-13 one custom resource reads the four SSM values; no SSM template pa
     const [[, readerAgain]] = ofType(again.Resources, 'Custom::AWS');
     assert.notEqual(JSON.parse(readerAgain.Properties.Update).physicalResourceId.id, update.physicalResourceId.id);
 
-    // Its policy: ssm:GetParameters on exactly the four parameter ARNs, nothing else, no "*".
+    // Its policy: ssm:GetParameters on exactly the five parameter ARNs, nothing else, no "*".
     const policies = ofType(all, 'AWS::IAM::Policy').filter(([id]) => reader.DependsOn?.includes(id));
     assert.equal(policies.length, 1);
     const statements = policies[0][1].Properties.PolicyDocument.Statement;
@@ -198,5 +197,84 @@ test('T-INF-13 one custom resource reads the four SSM values; no SSM template pa
     assert.deepEqual(field(api.data.tableName), [readerId, 'Parameters.1.Value']);
     assert.deepEqual(field(api.data.userPoolClientId), [readerId, 'Parameters.2.Value']);
     assert.deepEqual(field(api.data.userPoolId), [readerId, 'Parameters.3.Value']);
+    assert.deepEqual(field(api.data.webClientId), [readerId, 'Parameters.4.Value']);
+  }
+});
+
+test('T-WINF-6 the API serves many people: both clients in the audience, throttle 50 and 100, no API or bucket browser rule, api-url published', () => {
+  for (const stage of STAGES) {
+    const app = new cdk.App({ context });
+    const { data, api } = addStage(app, stage, env);
+    // Bind the authorizer to a probe route before synth so the audience is in the template.
+    const probe = new cdk.aws_lambda.Function(api, 'Probe', {
+      runtime: cdk.aws_lambda.Runtime.NODEJS_22_X,
+      handler: 'index.handler',
+      code: cdk.aws_lambda.Code.fromInline('exports.handler = async () => ({})'),
+    });
+    api.httpApi.addRoutes({
+      path: '/probe',
+      methods: [apigw.HttpMethod.GET],
+      integration: new HttpLambdaIntegration('ProbeIntegration', probe),
+      authorizer: api.authorizer,
+    });
+    const all = resources(api);
+
+    const [[readerId, reader]] = ofType(all, 'Custom::AWS');
+    const names: string[] = JSON.parse(reader.Properties.Create).parameters.Names;
+    assert.ok(names.includes(`/smart-finances/${stage}/web-client-id`), 'the API reads web-client-id');
+    const index = (name: string) => names.indexOf(`/smart-finances/${stage}/${name}`);
+
+    const [[, authorizer]] = ofType(all, 'AWS::ApiGatewayV2::Authorizer');
+    assert.deepEqual(authorizer.Properties.JwtConfiguration.Audience, [
+      { 'Fn::GetAtt': [readerId, `Parameters.${index('user-pool-client-id')}.Value`] },
+      { 'Fn::GetAtt': [readerId, `Parameters.${index('web-client-id')}.Value`] },
+    ], 'the public client and the web-server client');
+
+    const [[, httpApi]] = ofType(all, 'AWS::ApiGatewayV2::Api');
+    assert.equal(httpApi.Properties.CorsConfiguration, undefined, `${stage}: no API browser rule`);
+
+    const [[, apiStage]] = ofType(all, 'AWS::ApiGatewayV2::Stage');
+    assert.deepEqual(apiStage.Properties.DefaultRouteSettings, { ThrottlingRateLimit: 50, ThrottlingBurstLimit: 100 });
+
+    const params = ofType(all, 'AWS::SSM::Parameter').map(([, r]) => r.Properties);
+    assert.equal(params.length, 1, 'one published parameter');
+    assert.equal(params[0].Name, `/smart-finances/${stage}/api-url`);
+    assert.equal(params[0].Type, 'String');
+    const [[apiId]] = ofType(all, 'AWS::ApiGatewayV2::Api');
+    assert.ok(JSON.stringify(params[0].Value).includes(apiId), 'the value is the HTTP API endpoint');
+
+    const buckets = ofType(resources(data), 'AWS::S3::Bucket');
+    assert.equal(buckets.length, 1);
+    assert.equal(buckets[0][1].Properties.CorsConfiguration, undefined, `${stage}: the data stack sets no bucket browser rule (D-88)`);
+  }
+});
+
+test('T-WINF-12 the API stage writes a JSON access log (status, route key, request time, request id only) kept one month', () => {
+  for (const stage of STAGES) {
+    const { api } = addStage(new cdk.App({ context }), stage, env);
+    const json = Template.fromStack(api).toJSON();
+    const all = json.Resources as Record<string, Resource & { DeletionPolicy?: string }>;
+
+    assert.equal(apiAccessLogGroupName(stage), `/aws/apigateway/smart-finances-${stage}-api-access`);
+    const groups = ofType(all, 'AWS::Logs::LogGroup').filter(([, g]) => g.Properties.LogGroupName === apiAccessLogGroupName(stage));
+    assert.equal(groups.length, 1, `${stage}: one access log group by its fixed name`);
+    const [[groupId, group]] = groups;
+    assert.equal(group.Properties.RetentionInDays, 30, 'one month');
+    assert.equal(all[groupId].DeletionPolicy, 'Delete', 'removed with the stack, so the fixed name can be created again');
+
+    const [[, apiStage]] = ofType(all, 'AWS::ApiGatewayV2::Stage');
+    const settings = apiStage.Properties.AccessLogSettings;
+    assert.ok(settings, `${stage}: the stage has access logging`);
+    assert.deepEqual(settings.DestinationArn, { 'Fn::GetAtt': [groupId, 'Arn'] });
+    assert.deepEqual(JSON.parse(settings.Format), {
+      requestId: '$context.requestId',
+      requestTime: '$context.requestTime',
+      routeKey: '$context.routeKey',
+      status: '$context.status',
+    });
+    // No source IP, identity, user agent, path or path parameters, authorizer claims or errors with values.
+    for (const banned of ['identity', 'sourceIp', 'userAgent', 'path', 'authorizer', 'requestTimeEpoch']) {
+      assert.ok(!settings.Format.includes(`$context.${banned}`), `${stage}: no $context.${banned}`);
+    }
   }
 });
