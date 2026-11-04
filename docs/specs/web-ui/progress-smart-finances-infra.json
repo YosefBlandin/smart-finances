@@ -39,9 +39,10 @@
         "npm test --workspace @smart-finances/infra exit 0: # tests 13 # pass 13 # fail 0",
         "npm run build --workspace @smart-finances/infra (tsc --noEmit) exit 0",
         "Profile verify: npm test (root) exit 0: api+contracts 37/37 pass; web vitest 23 files, 214/214 pass; infra 13/13 pass; no stray next-server",
-        "Profile verify: npm run lint --workspace @smart-finances/web exit 0: eslint clean, \"All matched files use Prettier code style!\""
+        "Profile verify: npm run lint --workspace @smart-finances/web exit 0: eslint clean, \"All matched files use Prettier code style!\"",
+        "Conformance fix: the 'reviewer has no blocker' gate had no recorded run; ran the task-review prompt (handoff-prompts.md section 3) headless and read-only (claude -p, dontAsk, Read/Grep/Glob and git show/log/grep only, a different model from the executor's) on the task's commit on 2026-11-04; result 'blocker': false; outcome recorded in review"
       ],
-      "review": ""
+      "review": "findings (no blocker): headless fresh-context task review of f4d3e0e, read-only, 2026-11-04. Minor: (1) the SF-121 commit alone opens sign-up before SF-122's gate exists, safe only because the PR ships in one merge (do not deploy SF-121 alone); (2) the client secret passes through the AwsCustomResource response, hidden only while @aws-cdk/cognito:logUserPoolClientSecretValue stays off, already guarded by T-WINF-2."
     },
     {
       "id": "SF-122",
@@ -59,9 +60,10 @@
         "Verify: npm test --workspace @smart-finances/infra exit 0: # tests 14 # pass 14 # fail 0 (synth bundles the trigger locally with esbuild; no Docker or network)",
         "npm run build --workspace @smart-finances/infra (tsc --noEmit) exit 0",
         "Profile verify: npm test (root) exit 0: api+contracts 37/37 pass; web lint clean; web vitest 23 files, 214/214 pass; infra 14/14 pass; one stray next-server killed afterwards",
-        "Profile verify: npm run lint --workspace @smart-finances/web exit 0: eslint clean, \"All matched files use Prettier code style!\""
+        "Profile verify: npm run lint --workspace @smart-finances/web exit 0: eslint clean, \"All matched files use Prettier code style!\"",
+        "Conformance fix: the 'reviewer has no blocker' gate had no recorded run; ran the task-review prompt (handoff-prompts.md section 3) headless and read-only (claude -p, dontAsk, Read/Grep/Glob and git show/log/grep only, a different model from the executor's) on the task's commit on 2026-11-04; result 'blocker': false; outcome recorded in review"
       ],
-      "review": ""
+      "review": "findings (no blocker): headless fresh-context task review of 5479983, read-only, 2026-11-04. Minor: (1) T-WINF-3 was not run by any script or CI (fixed in 9d76280, SF-132 workflow step); (2) the reason keys client_not_allowed, signup_closed, disposable_email, invalid_email live only in code and progress, the auth PR must match them; (3) the disposable list is from 2022, and a trailing-dot domain is not normalised (whether Cognito accepts one is unverified)."
     },
     {
       "id": "SF-123",
@@ -112,9 +114,10 @@
         "Verify: npm test --workspace @smart-finances/infra exit 0: # tests 19 # pass 19 # fail 0 (no esbuild bundling in this stack: it has no makeFunction yet)",
         "npm run build --workspace @smart-finances/infra (tsc --noEmit) exit 0",
         "Profile verify: npm test (root) exit 0: api+contracts 37/37 pass; web lint clean; web vitest 23 files, 214/214 pass; infra 19/19 pass; no stray next-server",
-        "Profile verify: npm run lint --workspace @smart-finances/web exit 0: \"All matched files use Prettier code style!\""
+        "Profile verify: npm run lint --workspace @smart-finances/web exit 0: \"All matched files use Prettier code style!\"",
+        "Conformance fix: the 'reviewer has no blocker' gate had no recorded run; ran the task-review prompt (handoff-prompts.md section 3) headless and read-only (claude -p, dontAsk, Read/Grep/Glob and git show/log/grep only, a different model from the executor's) on the task's commit on 2026-11-04; result 'blocker': false; outcome recorded in review"
       ],
-      "review": ""
+      "review": "findings (no blocker): headless fresh-context task review of 8e63374, read-only, 2026-11-04. Minor: (1) the Amplify service role has only CreateLogStream/PutLogEvents, check compute logs on qa; (2) trust-condition question answered: the plain amplify.amazonaws.com trust with no aws:SourceArn/SourceAccount is acceptable and not a blocker (nothing in the brief or decisions requires it, PassRole is limited to these roles in SF-126, the role grants are tightly scoped, and a wrong condition cannot be checked offline); optional hardening follow-up after the first qa deploy."
     },
     {
       "id": "SF-126",
@@ -131,9 +134,10 @@
         "Verify: npm test --workspace @smart-finances/infra exit 0: # tests 24 # pass 24 # fail 0 (about 65 s with three bundling stages)",
         "npm run build --workspace @smart-finances/infra (tsc --noEmit) exit 0",
         "Profile verify: npm test (root) exit 0: api+contracts 37/37 pass; web lint clean; web vitest 23 files, 214/214 pass; infra 24/24 pass; no stray next-server",
-        "Profile verify: npm run lint --workspace @smart-finances/web exit 0: \"All matched files use Prettier code style!\""
+        "Profile verify: npm run lint --workspace @smart-finances/web exit 0: \"All matched files use Prettier code style!\"",
+        "Conformance fix: the 'reviewer has no blocker' gate had no recorded run; ran the task-review prompt (handoff-prompts.md section 3) headless and read-only (claude -p, dontAsk, Read/Grep/Glob and git show/log/grep only, a different model from the executor's) on the task's commit on 2026-11-04; result 'blocker': false; outcome recorded in review"
       ],
-      "review": ""
+      "review": "findings (no blocker): headless fresh-context task review of a90929a, read-only, 2026-11-04 (the reviewer read the working-tree files after a denied command, not only the diff). Major, need a person or owner before the first qa deploy, not fixable offline: (1) AWS_REGION as an Amplify branch variable may be refused (AWS_ prefix), failing UpdateBranch; (2) clearing the roles on delete by sending '' to UpdateApp/UpdateBranch, and UpdateBranch with an empty variables map, are unverified and could fail a destroy or rollback on qa. Minor: (3) the web stack's first deploy needs api-url, bucket-name, support-address and web-client-id, which release.md HUMAN needs do not list for it."
     },
     {
       "id": "SF-127",
@@ -166,15 +170,26 @@
         "Verify: npm test --workspace @smart-finances/infra exit 0: # tests 27 # pass 27 # fail 0",
         "npm run build --workspace @smart-finances/infra (tsc --noEmit) exit 0",
         "Profile verify: npm test (root) exit 0: api+contracts 37/37 pass; web lint clean; web vitest 23 files, 214/214 pass; infra 27/27 pass; one next-server process seen right after, gone by the time pkill ran",
-        "Profile verify: npm run lint --workspace @smart-finances/web exit 0: \"All matched files use Prettier code style!\""
+        "Profile verify: npm run lint --workspace @smart-finances/web exit 0: \"All matched files use Prettier code style!\"",
+        "Conformance fix: the 'reviewer has no blocker' gate had no recorded run; ran the task-review prompt (handoff-prompts.md section 3) headless and read-only (claude -p, dontAsk, Read/Grep/Glob and git show/log/grep only, a different model from the executor's) on the task's commit on 2026-11-04; result 'blocker': false; outcome recorded in review"
       ],
-      "review": ""
+      "review": "findings (no blocker): headless fresh-context task review of 9913a5b, read-only, 2026-11-04. 'Skip and count' question answered: the implemented reading (a missing delete-function-name skips the whole person, counts eraseSkipped, and the row alarms as StuckDeletions after 6 hours) is consistent with D-104, T-WINF-11 and the stuck-deletion alarm; the literal reading must not be implemented, but the reading should be recorded as a decision or brief amendment by the planner. Minor: delete-function-name and the { sub } invoke contract are not in architecture.md Stage parameters; infra/package.json and @aws-sdk/client-lambda sit outside SF-128's Files and D-73's client list (recorded in progress)."
     },
     {
       "id": "SF-129",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "blocked",
+      "commit": "7a47d11",
+      "blocker": "The 429 half of the Alarms contract row 'API errors and throttles' (HTTP API 5xx and 429, 'any 429 for 5 minutes', D-80) is not built: HTTP APIs publish no 429 or throttle metric and the API stack has no access log, so it cannot be built inside SF-129's Files. Waiting on the owner's answer to deviation SF-129 (recommended option (a): access log on the API stack plus a metric filter and an api-throttles alarm). Everything else in the task is committed in 7a47d11 and verified below.",
+      "evidence": [
+        "Tests first: T-WINF-12 in infra/test/alarms-stack.test.ts (6 tests, each titled T-WINF-12): topic and email subscription, one metric filter per security event on /aws/amplify/<app id>, every contract alarm with operator/threshold/periods/missing-data/metrics (heartbeat breaching), one dashboard widget per alarm, qa-only budget at 50/80/100% to the topic with a budgets.amazonaws.com publish statement, dev refused",
+        "Fail first (cd infra && node --require ts-node/register --test test/alarms-stack.test.ts): not ok 1 - test/alarms-stack.test.ts; error TS2307: Cannot find module '../lib/alarms-stack' (# pass 0 # fail 1)",
+        "Implementation: infra/lib/alarms-stack.ts AlarmsStack (qa, staging, prod; throws for dev). Reads alarm-email, amplify-app-id, api-url and on qa monthly-budget-usd with readStageValues. Topic smart-finances-<stage>-alarms with an email subscription to alarm-email. 12 metric filters { $.event = \"<name>\" } on /aws/amplify/<app id> into SmartFinances/<stage>/<event name>, value 1, no default. Alarms smart-finances-<stage>-: signup-spike (signup Sum 1 h > 50), signin-failures (signin_fail Sum 15 min > 100), rate-limit-refusals (rate_limited Sum 5 min > 500), web-server-errors (100*AWS/AmplifyHosting 5xxErrors/Requests, App=<app id>, > 2 for 2x5 min), api-errors (100*AWS/ApiGateway 5xx/Count, ApiId from the api-url host, > 2 in 5 min), function-errors-<fn> for health, pre-sign-up, custom-message, housekeeping, amplify-vars (Errors+Throttles > 0 in 5 min), log-heartbeat (health Sum 1 h < 1, missing data breaching), stuck-deletion (StuckDeletions Maximum 1 h > 0, no dimensions), ses-bounce-rate (> 0.05), ses-complaint-rate (> 0.001); every alarm actions the topic, all but the heartbeat treat missing data as not breaching. Dashboard smart-finances-<stage> with one AlarmWidget per alarm. qa only: CfnBudget smart-finances-monthly COST MONTHLY USD from monthly-budget-usd, ACTUAL GREATER_THAN 50/80/100 PERCENTAGE to the topic. Rollup failures alarm left for data PR 3 (brief). The 429 half of 'API errors and throttles' is NOT built: see deviation SF-129",
+        "node --require ts-node/register --test test/alarms-stack.test.ts: # pass 6 # fail 0",
+        "npm test --workspace @smart-finances/infra: exit 0, # tests 34 # pass 34 # fail 0 (no esbuild or Docker runs for this stack: no makeFunction in it)",
+        "npm run build --workspace @smart-finances/infra (tsc --noEmit): exit 0",
+        "Profile verify: root npm test exit 0 (api+contracts 37/37; web vitest 23 files 214/214; infra 34/34); npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0 (eslint clean, Prettier clean); no stray next-server",
+        "Conformance fix: merged the two SF-129 entries (a stale 'todo' one in task order and the 'blocked' one appended after SF-133) into this single entry in task order, with the blocker text; no code change"
+      ],
       "review": ""
     },
     {
@@ -204,7 +219,10 @@
       "id": "SF-132",
       "status": "todo",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "Conformance fix: commit 9d76280 adds a 'Lambda tests' step (node --test infra/lambda/*.test.mjs) to .github/workflows/deploy.yml after 'Test' and before any AWS credentials, so CI runs T-WINF-3, T-WINF-5, T-WINF-8 (amplify-vars half), T-WINF-10 and T-WINF-11 (G-merge). Before: root npm test output had none of the four lambda files (37 api/contracts, 214 web, 36 infra; only the two T-WINF-10/11 synth tests in infra/test). The rest of SF-132 is still to do; status stays todo",
+        "Conformance fix: verify: workflow parses as YAML (steps Test, Lambda tests, Type check, ...); node --test infra/lambda/*.test.mjs from the repo root: # tests 37 # pass 37 # fail 0; per file amplify-vars 9/9, custom-message 7/7, housekeeping 10/10, pre-sign-up 11/11; profile verify: root npm test exit 0 (api+contracts 37/37, web 23 files 214/214, infra 36/36), npm run build --workspace @smart-finances/infra exit 0, npm run lint --workspace @smart-finances/web exit 0; no stray next-server"
+      ],
       "review": ""
     },
     {
@@ -219,21 +237,6 @@
         "Profile verify: npm run build --workspace @smart-finances/infra (tsc --noEmit) exit 0",
         "Profile verify: npm run lint --workspace @smart-finances/web exit 0: \"All matched files use Prettier code style!\"",
         "npm test --workspace @smart-finances/infra exit 0: # tests 36 # pass 36 # fail 0"
-      ],
-      "review": ""
-    },
-    {
-      "id": "SF-129",
-      "status": "blocked",
-      "commit": "7a47d11",
-      "evidence": [
-        "Tests first: T-WINF-12 in infra/test/alarms-stack.test.ts (6 tests, each titled T-WINF-12): topic and email subscription, one metric filter per security event on /aws/amplify/<app id>, every contract alarm with operator/threshold/periods/missing-data/metrics (heartbeat breaching), one dashboard widget per alarm, qa-only budget at 50/80/100% to the topic with a budgets.amazonaws.com publish statement, dev refused",
-        "Fail first (cd infra && node --require ts-node/register --test test/alarms-stack.test.ts): not ok 1 - test/alarms-stack.test.ts; error TS2307: Cannot find module '../lib/alarms-stack' (# pass 0 # fail 1)",
-        "Implementation: infra/lib/alarms-stack.ts AlarmsStack (qa, staging, prod; throws for dev). Reads alarm-email, amplify-app-id, api-url and on qa monthly-budget-usd with readStageValues. Topic smart-finances-<stage>-alarms with an email subscription to alarm-email. 12 metric filters { $.event = \"<name>\" } on /aws/amplify/<app id> into SmartFinances/<stage>/<event name>, value 1, no default. Alarms smart-finances-<stage>-: signup-spike (signup Sum 1 h > 50), signin-failures (signin_fail Sum 15 min > 100), rate-limit-refusals (rate_limited Sum 5 min > 500), web-server-errors (100*AWS/AmplifyHosting 5xxErrors/Requests, App=<app id>, > 2 for 2x5 min), api-errors (100*AWS/ApiGateway 5xx/Count, ApiId from the api-url host, > 2 in 5 min), function-errors-<fn> for health, pre-sign-up, custom-message, housekeeping, amplify-vars (Errors+Throttles > 0 in 5 min), log-heartbeat (health Sum 1 h < 1, missing data breaching), stuck-deletion (StuckDeletions Maximum 1 h > 0, no dimensions), ses-bounce-rate (> 0.05), ses-complaint-rate (> 0.001); every alarm actions the topic, all but the heartbeat treat missing data as not breaching. Dashboard smart-finances-<stage> with one AlarmWidget per alarm. qa only: CfnBudget smart-finances-monthly COST MONTHLY USD from monthly-budget-usd, ACTUAL GREATER_THAN 50/80/100 PERCENTAGE to the topic. Rollup failures alarm left for data PR 3 (brief). The 429 half of 'API errors and throttles' is NOT built: see deviation SF-129",
-        "node --require ts-node/register --test test/alarms-stack.test.ts: # pass 6 # fail 0",
-        "npm test --workspace @smart-finances/infra: exit 0, # tests 34 # pass 34 # fail 0 (no esbuild or Docker runs for this stack: no makeFunction in it)",
-        "npm run build --workspace @smart-finances/infra (tsc --noEmit): exit 0",
-        "Profile verify: root npm test exit 0 (api+contracts 37/37; web vitest 23 files 214/214; infra 34/34); npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0 (eslint clean, Prettier clean); no stray next-server"
       ],
       "review": ""
     }
@@ -299,6 +302,8 @@
     "SF-133: architecture.md Docs also asks for README.md \"Layout\" and \"Status\" updates, and D-104 asks for a data-architecture follow-up row (the hourly job invokes the data service's delete function); neither README.md nor a D-104 row is in SF-133's Files or Do list, so both were left out. README \"Layout\" does not list docs/runbooks yet.",
     "SF-133: apps/api/test/docs.test.mjs T-DOC-2 asserts the threat model contains the literal phrase 'self sign-up' (written when it was off); the v3 text keeps it by saying the pool's self sign-up is on.",
     "SF-133: the runbook's authenticator reset (admin-set-user-mfa-preference with the software token disabled, on a pool where TOTP is required) is expected to send the next sign-in to the setup step, but that was not checked against AWS (no AWS calls); the runbook asks the owner to confirm it once on qa with a synthetic account first.",
-    "SF-133: apps/web/messages/en.json auth.lost.wait still says 'A person answers, so it can take a day or two', which D-148 replaces with the 72-hour wording, and apps/web/src/middleware.ts still sets Referrer-Policy no-referrer where D-153 says same-origin; both are outside SF-133 (left for the auth and screens PRs)."
+    "SF-133: apps/web/messages/en.json auth.lost.wait still says 'A person answers, so it can take a day or two', which D-148 replaces with the 72-hour wording, and apps/web/src/middleware.ts still sets Referrer-Policy no-referrer where D-153 says same-origin; both are outside SF-133 (left for the auth and screens PRs).",
+    "SF-132: conformance fix put the infra/lambda/*.test.mjs run in the deploy workflow (SF-132's Files), so CI covers them, but root npm test and the profile verify still do not, because infra/package.json scripts are outside every task's Files. Proposal for the owner, not applied: change the infra test script to `node --require ts-node/register --test test/*.test.ts lambda/*.test.mjs` so local npm test covers them too. Note also that deploy.yml runs only on push to main, staging and qa, not on pull requests into feature/web-ui.",
+    "SF-126: the fresh-context review raised two majors that cannot be checked offline: whether Amplify accepts AWS_REGION as a branch variable, and whether '' clears the service and compute roles on delete. Both need a qa check or an owner decision before the first qa deploy and rollback."
   ]
 }
