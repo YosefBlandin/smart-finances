@@ -82,13 +82,21 @@
     },
     {
       "id": "SF-124",
-      "status": "todo",
-      "commit": "",
+      "status": "done",
+      "commit": "407ec93",
       "evidence": [
         "Tests first: T-WINF-6 written in infra/test/api-stack.test.ts (per stage: the API reader reads web-client-id, the JWT audience is [user-pool-client-id, web-client-id], no CorsConfiguration on the HTTP API, DefaultRouteSettings 50/100, an SSM parameter /smart-finances/<stage>/api-url, no CorsConfiguration on the data stack's bucket)",
         "Fail first: node --require ts-node/register --test --test-name-pattern 'T-WINF-6' test/api-stack.test.ts: 0 pass, 1 fail, AssertionError 'the API reads web-client-id' (expected true, actual false)",
         "Trial implementation (not committed, reverted): ApiStack reads web-client-id, audience lists both clients, corsPreflight removed, throttle 50/100, StringParameter api-url; DataStack bucket cors removed. tsc --noEmit exit 0. npm test --workspace @smart-finances/infra: 15 tests, 9 pass, 6 fail. In-scope failures (api-stack.test.ts, fixable in this task): T-INF-7 x2 (old throttle 10/20, CORS and single-audience assertions), T-INF-13 (exactly four reader names), T-WINF-6 (test bug: probe added after synth). Out-of-scope failures: T-INF-3 in infra/test/data-stack.test.ts:61-80 asserts the bucket CorsConfiguration POST from http://localhost:3000; T-INF-6 in infra/test/stacks.test.ts:48-69 asserts the API reader's four names and that webOrigins reach the bucket CORS",
-        "Blocked: SF-124's Files are infra/lib/api-stack.ts, infra/lib/data-stack.ts and infra/test/api-stack.test.ts; making verify green needs edits to infra/test/data-stack.test.ts and infra/test/stacks.test.ts (deviation recorded). Working tree reverted to 299dd82; nothing committed for code"
+        "Blocked: SF-124's Files are infra/lib/api-stack.ts, infra/lib/data-stack.ts and infra/test/api-stack.test.ts; making verify green needs edits to infra/test/data-stack.test.ts and infra/test/stacks.test.ts (deviation recorded). Working tree reverted to 299dd82; nothing committed for code",
+        "Resumed after the owner's decision (deviations, 2026-11-04): SF-124 may also update infra/test/data-stack.test.ts (T-INF-3) and infra/test/stacks.test.ts (T-INF-6); the dev bucket's missing browser rule is accepted. Status set back to in_progress, then done.",
+        "Tests first (re-run): T-WINF-6 rewritten in infra/test/api-stack.test.ts (probe route bound before synth; per stage: reader names include web-client-id, audience [user-pool-client-id, web-client-id], no API CorsConfiguration, DefaultRouteSettings 50/100, exactly one SSM parameter /smart-finances/<stage>/api-url whose value is the HTTP API endpoint, no CorsConfiguration on the data stack's bucket); T-INF-7 updated (no API CORS for any stage, throttle 50/100, audience lists both clients), T-INF-13 updated (five names, api.data.webClientId is Parameters.4.Value), T-INF-3 updated (no bucket CorsConfiguration with or without webOrigins), T-INF-6 updated (reader names gain web-client-id; webOrigins no longer reach the bucket, api.webOrigins assertions kept)",
+        "Fail first: npm test --workspace @smart-finances/infra: tsc error TS2339 'webClientId' does not exist on ApiStack.data (api-stack.test.ts:199), T-INF-3 and T-INF-6 fail; with TS_NODE_TRANSPILE_ONLY=1 node --require ts-node/register --test test/api-stack.test.ts test/stacks.test.ts test/data-stack.test.ts: 15 tests, 9 pass, 6 fail: T-INF-7 x2, T-INF-13, T-WINF-6 ('the API reads web-client-id', expected true, actual false), T-INF-3, T-INF-6",
+        "Implementation: ApiStack reads web-client-id, JWT audience [user-pool-client-id, web-client-id], corsPreflight removed, throttle 50/100, StringParameter ApiUrlParam /smart-finances/<stage>/api-url = httpApi.apiEndpoint; DataStack bucket cors removed (webOrigins prop kept, documented unused, since infra/lib/stage.ts is not in Files)",
+        "Verify: npm test --workspace @smart-finances/infra → exit 0, 28/28 pass",
+        "Verify: npm run build --workspace @smart-finances/infra (tsc --noEmit) → exit 0",
+        "Extra: node --test infra/lambda/*.test.mjs → 37/37 pass",
+        "Profile verify: root npm test → exit 0 (node --test api+contracts 37/37; web vitest 23 files 214/214; infra 28/28); npm run build --workspace @smart-finances/infra → exit 0; npm run lint --workspace @smart-finances/web → exit 0 (eslint clean, prettier clean). No esbuild or Docker beyond the existing health/probe bundling; no AWS calls."
       ],
       "review": ""
     },
@@ -236,6 +244,8 @@
     "SF-128: the brief's grants say \"the tables\", but finding rows with status deleting needs a Scan of the accounts table (pk only, no index on status), which the compute role does not have; the housekeeping role gets dynamodb:Scan on the accounts table only. The accounts table holds one small row per person, so the hourly scan is cheap at this scale. The job does not read housekeeping-hmac-secret-arn (architecture's parameter table lists housekeeping as a reader for counter keys, D-115, but the task's Do names no counter work; counters expire by TTL).",
     "SF-128: the run is not retried (async MaximumRetryAttempts 0), so a failed run calls /api/health once and the next comes an hour later; the heartbeat alarm (SF-129, missing for 1 hour) can therefore trip on a single failed health call or a run that misses its window. Housekeeping has no grace period before finishing a deleting row, so it may run the same steps as the person's own finishing session; every step is safe to repeat (not found and a changed row count as done).",
     "SF-128: like the other infra/lambda tests, housekeeping.test.mjs runs only through the explicit node --test command, not root npm test or the infra test script.",
-    "The container restarted during SF-128's review fix round; its half-made edits were stashed (git stash, 'interrupted SF-128 fix round'), and the round was re-run from the committed state."
+    "The container restarted during SF-128's review fix round; its half-made edits were stashed (git stash, 'interrupted SF-128 fix round'), and the round was re-run from the committed state.",
+    "SF-124: ApiStack and DataStack still take the webOrigins prop (infra/lib/stage.ts, which passes it, is not in SF-124's Files); the data stack no longer uses it and the API keeps it only as a field T-INF-6 reads. SF-131 (stage wiring) can drop it from both or pass the list to the web stack. With SF-124 in, the two-writer bucket rule SF-127 noted is gone: only the web stack's custom resource sets it.",
+    "SF-124: the api-url parameter is created by the API stack, so the first deploy of an existing stage replaces nothing but adds a new SSM parameter; the web stack (SF-126) reads it at deploy time, so the API stack must deploy before the web stack on each stage (stage.ts dependency order, SF-131)."
   ]
 }
