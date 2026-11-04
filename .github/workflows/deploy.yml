@@ -17,7 +17,8 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Checks, four stacks, the Amplify job (at most 15 minutes) and the health check (D-113).
+    timeout-minutes: 45
     env:
       # main -> prod, staging -> staging, qa -> qa
       STAGE: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
@@ -31,7 +32,11 @@ jobs:
 
       - run: npm ci
 
-      # Api tests and infra synth tests, before any AWS credentials exist.
+      # Everything below runs before any AWS credentials exist.
+      - name: Lint and format check
+        run: npm run lint --workspace @smart-finances/web
+
+      # Api tests, web unit tests and infra synth tests (npm test also re-runs the lint).
       - name: Test
         run: npm test
 
@@ -40,8 +45,33 @@ jobs:
       - name: Lambda tests
         run: node --test infra/lambda/*.test.mjs
 
+      - name: Release script tests
+        run: node --test scripts/amplify-release.test.mjs
+
       - name: Type check
         run: npm run build --workspace @smart-finances/infra
+
+      # Browser tests and Storybook's test runner use Playwright's Chromium (D-59, D-136); Lighthouse CI uses the
+      # runner's Chrome. These builds run on fixtures, so they get STAGE=test, not the job's stage.
+      - name: Install Playwright Chromium
+        run: npm exec --workspace @smart-finances/web -- playwright install --with-deps chromium
+
+      # Against a production build with STAGE=test, never next dev (D-151).
+      - name: Browser tests
+        env:
+          STAGE: test
+        run: npm run e2e --workspace @smart-finances/web
+
+      - name: Storybook build, accessibility and interaction tests
+        env:
+          STAGE: test
+        run: npm run test-storybook --workspace @smart-finances/web
+
+      # Phone settings on the fixtures (D-134).
+      - name: Lighthouse CI budgets
+        env:
+          STAGE: test
+        run: npm run lhci --workspace @smart-finances/web
 
       - name: Configure AWS credentials (OIDC, no stored keys)
         uses: aws-actions/configure-aws-credentials@v4
@@ -57,3 +87,16 @@ jobs:
       - name: Deploy API stack
         working-directory: infra
         run: npx cdk deploy "smart-finances-api-${STAGE}" -c stage="${STAGE}" --require-approval never
+
+      - name: Deploy web stack
+        working-directory: infra
+        run: npx cdk deploy "smart-finances-web-${STAGE}" -c stage="${STAGE}" --require-approval never
+
+      - name: Deploy alarms stack
+        working-directory: infra
+        run: npx cdk deploy "smart-finances-alarms-${STAGE}" -c stage="${STAGE}" --require-approval never
+
+      # Amplify auto-build is off (D-93): start the job for this commit, wait for it and for /api/health to report
+      # the commit, then compare the headers with the contract (RK-2, RK-3).
+      - name: Release the web app
+        run: node scripts/amplify-release.mjs --stage "${STAGE}" --branch "${GITHUB_REF_NAME}" --sha "${GITHUB_SHA}"
