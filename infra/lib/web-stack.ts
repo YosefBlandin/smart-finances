@@ -1,11 +1,19 @@
 import * as cdk from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as cr from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
+import { makeFunction } from './function';
 import { readStageValues } from './stage-values';
+
+/** The Amplify branch each stage deploys (D-102); dev has no web stack. */
+const BRANCHES: Record<string, string> = { qa: 'qa', staging: 'staging', prod: 'main' };
+
+/** Stage values this stack reads at deploy time (Contracts "Stage parameters"). */
+const STAGE_VALUES = ['amplify-app-id', 'api-url', 'bucket-name', 'support-address', 'user-pool-id', 'web-client-id', 'web-client-secret-arn'] as const;
 
 export interface WebStackProps extends cdk.StackProps {
   stage: string;
@@ -15,14 +23,28 @@ export interface WebStackProps extends cdk.StackProps {
  * The web server's side of one stage (D-102): the console-created Amplify app is adopted by the
  * amplify-app-id stage parameter, never created here. This stack owns the sessions and accounts
  * tables (D-72, D-87), the counter-key HMAC secret (D-115), the Amplify service role (log writes
- * on the app's existing log group, D-112) and the compute role the web server runs as.
+ * on the app's existing log group, D-112) and the compute role the web server runs as, and sets
+ * the app's platform and roles, the branch's auto-build, compute role and variables through custom
+ * resources that may pass only those two roles and clear them on delete (D-93, D-110, D-111).
  * Values from the data stack and from people are read from SSM at deploy time (D-33), so synth
  * needs no stage values and there are no CloudFormation exports.
  */
 export class WebStack extends cdk.Stack {
   readonly stage: string;
   /** Stage values read at deploy time. */
-  readonly values: { amplifyAppId: string; userPoolId: string; webClientSecretArn: string };
+  readonly values: {
+    amplifyAppId: string;
+    apiUrl: string;
+    bucketName: string;
+    supportAddress: string;
+    userPoolId: string;
+    webClientId: string;
+    webClientSecretArn: string;
+  };
+  /** The Amplify branch this stage deploys: qa, staging or main. */
+  readonly branchName: string;
+  /** The branch address, https://<branch>.<app id>.amplifyapp.com. */
+  readonly webOrigin: string;
   readonly sessionsTable: dynamodb.Table;
   readonly accountsTable: dynamodb.Table;
   readonly hmacSecret: secretsmanager.Secret;
@@ -34,17 +56,26 @@ export class WebStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: WebStackProps) {
     super(scope, id, props);
     this.stage = props.stage;
+    const branchName = BRANCHES[props.stage];
+    if (!branchName) throw new Error(`WebStack: no Amplify branch for stage ${props.stage}`);
+    this.branchName = branchName;
 
     // Real people's consent lives in staging and prod: keep it if the stack goes (D-111). The web
     // stack is destroyed only on qa.
     const keep = props.stage === 'staging' || props.stage === 'prod';
 
-    const values = readStageValues(this, props.stage, ['amplify-app-id', 'user-pool-id', 'web-client-secret-arn']);
+    // One reader per stack (its construct id is fixed): every stage value goes in this one call.
+    const values = readStageValues(this, props.stage, STAGE_VALUES);
     this.values = {
       amplifyAppId: values['amplify-app-id'],
+      apiUrl: values['api-url'],
+      bucketName: values['bucket-name'],
+      supportAddress: values['support-address'],
       userPoolId: values['user-pool-id'],
+      webClientId: values['web-client-id'],
       webClientSecretArn: values['web-client-secret-arn'],
     };
+    this.webOrigin = `https://${branchName}.${this.values.amplifyAppId}.amplifyapp.com`;
 
     // Sessions, pre-auth state, proof-of-work answers and window counters (Contracts "Sessions
     // table"). Keys are SHA-256 or HMAC values, never a cookie id. Every read checks expires_at
@@ -171,5 +202,116 @@ export class WebStack extends cdk.Stack {
         ],
       }),
     );
+
+    this.adoptAmplifyApp(branchName);
+  }
+
+  /**
+   * D-102, D-93, D-110, D-111: the console-created app becomes web compute with this stack's two
+   * roles; its stage branch gets auto-build off and the compute role; then the branch variables
+   * are merged in. The app and branch updates are SDK calls on CDK's shared provider, whose role
+   * may pass only the two roles, and only to Amplify. Their answers hold the app's settings, so
+   * only an id is kept and nothing is logged. Each has one physical id per app, so a stack update
+   * never runs the delete (which clears the roles) against a live app.
+   */
+  private adoptAmplifyApp(branchName: string) {
+    const appId = this.values.amplifyAppId;
+    const appArn = this.formatArn({ service: 'amplify', resource: 'apps', resourceName: appId, arnFormat: cdk.ArnFormat.SLASH_RESOURCE_NAME });
+    const branchArn = `${appArn}/branches/${branchName}`;
+    const passTo = (roles: iam.IRole[]) =>
+      new iam.PolicyStatement({
+        actions: ['iam:PassRole'],
+        resources: roles.map((r) => r.roleArn),
+        conditions: { StringEquals: { 'iam:PassedToService': 'amplify.amazonaws.com' } },
+      });
+
+    const setApp: cr.AwsSdkCall = {
+      service: 'Amplify',
+      action: 'updateApp',
+      parameters: { appId, platform: 'WEB_COMPUTE', iamServiceRoleArn: this.serviceRole.roleArn, computeRoleArn: this.computeRole.roleArn },
+      physicalResourceId: cr.PhysicalResourceId.of(`amplify-app/${appId}`),
+      outputPaths: ['app.appId'],
+      logging: cr.Logging.withDataHidden(),
+    };
+    const app = new cr.AwsCustomResource(this, 'AmplifyApp', {
+      onCreate: setApp,
+      onUpdate: setApp,
+      // Clear only the roles this stack set; the platform stays web compute.
+      onDelete: {
+        service: 'Amplify',
+        action: 'updateApp',
+        parameters: { appId, iamServiceRoleArn: '', computeRoleArn: '' },
+        ignoreErrorCodesMatching: 'NotFoundException',
+        outputPaths: ['app.appId'],
+        logging: cr.Logging.withDataHidden(),
+      },
+      installLatestAwsSdk: false,
+      policy: cr.AwsCustomResourcePolicy.fromStatements([
+        new iam.PolicyStatement({ actions: ['amplify:UpdateApp'], resources: [appArn] }),
+        passTo([this.serviceRole, this.computeRole]),
+      ]),
+    });
+
+    const setBranch: cr.AwsSdkCall = {
+      service: 'Amplify',
+      action: 'updateBranch',
+      parameters: { appId, branchName, enableAutoBuild: false, computeRoleArn: this.computeRole.roleArn },
+      physicalResourceId: cr.PhysicalResourceId.of(`amplify-branch/${appId}/${branchName}`),
+      outputPaths: ['branch.branchName'],
+      logging: cr.Logging.withDataHidden(),
+    };
+    const branch = new cr.AwsCustomResource(this, 'AmplifyBranch', {
+      onCreate: setBranch,
+      onUpdate: setBranch,
+      // Auto-build stays off: CI starts every job (D-93), also for a rollback.
+      onDelete: {
+        service: 'Amplify',
+        action: 'updateBranch',
+        parameters: { appId, branchName, computeRoleArn: '' },
+        ignoreErrorCodesMatching: 'NotFoundException',
+        outputPaths: ['branch.branchName'],
+        logging: cr.Logging.withDataHidden(),
+      },
+      installLatestAwsSdk: false,
+      policy: cr.AwsCustomResourcePolicy.fromStatements([
+        new iam.PolicyStatement({ actions: ['amplify:UpdateBranch'], resources: [branchArn] }),
+        passTo([this.computeRole]),
+      ]),
+    });
+    branch.node.addDependency(app);
+
+    // Contracts "Web server settings": the names WebStack writes. Only ARNs of secrets, never a
+    // value; COMMIT_SHA comes from amplify.yml.
+    const variables: Record<string, string> = {
+      STAGE: this.stage,
+      AWS_REGION: this.region,
+      API_URL: this.values.apiUrl,
+      USER_POOL_ID: this.values.userPoolId,
+      WEB_CLIENT_ID: this.values.webClientId,
+      WEB_CLIENT_SECRET_ARN: this.values.webClientSecretArn,
+      HMAC_SECRET_ARN: this.hmacSecret.secretArn,
+      SESSIONS_TABLE: this.sessionsTable.tableName,
+      ACCOUNTS_TABLE: this.accountsTable.tableName,
+      // The presigned POST address the data service hands out (virtual-hosted, regional).
+      UPLOAD_HOST: `${this.values.bucketName}.s3.${this.region}.amazonaws.com`,
+      WEB_ORIGIN: this.webOrigin,
+      SUPPORT_ADDRESS: this.values.supportAddress,
+    };
+
+    const fn = makeFunction(this, { name: 'amplify-vars', entry: 'infra/lambda/amplify-vars.mjs', memoryMb: 128, timeoutSeconds: 30 });
+    fn.addToRolePolicy(new iam.PolicyStatement({ actions: ['amplify:GetBranch', 'amplify:UpdateBranch'], resources: [branchArn] }));
+    const provider = new cr.Provider(this, 'AmplifyVarsProvider', {
+      onEventHandler: fn,
+      logGroup: new logs.LogGroup(this, 'AmplifyVarsProviderLogs', {
+        retention: logs.RetentionDays.ONE_MONTH,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }),
+    });
+    const vars = new cdk.CustomResource(this, 'AmplifyBranchVariables', {
+      serviceToken: provider.serviceToken,
+      resourceType: 'Custom::AmplifyBranchVariables',
+      properties: { AppId: appId, BranchName: branchName, Variables: variables },
+    });
+    vars.node.addDependency(branch);
   }
 }

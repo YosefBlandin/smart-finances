@@ -12,6 +12,7 @@
     "diff:dev:personal": "cdk diff smart-finances-api-dev --profile personal -c stage=dev"
   },
   "dependencies": {
+    "@aws-sdk/client-amplify": "3.1152.0",
     "@aws-sdk/client-ssm": "3.1152.0",
     "aws-cdk-lib": "^2.170.0",
     "constructs": "^10.4.2",
