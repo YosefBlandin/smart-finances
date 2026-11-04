@@ -250,10 +250,10 @@ describe('T-WEB-14: memory adapters keep the port rules', () => {
     const c = testContainer();
     const breach = c.breachChecker as MemoryBreachChecker;
     breach.add('password1234');
-    expect(await c.breachChecker.isBreached('password1234')).toBe(true);
-    expect(await c.breachChecker.isBreached('a fresh password')).toBe(false);
+    expect(await c.breachChecker.isBreached('password1234', { requestId: 'req-test' })).toBe(true);
+    expect(await c.breachChecker.isBreached('a fresh password', { requestId: 'req-test' })).toBe(false);
     breach.setUnavailable(true);
-    expect(await c.breachChecker.isBreached('a fresh password')).toBe('unavailable');
+    expect(await c.breachChecker.isBreached('a fresh password', { requestId: 'req-test' })).toBe('unavailable');
     (c.secretStore as MemorySecretStore).set('arn:test', 'secret');
     expect(await c.secretStore.get('arn:test')).toBe('secret');
     await expect(c.secretStore.get('arn:missing')).rejects.toThrow();
@@ -261,7 +261,10 @@ describe('T-WEB-14: memory adapters keep the port rules', () => {
     expect(await c.parameterStore.get('/smart-finances/test/imports-paused')).toBe('false');
     expect(await c.parameterStore.get('/smart-finances/test/missing')).toBeUndefined();
     c.logger.event('sign_in', 'ok', { requestId: 'r1' });
-    expect((c.logger as MemoryLogger).events).toEqual([{ name: 'sign_in', outcome: 'ok', sub: undefined, requestId: 'r1' }]);
+    expect((c.logger as MemoryLogger).events).toEqual([
+      { name: 'breach_check_unavailable', outcome: 'unavailable', requestId: 'req-test', sub: undefined },
+      { name: 'sign_in', outcome: 'ok', sub: undefined, requestId: 'r1' },
+    ]);
     expect(c.settings.get().STAGE).toBe('test');
   });
 });

@@ -60,18 +60,19 @@ export const PORT_NAMES = [
 ] as const satisfies readonly (keyof Container)[];
 
 export function memoryContainer(settings: Settings = new MemorySettings(), clock: Clock = new MemoryClock(Date.now())): Container {
+  const logger = new MemoryLogger();
   return {
     clock,
     settings,
     secretStore: new MemorySecretStore(),
     parameterStore: new MemoryParameterStore(),
-    logger: new MemoryLogger(),
+    logger,
     sessionStore: new MemorySessionStore(clock),
     preAuthStore: new MemoryPreAuthStore(clock),
     counter: new MemoryCounter(clock),
     powStore: new MemoryPowStore(clock),
     accountStore: new MemoryAccountStore(),
-    breachChecker: new MemoryBreachChecker(),
+    breachChecker: new MemoryBreachChecker(logger),
     identityProvider: new MemoryIdentityProvider(clock),
     dataApi: new MemoryDataApi(clock),
   };
