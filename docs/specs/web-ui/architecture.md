@@ -159,7 +159,7 @@ app/             pages and layouts assemble sections; server components prefetch
 
 ### CI and build
 - Where: smart-finances:.github/workflows/deploy.yml, smart-finances:infra/lib/github-oidc-stack.ts, apps/web/amplify.yml (new), apps/web/lighthouserc.json (new).
-- deploy.yml, before credentials: lint and format check (D-132), web unit tests, browser tests, the Storybook build with its accessibility and interaction tests (D-136), and Lighthouse CI on the fixtures (D-134). Then deploy data, API, web and alarms; start the Amplify job for the commit and poll /api/health until it reports that sha; check the headers against the contract (D-93, RK-2, RK-3).
+- deploy.yml, before credentials: lint and format check (D-132), web unit tests, browser tests against a production build (D-151), the Storybook build with its accessibility and interaction tests (D-136), and Lighthouse CI on the fixtures (D-134). Then deploy data, API, web and alarms; start the Amplify job for the commit and poll /api/health until it reports that sha; check the headers against the contract (D-93, RK-2, RK-3).
 - The owner redeploys the OIDC stack with Amplify job rights on each stage's app and read of amplify-app-id (D-113). The poll waits at most 15 minutes; the job limit is 45 minutes. amplify.yml runs lint and the web unit tests, then writes the settings and commit id into .env.production, then builds (D-110).
 - Serves: D-59, D-93, D-132, D-134, D-136.
 
@@ -254,9 +254,9 @@ pk ACCT#<sub>: consent { terms_version, privacy_version, lang, accepted_at }, st
 ### Password and code rules (D-75, D-117)
 Length 12 to 128, any characters, no composition rules or expiry; breached passwords refused by the range check (D-117); TOTP required at first sign-in; the email code expires in 24 hours and the reset code in 1 hour; 5 wrong codes lock the step.
 
-### Response headers (middleware, every response)
+### Response headers (middleware, every page and route handler; built assets skip it, D-154)
 - Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-<n>' 'strict-dynamic'; style-src 'self' 'nonce-<n>'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://<upload bucket host> https://dataplane.rum.us-east-1.amazonaws.com https://cognito-identity.us-east-1.amazonaws.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'.
-- Strict-Transport-Security max-age=31536000; X-Content-Type-Options nosniff; Referrer-Policy no-referrer; Permissions-Policy camera=(), microphone=(), geolocation=(); Cache-Control no-store on signed-in pages.
+- Strict-Transport-Security max-age=31536000; X-Content-Type-Options nosniff; Referrer-Policy same-origin (D-153); Permissions-Policy camera=(), microphone=(), geolocation=(); Cache-Control no-store on signed-in pages.
 - Amplify custom headers set no content policy.
 
 ### Web server settings (D-110)

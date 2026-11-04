@@ -9,7 +9,7 @@ status: executing
 <!-- The executor's main document. It must stand alone: copy values in, and link only to sections a task cites. At most 6k tokens; comments do not count. Required reading (intent.md, this file and its Read first sections) stays under 15k. Before the lock, the cold-read dry run must find zero "cannot start" items. -->
 
 - Goal: people can sign up, confirm, set up an authenticator, sign in, reset and sign out, with server-held sessions, limits and consent, built as hexagonal use cases.
-- Implements: AC-1, AC-12 to AC-17, AC-19, AC-20, D-72, D-73, D-75, D-87, D-91, D-92, D-103, D-106, D-108, D-115, D-117, D-120, D-124, D-125, D-138
+- Implements: AC-1, AC-12 to AC-17, AC-19, AC-20, D-72, D-73, D-75, D-87, D-91, D-92, D-103, D-106, D-108, D-115, D-117, D-120, D-124, D-125, D-138, D-151, D-153
 - Spec folder: /home/user/smart-finances/docs/specs/web-ui in a cloud session; locally <repo root>/docs/specs/web-ui. Read and write the spec there, on the branch named under Branch, never a copy elsewhere.
 - Refs: smart-finances at the sha in intent.md refs. Before the first task: `git fetch origin qa feature/web-ui`, then `node ~/.claude/skills/spec/scripts/drift.mjs docs/specs/web-ui --strict` (exit 0; NEW lines are expected)
 - Worktree: a cloud session's own checkout; locally <repo root>/.claude/worktrees/web-auth (profile Notes)
@@ -58,6 +58,8 @@ status: executing
 - D-124: Zod validates every boundary: server action inputs, the JSON routes' inputs, every data API reply mirrored in types.ts, and the settings. Bad input becomes a plain error message, never a crash.
 - D-125: Forms submit through Next.js server actions, each wrapped by one guarded(action, opts) helper (exact Origin, proof of work for auth, limits, session and consent, Zod input). Route handlers remain only for health, the proof-of-work challenge, export, language and the JSON reads. Narrows D-82 and D-115.
 - D-138: Code architecture: the web server's logic is hexagonal (domain, application use cases, ports, adapters, with in-memory adapters for tests and Storybook); Next.js app/ only delivers (pages, layouts, server actions, JSON routes) and calls use cases through one container; presentation (ui, screens, queries, i18n) follows Next.js conventions. ESLint import rules enforce the dependency direction.
+- D-151: Browser tests run against a production build (next build, then next start with STAGE=test), never next dev. The content policy has no 'unsafe-eval' in any mode, so pages served by next dev do not hydrate; the dev server is only for looking at static layout.
+- D-153: Referrer-Policy is same-origin, not no-referrer. With no-referrer, Chrome sends Origin: null on our own form posts and server actions, which the exact Origin check refuses; same-origin keeps the real Origin on our posts and sends no referrer to other sites. The exact Origin check of D-115 is unchanged. Narrows D-115.
 - Values:
   - Packages allowed: @aws-sdk/client-cognito-identity-provider, -dynamodb, @aws-sdk/lib-dynamodb, -secrets-manager, -ssm, qrcode.
   - Username in the pool is the sub; sign-in uses the lower-cased email as the login.
@@ -127,12 +129,13 @@ status: executing
 - Verify: `npm test --workspace @smart-finances/web -- src/application/pow.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
 ### SF-145 · The guarded() wrapper for server actions
-- Implements: AC-15, AC-17, AC-19, D-115, D-124, D-125 · After: SF-144 · Judgment: high
-- Files: apps/web/src/app/guarded.ts (new), apps/web/src/app/guarded.test.ts (new)
+- Implements: AC-15, AC-17, AC-19, D-115, D-124, D-125, D-153 · After: SF-144 · Judgment: high
+- Files: apps/web/src/app/guarded.ts (new), apps/web/src/app/guarded.test.ts (new), apps/web/src/middleware.ts, apps/web/src/middleware.test.ts
 - Tests first: T-WAUTH-7
 - Do:
   - guarded(schema, { kind: "auth" }, fn) for now: exact Origin = WEB_ORIGIN from headers() (missing or null → messageKey auth.forbidden), then proof of work, then the counters, then the Zod input. SF-150 adds kind "money".
   - Returns { ok: true, data } or { ok: false, messageKey, retryAfterSeconds? }; never throws to the client.
+  - Middleware sends Referrer-Policy same-origin (D-153); update its T-WEB-7 expectation in middleware.test.ts first.
 - Verify: `npm test --workspace @smart-finances/web -- src/app/guarded.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
 ### SF-146 · Breached-password check

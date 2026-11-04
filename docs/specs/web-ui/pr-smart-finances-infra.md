@@ -57,6 +57,7 @@ status: executing
 - D-120: No WAF for now, on any stage. Limits live in the web server's window counters: auth posts per IP 20 per 5 minutes, sign-in or reset failures per email and address prefix 5 per 15 minutes, code emails per email 3 an hour and 10 a day, data requests per person 120 a minute. A self-hosted proof-of-work check (served from the site, no third party) guards sign-up and the auth posts instead of the WAF challenge. The user accepts that floods reach the web server's compute. Supersedes D-90 and D-105.
 - D-121: Integration branch: the four PRs (foundation, infra, auth, screens) each open as a draft into feature/web-ui, in order; once all are merged there, one PR from feature/web-ui into qa ships infra and web in one merge. The agent commits, pushes its feature branches and opens draft PRs; the user reviews, merges and promotes. Narrows D-6.
 - D-135: Browser monitoring with CloudWatch RUM: page loads, web vitals and JavaScript errors, client bundled from npm, no cookies, addresses stripped of search values, no person ids; a guest identity pool may only put RUM events; about 1 dollar per 100,000 events.
+- D-151: Browser tests run against a production build (next build, then next start with STAGE=test), never next dev. The content policy has no 'unsafe-eval' in any mode, so pages served by next dev do not hydrate; the dev server is only for looking at static layout.
 - Values:
   - Branch per stage: qa → qa, staging → staging, prod → main; address https://<branch>.<app id>.amplifyapp.com. Stage values are read at deploy time, so synth and tests need none.
   - Metrics: namespace SmartFinances/<stage>; StuckDeletions and one metric per security event name; period 5 minutes unless the table says an hour.
@@ -195,7 +196,7 @@ status: executing
 - Files: smart-finances:.github/workflows/deploy.yml, smart-finances:infra/lib/github-oidc-stack.ts, scripts/amplify-release.mjs (new), scripts/amplify-release.test.mjs (new)
 - Tests first: T-WINF-14
 - Do:
-  - Before credentials: lint, web unit tests, browser tests (install Playwright chromium), Storybook build and test-storybook, lhci.
+  - Before credentials: lint, web unit tests, browser tests against a production build (install Playwright chromium; D-151), Storybook build and test-storybook, lhci.
   - Deploy data, API, web, alarms; amplify-release.mjs (--stage, --branch, --sha; app id from amplify-app-id) starts a RELEASE job, polls it (15 minutes; fails on FAILED or CANCELLED), polls /api/health for the sha, and compares the headers with the contract. timeout-minutes 45.
   - The OIDC stack gains amplify:StartJob, GetJob, ListJobs on each stage’s app and ssm:GetParameter on the amplify-app-id parameters; a person deploys it.
 - Verify: `npm test --workspace @smart-finances/infra` and `node --test scripts/amplify-release.test.mjs` → pass
