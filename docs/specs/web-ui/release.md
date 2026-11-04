@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v7
 ---
 # Web UI: design system and screens: release
 
@@ -28,7 +28,7 @@ status: executing
 <!-- Values and actions only a person can supply, each as a HUMAN marker with the gate it blocks. Preflight failures from intake land here. The executor asks for these at the start and never invents them. -->
 - <HUMAN: store the Amplify app id as /smart-finances/<stage>/amplify-app-id in us-east-1 (D-102); qa done 2026-10-30, staging and prod later> · Blocks: the web stack
 - <HUMAN: turn auto-build off on each Amplify branch, or let the web stack do it on its first deploy; qa done 2026-10-30> · Blocks: first qa build
-- <HUMAN: set support-address, and signup-open (true on qa per D-118, false on staging and prod) stage parameters> · Blocks: the auth tasks' qa check
+- <HUMAN, or the agent on qa (D-155): set the D-163 stage parameters (support-address, alarm-email, monthly-budget-usd on qa, signup-open true on qa per D-118, false on staging and prod)> · Blocks: the first qa deploy
 - <HUMAN: redeploy the OIDC stack with Amplify job rights and amplify-app-id read (D-113); again when staging and prod apps exist> · Blocks: the first qa deploy
 - <HUMAN: read-only check that /aws/amplify/<app id> exists before the first web stack deploy (D-112)> · Blocks: the web stack
 - <HUMAN: confirm the SNS alarm email subscription> · Blocks: G-promote

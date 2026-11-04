@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v7
 ---
 # Web UI: design system and screens: architecture
 
@@ -262,7 +262,7 @@ Length 12 to 128, any characters, no composition rules or expiry; breached passw
 ### Web server settings (D-110)
 | Name | Source | Written by | Read by |
 |---|---|---|---|
-| STAGE, AWS_REGION | stage | WebStack, branch variables | server |
+| STAGE | stage | WebStack, branch variables | server (the region comes from the runtime, else us-east-1; D-159) |
 | API_URL | api-url parameter | WebStack | the data-api adapter |
 | USER_POOL_ID, WEB_CLIENT_ID | DataStack parameters | WebStack | auth flows |
 | WEB_CLIENT_SECRET_ARN, HMAC_SECRET_ARN | parameters | WebStack | server, read at run time through the compute role |
@@ -283,7 +283,7 @@ amplify.yml writes these into apps/web/.env.production before next build; no sec
 | sign-in failures | security events, signin_fail | over 100 in 15 minutes |
 | rate-limit refusals | security events, rate_limited | over 500 in 5 minutes |
 | web server errors | Amplify 5xx | over 2% for 10 minutes |
-| API errors and throttles | HTTP API 5xx and 429 | over 2%, or any 429 for 5 minutes |
+| API errors and throttles | HTTP API 5xx, and 429 lines in the API access log (D-160) | 5xx over 2%, or any 429 for 5 minutes |
 | function errors and throttles | Lambda, including housekeeping | any for 5 minutes |
 | log heartbeat | health lines from the hourly job's call | missing for 1 hour (missing data breaches) |
 | stuck deletion | accounts table, deleting older than 6 hours (hourly job metric) | any |

@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v7
 ---
 # Web UI: design system and screens: brief for smart-finances (PR 3 of 4, auth)
 
@@ -28,7 +28,7 @@ status: executing
 5. test-matrix.md rows whose task is SF-141 to SF-153.
 
 ## HUMAN needs
-- <HUMAN: support-address and signup-open (true on qa) stage parameters> · Blocks: the qa check after merge
+- <HUMAN or agent on qa (D-155): the D-163 stage parameters> · Blocks: the first qa deploy
 - <HUMAN: walk sign-up, setup, sign-in, reset and sign out on the qa branch with a test address> · Blocks: G-merge of feature/web-ui into qa
 - <HUMAN: review the privacy and terms text> · Blocks: SF-152 done
 
@@ -60,6 +60,8 @@ status: executing
 - D-138: Code architecture: the web server's logic is hexagonal (domain, application use cases, ports, adapters, with in-memory adapters for tests and Storybook); Next.js app/ only delivers (pages, layouts, server actions, JSON routes) and calls use cases through one container; presentation (ui, screens, queries, i18n) follows Next.js conventions. ESLint import rules enforce the dependency direction.
 - D-151: Browser tests run against a production build (next build, then next start with STAGE=test), never next dev. The content policy has no 'unsafe-eval' in any mode, so pages served by next dev do not hydrate; the dev server is only for looking at static layout.
 - D-153: Referrer-Policy is same-origin, not no-referrer. With no-referrer, Chrome sends Origin: null on our own form posts and server actions, which the exact Origin check refuses; same-origin keeps the real Origin on our posts and sends no referrer to other sites. The exact Origin check of D-115 is unchanged. Narrows D-115.
+- D-157: An existing test that asserts behaviour a task's decisions change may be updated in that task and recorded as a surprise. Production code outside a task's Files still stops.
+- D-159: AWS_REGION is not a branch variable, because Amplify reserves the AWS_ prefix. The web server takes the region from its runtime, else us-east-1 (D-89); amplify.yml no longer writes it. Narrows D-110.
 - Values:
   - Packages allowed: @aws-sdk/client-cognito-identity-provider, -dynamodb, @aws-sdk/lib-dynamodb, -secrets-manager, -ssm, qrcode.
   - Username in the pool is the sub; sign-in uses the lower-cased email as the login.
@@ -94,11 +96,11 @@ status: executing
 - Verify: the profile's verify.smart-finances → each result recorded under baseline, red or green
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json
 ### SF-141 · Add the settings, secrets and logger ports with their adapters
-- Implements: AC-16, D-110, D-80, D-115, D-138 · After: SF-140 · Judgment: high
-- Files: apps/web/src/ports/{Settings,SecretStore,Logger}.ts, apps/web/src/adapters/{env-settings,secrets,log}.ts (new), apps/web/src/adapters/memory/, apps/web/src/adapters/container.ts, apps/web/src/adapters/adapters.test.ts (new)
+- Implements: AC-16, D-110, D-80, D-115, D-138, D-159 · After: SF-140 · Judgment: high
+- Files: apps/web/src/ports/{Settings,SecretStore,Logger}.ts, apps/web/src/adapters/{env-settings,secrets,log}.ts (new), apps/web/src/adapters/memory/, apps/web/src/adapters/container.ts, apps/web/src/adapters/adapters.test.ts (new), apps/web/amplify.yml
 - Tests first: T-WAUTH-1, T-WAUTH-2
 - Do:
-  - Settings from the names in Contracts "Web server settings" (Zod-parsed), with STAGE=test defaults; secrets from Secrets Manager through the compute role, cached 5 minutes; plain strings.
+  - Settings from the names in Contracts "Web server settings" (Zod-parsed), with STAGE=test defaults; the region from the runtime, else us-east-1, and amplify.yml stops writing AWS_REGION (D-159); secrets from Secrets Manager through the compute role, cached 5 minutes; plain strings.
   - Logger writes one JSON security event per line and throws on keys named password, code, secret, token, email or ip.
 - Verify: `npm test --workspace @smart-finances/web -- src/adapters/adapters.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
@@ -130,12 +132,12 @@ status: executing
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
 ### SF-145 · The guarded() wrapper for server actions
 - Implements: AC-15, AC-17, AC-19, D-115, D-124, D-125, D-153 · After: SF-144 · Judgment: high
-- Files: apps/web/src/app/guarded.ts (new), apps/web/src/app/guarded.test.ts (new), apps/web/src/middleware.ts, apps/web/src/middleware.test.ts
+- Files: apps/web/src/app/guarded.ts (new), apps/web/src/app/guarded.test.ts (new), apps/web/src/middleware.ts, apps/web/src/middleware.test.ts, apps/web/e2e/headers.spec.ts
 - Tests first: T-WAUTH-7
 - Do:
   - guarded(schema, { kind: "auth" }, fn) for now: exact Origin = WEB_ORIGIN from headers() (missing or null → messageKey auth.forbidden), then proof of work, then the counters, then the Zod input. SF-150 adds kind "money".
   - Returns { ok: true, data } or { ok: false, messageKey, retryAfterSeconds? }; never throws to the client.
-  - Middleware sends Referrer-Policy same-origin (D-153); update its T-WEB-7 expectation in middleware.test.ts first.
+  - Middleware sends Referrer-Policy same-origin (D-153); update its T-WEB-7 expectation in middleware.test.ts and the T-WEB-8 one in e2e/headers.spec.ts first. The CI release checks this header (SF-132).
 - Verify: `npm test --workspace @smart-finances/web -- src/app/guarded.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
 ### SF-146 · Breached-password check
