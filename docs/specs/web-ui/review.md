@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v6
 ---
 # Web UI: design system and screens: review
 
@@ -88,6 +88,7 @@ status: executing
 <!-- Before each draft PR: a fresh reviewer compares the diff with the brief and its test ids. A finding that needs a decision becomes a deviation, not an edit. -->
 | Brief | Date | Tasks matched | Test ids found | Off-brief changes | Verdict |
 |---|---|---|---|---|---|
+| pr-smart-finances.md | 2026-10-31 | 15/15 | T-WEB-1 to T-WEB-17 | vitest.config.ts JSX, ui/ShellNav.tsx, playwright.config.ts production build, .gitignore (now D-149 to D-152) | pass: 0 blocker, 0 major, 16 minor after fixes; merged as PR #8 |
 
 ## Outcome
 <!-- At G-close. One line per AC: pass, fail or partial, and where it was verified, for example: - AC-1: pass, T-E2E-1 on production. Then the merge sha per repo. -->

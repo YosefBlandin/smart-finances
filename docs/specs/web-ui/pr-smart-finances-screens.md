@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v6
 ---
 # Web UI: design system and screens: brief for smart-finances (PR 4 of 4, screens)
 
@@ -62,6 +62,7 @@ status: executing
 - D-131: Optimistic updates only for review choices and approvals, and dollar rates; erase, delete account, imports and the language switch wait for the server's answer.
 - D-135: Browser monitoring with CloudWatch RUM: page loads, web vitals and JavaScript errors, client bundled from npm, no cookies, addresses stripped of search values, no person ids; a guest identity pool may only put RUM events; about 1 dollar per 100,000 events.
 - D-138: Code architecture: the web server's logic is hexagonal (domain, application use cases, ports, adapters, with in-memory adapters for tests and Storybook); Next.js app/ only delivers (pages, layouts, server actions, JSON routes) and calls use cases through one container; presentation (ui, screens, queries, i18n) follows Next.js conventions. ESLint import rules enforce the dependency direction.
+- D-151: Browser tests run against a production build (next build, then next start with STAGE=test), never next dev. The content policy has no 'unsafe-eval' in any mode, so pages served by next dev do not hydrate; the dev server is only for looking at static layout.
 - Values:
   - Each screen section: View.tsx (props only) and Container.tsx (hooks, actions), built from ui/patterns and ui/primitives.
   - Packages allowed: aws-rum-web, plus those of PRs 1 and 3.
