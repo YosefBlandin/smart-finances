@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 
@@ -20,6 +21,8 @@ export class DataStack extends cdk.Stack {
   readonly uploads: s3.Bucket;
   readonly userPool: cognito.UserPool;
   readonly webClient: cognito.UserPoolClient;
+  readonly webServerClient: cognito.UserPoolClient;
+  readonly webServerClientSecret: secretsmanager.Secret;
 
   constructor(scope: Construct, id: string, props: DataStackProps) {
     super(scope, id, props);
@@ -58,15 +61,27 @@ export class DataStack extends cdk.Stack {
     });
 
     // The sign-in sub is the person key of every stored item, so the pool is kept in every stage:
-    // a new pool would orphan all data (RK-10). The owner creates each user by hand.
+    // a new pool would orphan all data (RK-10, RK-5). Sign-up, policy and client changes below
+    // update it in place; the logical id is pinned by a synth test. People sign up through the
+    // web server (D-61); who may sign up is decided by the pre-sign-up trigger (D-98, D-109).
     this.userPool = new cognito.UserPool(this, 'UserPool', {
-      selfSignUpEnabled: false,
+      selfSignUpEnabled: true,
       signInAliases: { email: true },
       signInCaseSensitive: false,
       standardAttributes: { email: { required: true, mutable: true } },
       autoVerify: { email: true },
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      // Lite plan, no threat protection (D-117): the web server refuses breached passwords.
       featurePlan: cognito.FeaturePlan.LITE,
+      // Length 12 to 128, any characters, no composition rules (Contracts, D-75); the web server
+      // enforces the 128 upper bound.
+      passwordPolicy: {
+        minLength: 12,
+        requireLowercase: false,
+        requireUppercase: false,
+        requireDigits: false,
+        requireSymbols: false,
+      },
       mfa: cognito.Mfa.REQUIRED,
       mfaSecondFactor: { sms: false, otp: true },
       removalPolicy: cdk.RemovalPolicy.RETAIN,
@@ -78,6 +93,26 @@ export class DataStack extends cdk.Stack {
       authFlows: { userSrp: true },
       disableOAuth: true,
       preventUserExistenceErrors: true,
+    });
+
+    // Confidential client for the web server (D-73): a secret, the password flow and refresh, no
+    // OAuth, no context data (D-117). The public client above goes once this works on qa (D-98).
+    this.webServerClient = this.userPool.addClient('WebServerClient', {
+      generateSecret: true,
+      authFlows: { userPassword: true },
+      accessTokenValidity: cdk.Duration.minutes(60),
+      refreshTokenValidity: cdk.Duration.hours(12),
+      authSessionValidity: cdk.Duration.minutes(15),
+      disableOAuth: true,
+      preventUserExistenceErrors: true,
+    });
+
+    // The client secret is copied into Secrets Manager, read at run time by the compute role; only
+    // its ARN is published. userPoolClientSecret describes the client in a custom resource that
+    // hides the response from its logs (unless @aws-cdk/cognito:logUserPoolClientSecretValue is on).
+    this.webServerClientSecret = new secretsmanager.Secret(this, 'WebServerClientSecret', {
+      description: `Client secret of the ${props.stage} web-server sign-in client`,
+      secretStringValue: this.webServerClient.userPoolClientSecret,
     });
 
     const prefix = `/smart-finances/${props.stage}`;
@@ -96,6 +131,14 @@ export class DataStack extends cdk.Stack {
     new ssm.StringParameter(this, 'UserPoolClientIdParam', {
       parameterName: `${prefix}/user-pool-client-id`,
       stringValue: this.webClient.userPoolClientId,
+    });
+    new ssm.StringParameter(this, 'WebClientIdParam', {
+      parameterName: `${prefix}/web-client-id`,
+      stringValue: this.webServerClient.userPoolClientId,
+    });
+    new ssm.StringParameter(this, 'WebClientSecretArnParam', {
+      parameterName: `${prefix}/web-client-secret-arn`,
+      stringValue: this.webServerClientSecret.secretArn,
     });
   }
 }

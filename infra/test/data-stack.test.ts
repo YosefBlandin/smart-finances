@@ -2,14 +2,16 @@ import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as cdk from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { DataStack } from '../lib/data-stack';
 
 const env = { account: '111111111111', region: 'us-east-1' };
 const STAGES = ['dev', 'qa', 'staging', 'prod'];
 const retained = (stage: string) => stage === 'staging' || stage === 'prod';
 
-function synth(stage: string, webOrigins: string[] = ['http://localhost:3000']) {
-  const app = new cdk.App();
+function synth(stage: string, webOrigins: string[] = ['http://localhost:3000'], context?: Record<string, unknown>) {
+  const app = new cdk.App({ context });
   const stack = new DataStack(app, `smart-finances-data-${stage}`, { env, stage, webOrigins });
   return Template.fromStack(stack);
 }
@@ -110,12 +112,12 @@ test('T-INF-3 bucket: private, SSE-S3, TLS only, no versioning, EventBridge on, 
   assert.equal(noOrigins.Properties.CorsConfiguration, undefined, 'no CORS rule at all when webOrigins is empty');
 });
 
-test('T-INF-4 pool: self sign-up off, MFA required with TOTP only, retained in every stage; client: no secret, SRP and refresh only', () => {
+test('T-INF-4 pool: MFA required with TOTP only, retained in every stage; public client: no secret, SRP and refresh only', () => {
   for (const stage of STAGES) {
     const template = synth(stage);
     const pool = only(template, 'AWS::Cognito::UserPool');
     const props = pool.Properties;
-    assert.deepEqual(props.AdminCreateUserConfig, { AllowAdminCreateUserOnly: true }, 'no self sign-up');
+    // Self sign-up is on since SF-121 (T-WINF-1).
     assert.equal(props.MfaConfiguration, 'ON');
     assert.deepEqual(props.EnabledMfas, ['SOFTWARE_TOKEN_MFA']);
     assert.deepEqual(props.UsernameAttributes, ['email']);
@@ -127,7 +129,7 @@ test('T-INF-4 pool: self sign-up off, MFA required with TOTP only, retained in e
     assert.equal(pool.DeletionPolicy, 'Retain', `${stage} pool is retained`);
     assert.equal(pool.UpdateReplacePolicy, 'Retain');
 
-    const client = only(template, 'AWS::Cognito::UserPoolClient').Properties;
+    const client = (template.toJSON().Resources as Record<string, { Properties: Record<string, unknown> }>)[PUBLIC_CLIENT_ID].Properties;
     assert.equal(client.GenerateSecret, false);
     assert.deepEqual([...(client.ExplicitAuthFlows as string[])].sort(), ['ALLOW_REFRESH_TOKEN_AUTH', 'ALLOW_USER_SRP_AUTH']);
     assert.equal(client.AllowedOAuthFlows, undefined, 'no OAuth flows');
@@ -139,10 +141,13 @@ test('T-INF-4 pool: self sign-up off, MFA required with TOTP only, retained in e
     });
     template.hasResourceProperties('AWS::SSM::Parameter', {
       Name: `/smart-finances/${stage}/user-pool-client-id`,
-      Value: { Ref: 'UserPoolWebClient4C9370B0' },
+      Value: { Ref: PUBLIC_CLIENT_ID },
     });
   }
 });
+
+// The public SRP client of the old app; it stays until the web server signs in on qa (D-73, D-98).
+const PUBLIC_CLIENT_ID = 'UserPoolWebClient4C9370B0';
 
 // Changing any of these replaces the table or the pool, and a new pool means new sign-in subs
 // that no longer match stored items (RK-10). Change them only with a migration plan.
@@ -183,5 +188,121 @@ test('T-INF-5 logical ids, key schema and sign-in attributes of the table and po
     assert.equal(pool.Properties.AliasAttributes, PINNED.pool.AliasAttributes);
     assert.deepEqual(pool.Properties.Schema, PINNED.pool.Schema);
     assert.equal(pool.Properties.UserPoolName, undefined);
+  }
+});
+
+type Resources = Record<string, { Type: string; Properties: Record<string, any>; DeletionPolicy?: string }>;
+
+test('T-WINF-1 pool opens sign-up in place: self sign-up on, Lite plan, password minimum 12 with no classes, TOTP required; pool and public client keep their logical ids', () => {
+  for (const stage of STAGES) {
+    const resources = synth(stage).toJSON().Resources as Resources;
+    const pools = Object.entries(resources).filter(([, r]) => r.Type === 'AWS::Cognito::UserPool');
+    assert.deepEqual(pools.map(([id]) => id), [PINNED.pool.logicalId], `${stage} has the one pool, same logical id (no replacement)`);
+    const pool = resources[PINNED.pool.logicalId].Properties;
+    assert.deepEqual(pool.AdminCreateUserConfig, { AllowAdminCreateUserOnly: false }, 'self sign-up on');
+    assert.equal(pool.UserPoolTier, 'LITE', 'Lite plan, no threat protection (D-117)');
+    assert.equal(pool.UserPoolAddOns, undefined, 'no advanced security add-on');
+    assert.deepEqual(
+      {
+        MinimumLength: pool.Policies?.PasswordPolicy?.MinimumLength,
+        RequireLowercase: pool.Policies?.PasswordPolicy?.RequireLowercase,
+        RequireUppercase: pool.Policies?.PasswordPolicy?.RequireUppercase,
+        RequireNumbers: pool.Policies?.PasswordPolicy?.RequireNumbers,
+        RequireSymbols: pool.Policies?.PasswordPolicy?.RequireSymbols,
+      },
+      { MinimumLength: 12, RequireLowercase: false, RequireUppercase: false, RequireNumbers: false, RequireSymbols: false },
+      'password minimum 12, no character classes (Contracts "Password and code rules")',
+    );
+    assert.equal(pool.MfaConfiguration, 'ON', 'TOTP required unchanged');
+    assert.deepEqual(pool.EnabledMfas, ['SOFTWARE_TOKEN_MFA']);
+    assert.deepEqual(pool.AccountRecoverySetting, { RecoveryMechanisms: [{ Name: 'verified_email', Priority: 1 }] });
+
+    const publicClient = resources[PUBLIC_CLIENT_ID];
+    assert.equal(publicClient?.Type, 'AWS::Cognito::UserPoolClient', `${stage} public client keeps logical id ${PUBLIC_CLIENT_ID}`);
+    assert.equal(publicClient.Properties.GenerateSecret, false);
+    assert.deepEqual([...publicClient.Properties.ExplicitAuthFlows].sort(), ['ALLOW_REFRESH_TOKEN_AUTH', 'ALLOW_USER_SRP_AUTH']);
+    assert.deepEqual(publicClient.Properties.UserPoolId, { Ref: PINNED.pool.logicalId });
+  }
+});
+
+// Collects every { 'Fn::GetAtt': [logicalId, ...] } and { Ref: logicalId } target inside a value.
+function refsIn(value: unknown, into: Set<string> = new Set()): Set<string> {
+  if (Array.isArray(value)) value.forEach((v) => refsIn(v, into));
+  else if (value && typeof value === 'object') {
+    for (const [k, v] of Object.entries(value)) {
+      if (k === 'Ref' && typeof v === 'string') into.add(v);
+      else if (k === 'Fn::GetAtt' && Array.isArray(v)) into.add(String(v[0]));
+      else refsIn(v, into);
+    }
+  }
+  return into;
+}
+
+test('T-WINF-2 web-server client: secret, password flow and refresh, 60-minute access, 12-hour refresh, 15-minute session, no OAuth; its secret lives only in a Secrets Manager secret, and no output or parameter holds it', () => {
+  // Synth with the deploy context of cdk.json, so a feature flag that logs the secret would show.
+  const cdkJson = JSON.parse(readFileSync(join(__dirname, '..', 'cdk.json'), 'utf8')) as { context: Record<string, unknown> };
+  for (const stage of STAGES) {
+    const template = synth(stage, ['http://localhost:3000'], cdkJson.context);
+    const json = template.toJSON() as { Resources: Resources; Outputs?: Record<string, unknown>; Parameters?: Record<string, unknown> };
+    const resources = json.Resources;
+
+    const clients = Object.entries(resources).filter(([, r]) => r.Type === 'AWS::Cognito::UserPoolClient');
+    assert.equal(clients.length, 2, `${stage}: the public client and the web-server client`);
+    const confidential = clients.filter(([, r]) => r.Properties.GenerateSecret === true);
+    assert.equal(confidential.length, 1, 'one client with a secret');
+    const [clientId, client] = confidential[0];
+    assert.notEqual(clientId, PUBLIC_CLIENT_ID);
+    const p = client.Properties;
+    assert.deepEqual(p.UserPoolId, { Ref: PINNED.pool.logicalId });
+    assert.deepEqual([...p.ExplicitAuthFlows].sort(), ['ALLOW_REFRESH_TOKEN_AUTH', 'ALLOW_USER_PASSWORD_AUTH'], 'password flow and refresh only');
+    assert.equal(p.AccessTokenValidity, 60);
+    assert.equal(p.RefreshTokenValidity, 12 * 60);
+    assert.equal(p.TokenValidityUnits?.AccessToken, 'minutes');
+    assert.equal(p.TokenValidityUnits?.RefreshToken, 'minutes');
+    assert.equal(p.AuthSessionValidity, 15, 'challenge session 15 minutes');
+    assert.equal(p.AllowedOAuthFlowsUserPoolClient, false, 'OAuth off');
+    assert.equal(p.AllowedOAuthFlows, undefined);
+    assert.equal(p.AllowedOAuthScopes, undefined);
+    assert.equal(p.CallbackURLs, undefined);
+    assert.equal(p.PreventUserExistenceErrors, 'ENABLED');
+    assert.notEqual(p.EnablePropagateAdditionalUserContextData, true, 'no context data (D-117)');
+
+    // The secret is read from the client by one describe call whose response data is not logged.
+    const describers = Object.entries(resources).filter(([, r]) => r.Type === 'Custom::DescribeCognitoUserPoolClient');
+    assert.equal(describers.length, 1, 'one describe call for the client secret');
+    const [describerId, describer] = describers[0];
+    const call = JSON.stringify(describer.Properties);
+    assert.match(call, /describeUserPoolClient/);
+    assert.match(call, /logApiResponseData\\?":false/, 'the custom resource does not log the response holding the secret');
+
+    const secrets = Object.entries(resources).filter(([, r]) => r.Type === 'AWS::SecretsManager::Secret');
+    assert.equal(secrets.length, 1, 'one Secrets Manager secret');
+    const [secretId, secret] = secrets[0];
+    assert.deepEqual(secret.Properties.SecretString, { 'Fn::GetAtt': [describerId, 'UserPoolClient.ClientSecret'] }, 'the secret holds the client secret');
+    assert.equal(secret.Properties.GenerateSecretString, undefined);
+
+    // Only the Secrets Manager secret may read the describe response.
+    const readers = Object.entries(resources).filter(([id, r]) => id !== describerId && refsIn(r).has(describerId)).map(([id]) => id);
+    assert.deepEqual(readers, [secretId], 'nothing but the secret reads the client secret');
+    assert.equal(refsIn(json.Outputs ?? {}).has(describerId), false, 'no output holds the secret');
+    for (const [id, param] of Object.entries(json.Parameters ?? {})) {
+      assert.equal(id === 'BootstrapVersion' || !JSON.stringify(param).includes('ecret'), true, `template parameter ${id} is not a secret`);
+    }
+
+    // Published: the client id and the secret's ARN, never the value.
+    template.hasResourceProperties('AWS::SSM::Parameter', {
+      Name: `/smart-finances/${stage}/web-client-id`,
+      Type: 'String',
+      Value: { Ref: clientId },
+    });
+    template.hasResourceProperties('AWS::SSM::Parameter', {
+      Name: `/smart-finances/${stage}/web-client-secret-arn`,
+      Type: 'String',
+      Value: { Ref: secretId },
+    });
+    for (const param of Object.values(resources).filter((r) => r.Type === 'AWS::SSM::Parameter')) {
+      const targets = refsIn(param.Properties.Value);
+      assert.equal(targets.has(describerId), false, `${param.Properties.Name} does not hold the secret`);
+    }
   }
 });
