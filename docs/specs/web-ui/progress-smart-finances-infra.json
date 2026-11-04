@@ -45,9 +45,22 @@
     },
     {
       "id": "SF-122",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "5479983",
+      "evidence": [
+        "Tests first: T-WINF-3 (11 tests) in infra/lambda/pre-sign-up.test.mjs with a fake SSM client and an injected clock; T-WINF-4 added to infra/test/data-stack.test.ts (function wired as PreSignUp, environment { STAGE } only with no Ref/GetAtt, role may only ssm:GetParameters on the two parameter ARNs plus its log writes, Cognito invoke permission from this pool only, and a Ref/GetAtt/DependsOn cycle check)",
+        "Fail first: node --test infra/lambda/pre-sign-up.test.mjs: 0 pass, 1 fail, Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/user/smart-finances/infra/lambda/pre-sign-up.mjs'. node --require ts-node/register --test test/data-stack.test.ts: 6 pass, 1 fail, T-WINF-4 'dev: one pre-sign-up function' actual 0, expected 1",
+        "Packages: disposable-email-domains 1.0.62 (latest, published 2022-09-28) and @aws-sdk/client-ssm 3.1152.0 (same version as apps/api's SDK clients) added exact to infra/package.json; package-lock.json libc fields restored after npm install (lock diff only the two packages)",
+        "Implementation: infra/lambda/pre-sign-up.mjs exports makeHandler({ ssm, stage, now }) and handler = makeHandler({ new SSMClient, process.env.STAGE }); one GetParameters call for /smart-finances/<stage>/web-client-id and signup-open, cached 60 seconds, failures not cached (fail closed); refusals throw Error with reason keys client_not_allowed, signup_closed (anything but exactly \"true\", or missing), disposable_email (index list exact, wildcard list and its subdomains, case-insensitive), invalid_email (no domain); checks in that order; no logging. DataStack: makeFunction 'pre-sign-up' (256 MB, 5 s), ssm:GetParameters on the two ARNs built with formatArn (no resource refs), userPool.addTrigger(PRE_SIGN_UP); DataStack gains readonly stage for makeFunction",
+        "First run after implementing: two T-WINF-3 failures were a test-helper bug (default parameters swallowed explicit undefined); fixed the helper. T-WINF-4 then flagged Ref AWS::Partition in the ARNs; the check now allows pseudo parameters only",
+        "Mutation check: granting the trigger cognito-idp:DescribeUserPool on the pool ARN makes synth fail with 'Template is undeployable, these resources have a dependency cycle: UserPool6BA7E5F2 -> PreSignUp1C2BA29E -> PreSignUpRoleDefaultPolicyE8BDB8B3 -> UserPool6BA7E5F2' (reverted)",
+        "Bundle check (offline): esbuild with makeFunction's options bundles infra/lambda/pre-sign-up.mjs to 2.6 MB (JSON import attributes inlined); importing the bundle works and the handler throws 'pre-sign-up needs STAGE' without STAGE, no AWS call",
+        "Verify: node --test infra/lambda/pre-sign-up.test.mjs exit 0: # tests 11 # pass 11 # fail 0",
+        "Verify: npm test --workspace @smart-finances/infra exit 0: # tests 14 # pass 14 # fail 0 (synth bundles the trigger locally with esbuild; no Docker or network)",
+        "npm run build --workspace @smart-finances/infra (tsc --noEmit) exit 0",
+        "Profile verify: npm test (root) exit 0: api+contracts 37/37 pass; web lint clean; web vitest 23 files, 214/214 pass; infra 14/14 pass; one stray next-server killed afterwards",
+        "Profile verify: npm run lint --workspace @smart-finances/web exit 0: eslint clean, \"All matched files use Prettier code style!\""
+      ],
       "review": ""
     },
     {
@@ -133,6 +146,9 @@
     "SF-120: feature/web-infra already existed and was not created by this task: it was cut from the locked-v6 spec branch claude/tender-babbage-2p77gp (15f16c1), which sits on origin/feature/web-ui after PR 1 (#8) merged. During the baseline the owner merged that spec branch into feature/web-ui (PR #9, e5d26ef); its tree equals this branch's HEAD, so nothing needed merging.",
     "SF-120: npm ci warns EBADENGINE for jsdom@30.1.3 and three of its dependencies (they want node ^22.22.2; this container has v22.22.0); the web tests still pass. npm audit reports 71 vulnerabilities (11 low, 43 moderate, 17 high) at baseline.",
     "SF-121: the client secret reaches Secrets Manager through CDK's built-in UserPoolClient.userPoolClientSecret, which adds an AwsCustomResource (Custom::DescribeCognitoUserPoolClient) plus the shared AWS679f53fac002430cb0da5b7982bd2287 provider Lambda and an IAM policy allowing cognito-idp:DescribeUserPoolClient on this pool's ARN. CloudFormation keeps the describe response as a custom-resource attribute (readable only through GetAtt); the provider hides it from its logs only while the feature flag @aws-cdk/cognito:logUserPoolClientSecretValue stays off (cdk.json does not set it; T-WINF-2 checks). No esbuild or Docker runs at synth for this task.",
-    "SF-121: Cognito's password policy cannot express the 128-character upper bound from Contracts \"Password and code rules\"; the pool sets only the minimum of 12, so the web server must enforce the maximum (PR 3 domain rules)."
+    "SF-121: Cognito's password policy cannot express the 128-character upper bound from Contracts \"Password and code rules\"; the pool sets only the minimum of 12, so the web server must enforce the maximum (PR 3 domain rules).",
+    "SF-122: neither root npm test nor the infra workspace's test script (test/*.test.ts) runs infra/lambda/*.test.mjs, so T-WINF-3 runs only through the brief's explicit `node --test infra/lambda/pre-sign-up.test.mjs`; CI will not run it unless a script or the SF-132 workflow adds it. Changing infra/package.json scripts is outside this task's Files and the package-only allowance, so it was left as is.",
+    "SF-122: disposable-email-domains' newest release is 1.0.62 from 2022-09-28 (unmaintained on npm since), so the list is about four years old; it inlines into a 2.6 MB bundle. Per D-118 there is no qa allow-list: qa needs signup-open set to \"true\" by a person, and a missing parameter means closed.",
+    "SF-122: the trigger refuses every sign-up whose callerContext.clientId is not web-client-id, including AdminCreateUser (no client id); nothing in the spec creates users that way."
   ]
 }
