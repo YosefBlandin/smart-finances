@@ -48,18 +48,19 @@ test('T-INF-6 each stage has a data and an api stack; the api stack depends on t
       .filter((r) => r.Type === 'Custom::AWS');
     assert.equal(readers.length, 1);
     const names = JSON.parse(readers[0].Properties.Create).parameters.Names;
-    assert.deepEqual(names, ['table-name', 'bucket-name', 'user-pool-id', 'user-pool-client-id']
+    assert.deepEqual(names, ['table-name', 'bucket-name', 'user-pool-id', 'user-pool-client-id', 'web-client-id']
       .map((name) => `/smart-finances/${stage}/${name}`)
       .sort());
   }
 
-  // webOrigins come from context per stage, reach both stacks, and default to none.
+  // webOrigins come from context per stage and default to none; they no longer reach the
+  // data stack's bucket, whose browser rule the web stack sets (D-88).
   const cors = (stack: cdk.Stack) => {
     const buckets = Object.values(Template.fromStack(stack).findResources('AWS::S3::Bucket'));
     return (buckets[0].Properties.CorsConfiguration?.CorsRules ?? []).flatMap((rule: { AllowedOrigins: string[] }) => rule.AllowedOrigins);
   };
   const withOrigins = addStage(new cdk.App({ context }), 'qa', env);
-  assert.deepEqual(cors(withOrigins.data), ['http://localhost:3000']);
+  assert.deepEqual(cors(withOrigins.data), []);
   assert.deepEqual(withOrigins.api.webOrigins, ['http://localhost:3000']);
   const none = addStage(new cdk.App(), 'qa', env);
   assert.deepEqual(cors(none.data), []);

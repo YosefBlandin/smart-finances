@@ -58,7 +58,7 @@ test('T-INF-2 table: pk and sk strings, on-demand, PITR on, AWS-owned key, retai
   }
 });
 
-test('T-INF-3 bucket: private, SSE-S3, TLS only, no versioning, EventBridge on, CORS POST from webOrigins only', () => {
+test('T-INF-3 bucket: private, SSE-S3, TLS only, no versioning, EventBridge on, no browser rule from the data stack (D-88)', () => {
   for (const stage of STAGES) {
     const template = synth(stage);
     const bucket = only(template, 'AWS::S3::Bucket');
@@ -74,9 +74,8 @@ test('T-INF-3 bucket: private, SSE-S3, TLS only, no versioning, EventBridge on, 
     });
     assert.equal(props.VersioningConfiguration, undefined, 'no versioning');
     assert.equal(props.BucketName, undefined, 'no physical name');
-    assert.deepEqual(props.CorsConfiguration, {
-      CorsRules: [{ AllowedMethods: ['POST'], AllowedOrigins: ['http://localhost:3000'] }],
-    });
+    // The web stack sets the browser rule with the Amplify branch address (D-88), even when web origins are given.
+    assert.equal(props.CorsConfiguration, undefined, `${stage}: no CORS rule from the data stack`);
     template.hasResourceProperties('Custom::S3BucketNotifications', {
       NotificationConfiguration: { EventBridgeConfiguration: {} },
     });
@@ -109,7 +108,7 @@ test('T-INF-3 bucket: private, SSE-S3, TLS only, no versioning, EventBridge on, 
   }
 
   const noOrigins = only(synth('prod', []), 'AWS::S3::Bucket');
-  assert.equal(noOrigins.Properties.CorsConfiguration, undefined, 'no CORS rule at all when webOrigins is empty');
+  assert.equal(noOrigins.Properties.CorsConfiguration, undefined, 'no CORS rule when webOrigins is empty either');
 });
 
 test('T-INF-4 pool: MFA required with TOTP only, retained in every stage; public client: no secret, SRP and refresh only', () => {

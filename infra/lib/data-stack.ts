@@ -10,6 +10,7 @@ import { makeFunction } from './function';
 
 export interface DataStackProps extends cdk.StackProps {
   stage: string;
+  /** Unused since D-88: the web stack sets the upload bucket's browser rule. */
   webOrigins: string[];
 }
 
@@ -56,10 +57,7 @@ export class DataStack extends cdk.Stack {
       versioned: false,
       // Object Created events reach the parser through EventBridge.
       eventBridgeEnabled: true,
-      // The browser posts the presigned form straight to S3; no rule at all until a stage has a web origin.
-      cors: props.webOrigins.length
-        ? [{ allowedMethods: [s3.HttpMethods.POST], allowedOrigins: props.webOrigins }]
-        : undefined,
+      // No browser rule here: the web stack puts it with the Amplify branch address (D-88).
       removalPolicy,
       autoDeleteObjects: !keep,
     });
