@@ -48,9 +48,21 @@
     },
     {
       "id": "SF-142",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "1b495f5",
+      "evidence": [
+        "Tests first: apps/web/src/domain/session-policy.test.ts (T-WAUTH-3 x7, T-WAUTH-4 x2) and apps/web/src/adapters/dynamodb/sessions.test.ts (T-WAUTH-3/T-WAUTH-4 x46: the DynamoDB session and pre-auth stores over a hand-written fake document client with no TTL sweeper; application/session.ts over both the DynamoDB and the memory adapters; app/cookies.ts with next/headers mocked). First run: \"Cannot find package '@/application/session'\" and the session-policy import failing (Test Files 2 failed, no tests). With stubs (constants 0/'', functions throwing, empty adapter classes): \"Tests 55 failed (55)\"; reasons: \"AssertionError: expected +0 to be 1800000\", \"expected '' to be '__Host-sid'\", \"expected '' to be '__Host-pre'\", \"Error: not implemented\" (policy, use cases, cookies) and \"TypeError: store.create is not a function\" (adapters).",
+        "First green run had 2 failures in the test itself (the refresh test let 56 idle minutes pass, so the session was correctly idle); the test now reads the session along the way. No production change for it.",
+        "Verify: npm test --workspace @smart-finances/web -- src/domain/session-policy.test.ts exit 0: \"Test Files 1 passed (1) Tests 9 passed (9)\"",
+        "Verify: npm test --workspace @smart-finances/web -- src/adapters/dynamodb/sessions.test.ts exit 0: \"Test Files 1 passed (1) Tests 46 passed (46)\"",
+        "Profile verify: npm test (root) exit 0: node --test api+contracts 37/37 pass; web lint clean; web vitest \"Test Files 27 passed (27) Tests 303 passed (303)\"; infra 41/41 pass; strays killed after",
+        "Profile verify: npm run build --workspace @smart-finances/infra exit 0",
+        "Profile verify: npm run lint --workspace @smart-finances/web exit 0 (eslint clean; \"All matched files use Prettier code style!\" after prettier --write on the new files)",
+        "Profile verify: apps/web npx tsc --noEmit exit 0",
+        "Profile verify: npm run build --workspace @smart-finances/web exit 0",
+        "Dependency: @aws-sdk/client-dynamodb and @aws-sdk/lib-dynamodb 3.1152.0 (Values; the version apps/api pins) in apps/web/package.json; package-lock.json gains 2 lines (both already hoisted); libc fields restored with the brief's script (52)",
+        "No AWS call: the DynamoDB adapters are tested only with a hand-written fake document client; refresh, revoke and global sign-out go to a recording fake identity provider"
+      ],
       "review": ""
     },
     {
@@ -157,6 +169,11 @@
     "SF-147: IdentityFailure gains 'bad_password' (InvalidPasswordException at sign-up or reset confirm) and 'refused' (UserLambdaValidationException, the pre-sign-up trigger's refusal: closed, disposable or another client, AC-19) so the use cases can show the plain refusal; no existing code switched on the union.",
     "SF-147: unverifiable without AWS: the adapter sends the lower-cased email as USERNAME and in the SECRET_HASH for RespondToAuthChallenge (Contracts: the email for sign-in calls). Some pools with email as the username attribute want the internal username (USER_ID_FOR_SRP, the sub) there; the qa walk-through (release.md HUMAN step) should confirm setup and code succeed, else respondCode/verifySetup need the sub from the challenge parameters.",
     "SF-147: the adapter also sends clientMetadata.lang on resend (a code email the custom message trigger also renders), not only on sign-up and reset. The memory fake now lower-cases emails, gives deterministic subs (00000000-0000-4000-8000-<n in hex>, the nth sign-up of a fake) and records codeEmails { email, kind, lang } for the code-email cap tests of SF-148 and SF-151; forgot for an unknown email records nothing and replies ok.",
-    "SF-147: createContainer still refuses outside STAGE=test (the other real adapters do not exist yet); CognitoIdentityProvider is not wired in. No fresh-context reviewer ran in this executor (no subagent tool); review is left empty for the workflow's reviewer."
+    "SF-147: createContainer still refuses outside STAGE=test (the other real adapters do not exist yet); CognitoIdentityProvider is not wired in. No fresh-context reviewer ran in this executor (no subagent tool); review is left empty for the workflow's reviewer.",
+    "SF-142: the Interfaces list getSession() with no argument, but application/ may not import next/headers (D-138, lint); application/session.ts exports createSessions(deps) with readSession(id)/getSession(id) → Session | null, createSession({ sub, tokens, preAuthId?, previousSessionId? }) → { id, session }, refreshIfNeeded(session), endSession(id), signOutEverywhere(sub) → { ok, removed }, startPreAuth/readPreAuth/updatePreAuth/endPreAuth, plus newCookieId() and sessionIdHash(id). app/cookies.ts reads and writes the cookies (readSessionCookie, setSessionCookie, clearSessionCookie and the pre-auth trio); SF-145/SF-149/SF-150 compose the two. readSession also says idle or expired, for the sign-in screen's idle note.",
+    "SF-142: the session row has no access-token expiry field (Contracts and the SessionStore port), so refreshIfNeeded reads exp from the access token payload (unverified: the token came from the pool to this server), and the email of getSession comes from the id token's email claim. The cookie flags live in domain/session-policy.ts and app/cookies.ts uses them.",
+    "SF-142: the SessionStore port has no conditional replace, so a refresh writes the new tokens with create (a put) after re-reading the row; a sign-out landing between that read and the put could bring the row back with fresh tokens (a narrow window; the revoked or globally signed-out refresh token makes the refresh itself fail in most orders). A conditional update would need a port change (ports/session-store.ts is outside SF-142's Files).",
+    "SF-142: expires_at is stored in epoch seconds (DynamoDB TTL needs seconds), rounded down; created_at and last_seen_at are epoch milliseconds. Reads are consistent reads and check expires_at and the policy themselves; the bySub index is keys-only and eventually consistent, so deleteBySub may miss a session created within about a second before it (signOutEverywhere also signs out at the pool first, so such a row's refresh fails). Both the session and the pre-auth stores are in adapters/dynamodb/sessions.ts (one table).",
+    "SF-142: architecture.md Cross-cutting says pre-auth rows hold an email hash, never the email, but Contracts \"Sessions table\" and the PR 1 PreAuthStore port keep the email (needed for confirm and code; never logged). The adapter follows Contracts and the port. Not wired into createContainer (it still refuses outside STAGE=test until every port has a real adapter). No fresh-context reviewer ran in this executor (no subagent tool); review is left empty for the workflow's reviewer."
   ]
 }
