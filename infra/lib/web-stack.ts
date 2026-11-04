@@ -17,6 +17,11 @@ const STAGE_VALUES = ['amplify-app-id', 'api-url', 'bucket-name', 'support-addre
 
 export interface WebStackProps extends cdk.StackProps {
   stage: string;
+  /**
+   * The stage's extra browser origins for the upload bucket rule (D-88). Defaults to this stage's
+   * entry in the webOrigins context map in cdk.json, the list the data stack used to set.
+   */
+  webOrigins?: string[];
 }
 
 /**
@@ -25,7 +30,8 @@ export interface WebStackProps extends cdk.StackProps {
  * tables (D-72, D-87), the counter-key HMAC secret (D-115), the Amplify service role (log writes
  * on the app's existing log group, D-112) and the compute role the web server runs as, and sets
  * the app's platform and roles, the branch's auto-build, compute role and variables through custom
- * resources that may pass only those two roles and clear them on delete (D-93, D-110, D-111).
+ * resources that may pass only those two roles and clear them on delete (D-93, D-110, D-111), and
+ * puts the upload bucket's browser rule with the branch address (D-88).
  * Values from the data stack and from people are read from SSM at deploy time (D-33), so synth
  * needs no stage values and there are no CloudFormation exports.
  */
@@ -204,6 +210,45 @@ export class WebStack extends cdk.Stack {
     );
 
     this.adoptAmplifyApp(branchName);
+
+    const contextOrigins = (this.node.tryGetContext('webOrigins') ?? {}) as Record<string, string[]>;
+    this.setUploadBucketRule(props.webOrigins ?? contextOrigins[props.stage] ?? []);
+  }
+
+  /**
+   * D-88, AC-5: the browser posts the presigned form straight to the data stack's upload bucket,
+   * so the bucket named by bucket-name gets the rule the data stack used to set (POST only, no
+   * other field) from the branch address and the stage's cdk.json origins. One physical id per
+   * bucket, so a changed origin is an update; the rule goes with the stack, which is destroyed on
+   * qa only (D-111). S3 checks s3:PutBucketCORS for both the put and the delete.
+   */
+  private setUploadBucketRule(extraOrigins: string[]) {
+    const bucket = this.values.bucketName;
+    const physicalResourceId = cr.PhysicalResourceId.of(`bucket-cors/${bucket}`);
+    const putRule: cr.AwsSdkCall = {
+      service: 'S3',
+      action: 'putBucketCors',
+      parameters: {
+        Bucket: bucket,
+        CORSConfiguration: { CORSRules: [{ AllowedMethods: ['POST'], AllowedOrigins: [this.webOrigin, ...extraOrigins] }] },
+      },
+      physicalResourceId,
+    };
+    new cr.AwsCustomResource(this, 'UploadBucketCors', {
+      onCreate: putRule,
+      onUpdate: putRule,
+      onDelete: {
+        service: 'S3',
+        action: 'deleteBucketCors',
+        parameters: { Bucket: bucket },
+        physicalResourceId,
+        ignoreErrorCodesMatching: 'NoSuchBucket',
+      },
+      installLatestAwsSdk: false,
+      policy: cr.AwsCustomResourcePolicy.fromStatements([
+        new iam.PolicyStatement({ actions: ['s3:PutBucketCORS'], resources: [`arn:${this.partition}:s3:::${bucket}`] }),
+      ]),
+    });
   }
 
   /**

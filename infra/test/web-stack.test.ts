@@ -99,7 +99,7 @@ function providerRole(all: Record<string, Resource>): string {
   return providers[0][1].Properties.Role['Fn::GetAtt'][0];
 }
 
-type SdkCall = { service: string; action: string; parameters: Record<string, any>; outputPaths?: string[]; ignoreErrorCodesMatching?: string; logApiResponseData?: boolean };
+type SdkCall = { service: string; action: string; parameters: Record<string, any>; outputPaths?: string[]; ignoreErrorCodesMatching?: string; logApiResponseData?: boolean; physicalResourceId?: { id: string } };
 
 /** The SDK-call custom resources other than the stage values reader, with their Create call flattened. */
 function sdkCalls(all: Record<string, Resource>, names: Map<string, string>): [string, SdkCall, Resource][] {
@@ -384,7 +384,8 @@ test('T-WINF-8 iam:PassRole only on the two roles, only to Amplify, only for the
     }
     assert.deepEqual(passes.sort(), [`${providerRoleId} ${compute}`, `${providerRoleId} ${compute}`, `${providerRoleId} ${service}`].sort());
 
-    // The provider role's whole grant set: its log writes, the stage values, the retention, and the two updates.
+    // The provider role's whole grant set: its log writes, the stage values, the retention, the two
+    // updates and the upload bucket's rule (T-WINF-9).
     const group = 'arn:aws:logs:us-east-1:111111111111:log-group:/aws/amplify/{{amplify-app-id}}';
     const param = (n: string) => `arn:aws:ssm:us-east-1:111111111111:parameter/smart-finances/${stage}/${n}`;
     const app = 'arn:aws:amplify:us-east-1:111111111111:apps/{{amplify-app-id}}';
@@ -398,6 +399,7 @@ test('T-WINF-8 iam:PassRole only on the two roles, only to Amplify, only for the
         `iam:PassRole ${service}`,
         `logs:PutRetentionPolicy ${group}`,
         `logs:PutRetentionPolicy ${group}:*`,
+        's3:PutBucketCORS arn:aws:s3:::{{bucket-name}}',
         ...cross(['ssm:GetParameters'], STAGE_VALUES.map(param)),
       ].sort(),
     );
@@ -409,4 +411,49 @@ test('T-WINF-8 no stage without an Amplify branch: dev and unknown stages are re
     const app = new cdk.App({ context: cdkContext });
     assert.throws(() => new WebStack(app, `smart-finances-web-${stage}`, { env, stage }), /branch/);
   }
+});
+
+test('T-WINF-9 upload bucket rule: POST from the branch address and the stage cdk.json origins, set on the bucket named by bucket-name', () => {
+  const origins = cdkContext.webOrigins as Record<string, string[]>;
+  for (const stage of STAGES) {
+    const { resources } = synth(stage);
+    const names = stageValueNames(resources, stage);
+    const branchAddress = `https://${BRANCH[stage]}.{{amplify-app-id}}.amplifyapp.com`;
+    const rule = { CORSRules: [{ AllowedMethods: ['POST'], AllowedOrigins: [branchAddress, ...(origins[stage] ?? [])] }] };
+
+    const cors = sdkCalls(resources, names).filter(([, call]) => call.service === 'S3');
+    assert.equal(cors.length, 1, `${stage}: one bucket rule custom resource`);
+    const [, , r] = cors[0];
+    for (const key of ['Create', 'Update'] as const) {
+      const call = event(r, key, names);
+      assert.equal(call.action, 'putBucketCors');
+      // The same rule the data stack used to set (POST only, the origins as they are), plus the branch address.
+      assert.deepEqual(call.parameters, { Bucket: '{{bucket-name}}', CORSConfiguration: rule });
+    }
+    // One physical id per bucket, so an origin change is an update, never a delete of the live rule.
+    assert.equal(event(r, 'Create', names).physicalResourceId?.id, 'bucket-cors/{{bucket-name}}');
+    // The stack's rule goes with the stack (destroyed on qa only, D-111).
+    const clear = event(r, 'Delete', names);
+    assert.equal(clear.action, 'deleteBucketCors');
+    assert.deepEqual(clear.parameters, { Bucket: '{{bucket-name}}' });
+    assert.equal(clear.ignoreErrorCodesMatching, 'NoSuchBucket');
+
+    // Only this bucket's rule: the provider role may put (and delete) the CORS rule of that one bucket.
+    const s3Grants = grants(resources, providerRole(resources), names).filter((g) => g.startsWith('s3:'));
+    assert.deepEqual(s3Grants, ['s3:PutBucketCORS arn:aws:s3:::{{bucket-name}}']);
+    // The stack still creates no bucket: the data stack owns it.
+    assert.equal(ofType(resources, 'AWS::S3::Bucket').length, 0);
+  }
+
+  // The stage's origins are passed through unchanged, in order.
+  const app = new cdk.App({ context: { ...cdkContext, webOrigins: { staging: ['https://b.example.test', 'https://a.example.test'] } } });
+  const stack = new WebStack(app, 'smart-finances-web-staging', { env, stage: 'staging' });
+  const all = Template.fromStack(stack).toJSON().Resources as Record<string, Resource>;
+  const names = stageValueNames(all, 'staging');
+  const [, call] = sdkCalls(all, names).find(([, c]) => c.service === 'S3')!;
+  assert.deepEqual(call.parameters.CORSConfiguration.CORSRules[0].AllowedOrigins, [
+    'https://staging.{{amplify-app-id}}.amplifyapp.com',
+    'https://b.example.test',
+    'https://a.example.test',
+  ]);
 });
