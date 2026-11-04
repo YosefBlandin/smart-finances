@@ -319,11 +319,13 @@
       "signInLink": "Sign in",
       "errWeak": "That password is too short or too common. Use at least 12 characters and avoid common words.",
       "errLimit": "Too many sign-ups from this connection. Try again in an hour.",
-      "errBot": "The check didn’t pass, so we haven’t created an account. Reload the page and try again, or write to {contact}."
+      "errBot": "The check didn’t pass, so we haven’t created an account. Reload the page and try again, or write to {contact}.",
+      "errAccept": "Tick the box to accept the privacy notice and the terms.",
+      "errRefused": "We can’t create an account with this address right now."
     },
     "confirm": {
       "title": "Check your email",
-      "lead": "We sent a 6-digit code to {email}. The account is created once you enter it. The code works for 15 minutes.",
+      "lead": "We sent a 6-digit code to {email}. The account is created once you enter it.",
       "submit": "Confirm email",
       "confirming": "Confirming…",
       "resend": "Send a new code",
@@ -332,7 +334,9 @@
       "resent": "We sent a new code. The old one no longer works.",
       "resentWait": "You can ask for another one in 30 seconds.",
       "errWrong": "That code doesn’t match. Check the digits and try again.",
-      "errExpired": "This code has expired. Ask for a new one."
+      "errExpired": "This code has expired. Ask for a new one.",
+      "errLocked": "Too many wrong codes. Start again in a few minutes.",
+      "errStart": "This sign-up has expired. Start again."
     },
     "setup": {
       "title": "Set up your authenticator",

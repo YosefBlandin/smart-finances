@@ -319,11 +319,13 @@
       "signInLink": "Entrar",
       "errWeak": "Esa contraseña es muy corta o muy común. Usa al menos 12 caracteres y evita palabras comunes.",
       "errLimit": "Hubo demasiados registros desde esta conexión. Vuelve a intentar en una hora.",
-      "errBot": "La verificación no pasó, así que no creamos la cuenta. Recarga la página y vuelve a intentar, o escribe a {contact}."
+      "errBot": "La verificación no pasó, así que no creamos la cuenta. Recarga la página y vuelve a intentar, o escribe a {contact}.",
+      "errAccept": "Marca la casilla para aceptar el aviso de privacidad y los términos.",
+      "errRefused": "Por ahora no podemos crear una cuenta con este correo."
     },
     "confirm": {
       "title": "Revisa tu correo",
-      "lead": "Enviamos un código de 6 dígitos a {email}. La cuenta se crea cuando lo ingresas. El código sirve por 15 minutos.",
+      "lead": "Enviamos un código de 6 dígitos a {email}. La cuenta se crea cuando lo ingresas.",
       "submit": "Confirmar correo",
       "confirming": "Confirmando…",
       "resend": "Enviar un código nuevo",
@@ -332,7 +334,9 @@
       "resent": "Enviamos un código nuevo. El anterior ya no sirve.",
       "resentWait": "Puedes pedir otro en 30 segundos.",
       "errWrong": "Ese código no coincide. Revisa los dígitos y vuelve a intentar.",
-      "errExpired": "Este código venció. Pide uno nuevo."
+      "errExpired": "Este código venció. Pide uno nuevo.",
+      "errLocked": "Demasiados códigos incorrectos. Empieza de nuevo en unos minutos.",
+      "errStart": "Este registro venció. Empieza de nuevo."
     },
     "setup": {
       "title": "Configura tu autenticador",
