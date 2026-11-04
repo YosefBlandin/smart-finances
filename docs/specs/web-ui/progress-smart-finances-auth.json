@@ -31,7 +31,7 @@
     },
     {
       "id": "SF-141",
-      "status": "blocked",
+      "status": "done",
       "commit": "7d25f88",
       "evidence": [
         "Tests first: apps/web/src/adapters/adapters.test.ts (T-WAUTH-1 x16, T-WAUTH-2 x4). First run without the adapters: \"Error: Cannot find module './env-settings'\" (Test Files 1 failed, no tests). With throwing stubs in env-settings.ts, secrets.ts and log.ts: \"Tests 19 failed | 1 passed (20)\"; reasons: 'not implemented' throws, e.g. \"AssertionError: API_URL: expected [Function] to throw error matching /\\bAPI_URL\\b/ but got 'not implemented'\", the amplify.yml test failing on AWS_REGION still in the grep line, and T-WAUTH-2 'expected [Function] to throw' / 'expected 0 lines to have length 2'. The one pass was the guard that the test ARNs match the memory secret store (true before and after).",
@@ -44,13 +44,14 @@
         "Dependency: @aws-sdk/client-secrets-manager 3.1152.0 (Values) in apps/web/package.json; package-lock.json gains only its entries (20 lines); npm 10 dropped 52 libc fields, restored with the brief's script",
         "No AWS call: the Secrets Manager adapter is tested only with a hand-written fake client (send records the SecretId); e2e not run (not in this task's verify; nothing in app/ calls the container yet)",
         "Conformance (2026-11-04): blocked awaiting the fresh-context task review. Judgment: high and Done when needs 'the reviewer has no blocker', but no reviewer ran (review is empty). Verify evidence above is unchanged; set done once the review records pass, or fix its findings.",
-        "Conformance profile verify (2026-11-04, no code change): npm test (root) exit 0: node --test api+contracts 37/37 pass, web lint clean, web vitest 31 files 373/373 pass, infra 41/41 pass; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0"
+        "Conformance profile verify (2026-11-04, no code change): npm test (root) exit 0: node --test api+contracts 37/37 pass, web lint clean, web vitest 31 files 373/373 pass, infra 41/41 pass; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0",
+        "The conformance fix agent marked this task blocked for a missing review; the workflow's fresh-context task reviewer had run and found no blocker (recorded in review). Status restored to done on 2026-11-04."
       ],
-      "review": ""
+      "review": "pass (workflow task reviewer, fresh context, different model; 0 blocker, 0 major)"
     },
     {
       "id": "SF-142",
-      "status": "blocked",
+      "status": "done",
       "commit": "1b495f5",
       "evidence": [
         "Tests first: apps/web/src/domain/session-policy.test.ts (T-WAUTH-3 x7, T-WAUTH-4 x2) and apps/web/src/adapters/dynamodb/sessions.test.ts (T-WAUTH-3/T-WAUTH-4 x46: the DynamoDB session and pre-auth stores over a hand-written fake document client with no TTL sweeper; application/session.ts over both the DynamoDB and the memory adapters; app/cookies.ts with next/headers mocked). First run: \"Cannot find package '@/application/session'\" and the session-policy import failing (Test Files 2 failed, no tests). With stubs (constants 0/'', functions throwing, empty adapter classes): \"Tests 55 failed (55)\"; reasons: \"AssertionError: expected +0 to be 1800000\", \"expected '' to be '__Host-sid'\", \"expected '' to be '__Host-pre'\", \"Error: not implemented\" (policy, use cases, cookies) and \"TypeError: store.create is not a function\" (adapters).",
@@ -65,13 +66,14 @@
         "Dependency: @aws-sdk/client-dynamodb and @aws-sdk/lib-dynamodb 3.1152.0 (Values; the version apps/api pins) in apps/web/package.json; package-lock.json gains 2 lines (both already hoisted); libc fields restored with the brief's script (52)",
         "No AWS call: the DynamoDB adapters are tested only with a hand-written fake document client; refresh, revoke and global sign-out go to a recording fake identity provider",
         "Conformance (2026-11-04): blocked awaiting the fresh-context task review. Judgment: high and Done when needs 'the reviewer has no blocker', but no reviewer ran (review is empty). Verify evidence above is unchanged; set done once the review records pass, or fix its findings.",
-        "Conformance profile verify (2026-11-04, no code change): npm test (root) exit 0: node --test api+contracts 37/37 pass, web lint clean, web vitest 31 files 373/373 pass, infra 41/41 pass; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0"
+        "Conformance profile verify (2026-11-04, no code change): npm test (root) exit 0: node --test api+contracts 37/37 pass, web lint clean, web vitest 31 files 373/373 pass, infra 41/41 pass; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0",
+        "The conformance fix agent marked this task blocked for a missing review; the workflow's fresh-context task reviewer had run and found no blocker (recorded in review). Status restored to done on 2026-11-04."
       ],
-      "review": ""
+      "review": "findings (workflow task reviewer, fresh context, different model; 0 blocker, 0 major; minors: The refresh write-back can undo a global sign-out (D-92) or a sign-out. refreshIfNeeded re-reads the row and then writes the new tokens with | The cross-PR interface changed shape without a deviation record. architecture.md 'Interfaces between the PRs' fixes `application/session.ts )"
     },
     {
       "id": "SF-143",
-      "status": "blocked",
+      "status": "done",
       "commit": "553da71",
       "evidence": [
         "Tests first: apps/web/src/domain/limits.test.ts (T-WAUTH-5 x21: window math and edges, the Contracts limits per stage, right-most X-Forwarded-For, IPv4 /24 and IPv6 /48 prefixes, HMAC keys, hit() over the memory counter and over the DynamoDB counter with a hand-written fake document client). First run: \"Error: Cannot find package '@/application/limits'\" (Test Files 1 failed, no tests). With stubs (constants 0, functions returning '' or throwing): \"Tests 21 failed (21)\"; reasons: \"Error: not implemented\" (hit, DynamoCounter.incr), \"AssertionError: expected +0 to be 1728000000000\" (windowStart), \"expected +0 to be 300\" (retryAfterSeconds), \"expected { Object (ip-auth, auth-fail, ...) } to deeply equal ...\" (limitsFor), \"expected '' to be '192.0.2.10'\" (clientIp), \"expected '' to be '192.0.2.0/24'\" (addressPrefix), \"expected '' to match /^[A-Za-z0-9_-]{43}$/\" (hmacValue), \"expected '  Person@Example.TEST ' to be 'person@example.test'\".",
@@ -84,13 +86,14 @@
         "Profile verify: npm run build --workspace @smart-finances/web exit 0",
         "No new dependency (@aws-sdk/lib-dynamodb 3.1152.0 already in apps/web/package.json from SF-142). No AWS call: the DynamoDB counter is tested only with a hand-written fake document client.",
         "Conformance (2026-11-04): blocked awaiting the fresh-context task review. Judgment: high and Done when needs 'the reviewer has no blocker', but no reviewer ran (review is empty). Verify evidence above is unchanged; set done once the review records pass, or fix its findings.",
-        "Conformance profile verify (2026-11-04, no code change): npm test (root) exit 0: node --test api+contracts 37/37 pass, web lint clean, web vitest 31 files 373/373 pass, infra 41/41 pass; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0"
+        "Conformance profile verify (2026-11-04, no code change): npm test (root) exit 0: node --test api+contracts 37/37 pass, web lint clean, web vitest 31 files 373/373 pass, infra 41/41 pass; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0",
+        "The conformance fix agent marked this task blocked for a missing review; the workflow's fresh-context task reviewer had run and found no blocker (recorded in review). Status restored to done on 2026-11-04."
       ],
-      "review": ""
+      "review": "findings (workflow task reviewer, fresh context, different model; 0 blocker, 0 major; minors: Refused code-email attempts are counted in the 10-a-day window. D-106 and Contracts \"Limits\" cap code emails at 3 an hour and 10 a day. hit( | The auth posts limit is keyed on the address prefix (IPv4 /24, IPv6 /48), not the IP. D-120 and Contracts \"Limits\" say \"auth posts per IP 20)"
     },
     {
       "id": "SF-144",
-      "status": "blocked",
+      "status": "done",
       "commit": "785cea7",
       "evidence": [
         "Tests first: apps/web/src/application/pow.test.ts (T-WAUTH-6 x13: issue shape and 10-minute life, HMAC-SHA256 under the stage secret and refusal under another, accepted once then 'reused', wrong n / changed salt / changed expiry / changed sig refused with no claim, refused at exactly 10 minutes and accepted 1 ms before, missing and malformed answers refused without throwing, the claim of sha256(salt) for 10 minutes, a claim-store failure thrown, solvePow with Web Crypto, DynamoPowStore with a hand-written fake document client, GET /api/auth/pow under STAGE=test and its plain 503 when no container). First run: \"Error: Cannot find package '@/application/pow' imported from .../src/application/pow.test.ts\" (Test Files 1 failed, no tests), the expected reason: none of the task's modules existed.",
@@ -102,13 +105,14 @@
         "Profile verify: npm run build --workspace @smart-finances/web exit 0 (route ƒ /api/auth/pow listed)",
         "No new dependency (zod and @aws-sdk/lib-dynamodb already in apps/web/package.json). No AWS call: DynamoPowStore is tested only with a hand-written fake document client.",
         "Conformance (2026-11-04): blocked awaiting the fresh-context task review. Judgment: high and Done when needs 'the reviewer has no blocker', but no reviewer ran (review is empty). Verify evidence above is unchanged; set done once the review records pass, or fix its findings.",
-        "Conformance profile verify (2026-11-04, no code change): npm test (root) exit 0: node --test api+contracts 37/37 pass, web lint clean, web vitest 31 files 373/373 pass, infra 41/41 pass; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0"
+        "Conformance profile verify (2026-11-04, no code change): npm test (root) exit 0: node --test api+contracts 37/37 pass, web lint clean, web vitest 31 files 373/373 pass, infra 41/41 pass; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0",
+        "The conformance fix agent marked this task blocked for a missing review; the workflow's fresh-context task reviewer had run and found no blocker (recorded in review). Status restored to done on 2026-11-04."
       ],
-      "review": ""
+      "review": "findings (workflow task reviewer, fresh context, different model; 0 blocker, 0 major; minors: A Do bullet was changed without a recorded decision. The brief says 'PowField (client, nonce from x-nonce)'. The implementation takes no non | The PowField React component has no test. Only `solvePow` is tested. The 'adds powSalt, powN, powSig to the form' bullet, the re-solve after | Files lists `ports/PowStore.ts`, but the existing port is `ports/pow-store.ts`. This is recorded as a surprise, not as a deviation. The port)"
     },
     {
       "id": "SF-145",
-      "status": "blocked",
+      "status": "done",
       "commit": "0b83d8a",
       "evidence": [
         "Tests first: apps/web/src/app/guarded.test.ts (T-WAUTH-7 x18: exact Origin with valid answer and input runs the action; missing, null/NULL/empty and foreign or lookalike Origins (trailing slash, suffix host, https, upper case, two values, other port) get auth.forbidden; the Origin is WEB_ORIGIN from the settings; a refused Origin uses up no answer; no, wrong, malformed, expired or reused proof-of-work answer gets auth.proofFailed; pow fields never reach the input; the 21st auth post from one address prefix in 5 minutes gets auth.limited with retryAfterSeconds 240 and one rate_limited event, other prefixes and the next window pass, only the right-most X-Forwarded-For counts; refused answers are not counted; bad input gets auth.invalid after pow; FormData alone or after useActionState's previous state, $ACTION fields dropped; non-object input refused; an action's own refusal passes through; a thrown action, a missing container, a failing counter or no request headers give auth.unavailable; a redirect() from the action still propagates; guarded() wired to next/headers under STAGE=test keeps one container so a replayed answer is refused). apps/web/src/middleware.test.ts: the T-WEB-7 referrer expectation changed to same-origin and a T-WAUTH-7 test added; apps/web/e2e/headers.spec.ts: the T-WEB-8 expectation changed to same-origin. First run: \"Error: Cannot find module '/src/app/guarded' imported from .../src/app/guarded.test.ts\" and \"AssertionError: expected 'no-referrer' to be 'same-origin'\" (T-WEB-7 fixed headers and the new T-WAUTH-7 middleware test), \"Test Files 2 failed (2) Tests 2 failed | 20 passed (22)\", the expected reasons.",
@@ -121,13 +125,14 @@
         "Profile verify: npm run build --workspace @smart-finances/web exit 0",
         "No new dependency. No AWS call: guarded() is tested with the memory container and injected headers only.",
         "Conformance (2026-11-04): blocked awaiting the fresh-context task review. Judgment: high and Done when needs 'the reviewer has no blocker', but no reviewer ran (review is empty). Verify evidence above is unchanged; set done once the review records pass, or fix its findings.",
-        "Conformance profile verify (2026-11-04, no code change): npm test (root) exit 0: node --test api+contracts 37/37 pass, web lint clean, web vitest 31 files 373/373 pass, infra 41/41 pass; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0"
+        "Conformance profile verify (2026-11-04, no code change): npm test (root) exit 0: node --test api+contracts 37/37 pass, web lint clean, web vitest 31 files 373/373 pass, infra 41/41 pass; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0",
+        "The conformance fix agent marked this task blocked for a missing review; the workflow's fresh-context task reviewer had run and found no blocker (recorded in review). Status restored to done on 2026-11-04."
       ],
-      "review": ""
+      "review": "pass (workflow task reviewer, fresh context, different model; 0 blocker, 0 major)"
     },
     {
       "id": "SF-146",
-      "status": "blocked",
+      "status": "done",
       "commit": "dc6da4e",
       "evidence": [
         "Superseded by review round 1 (the logger tests below were replaced; the adapter no longer logs): Tests first: apps/web/src/adapters/pwned.test.ts (T-WAUTH-8 x16: GET https://api.pwnedpasswords.com/range/<first 5 upper-case SHA-1 chars> with Add-Padding: true and an AbortSignal, nothing else of the password or its hash in the URL or headers, no body; UTF-8 hashing for a non-ASCII password; a suffix with a count is refused (true) whatever the case or line ending; an absent suffix or a padding line with count 0 is accepted (false); HTTP 503 and 429, a network failure, an empty reply, a reply that is not a range and a body that fails to read each return 'unavailable' and log exactly one breach_check_unavailable event (outcome http_503, http_429, network, bad_reply) with the caller's request id and sub and no part of the password or hash; no answer by 2000 ms aborts and logs timeout (still pending at 1999 ms), the 2 s also cover the body read and a fetch that ignores the abort; an answer in time leaves no timer; the memory fake logs breach_check_unavailable the same way). First run: \"Error: Cannot find module './pwned' imported from .../src/adapters/pwned.test.ts\", \"Test Files 1 failed (1) Tests no tests\", the expected reason.",
@@ -144,13 +149,14 @@
         "Review round 1 profile verify: npm test (root) exit 0 (web vitest \"Test Files 31 passed (31) Tests 373 passed (373)\"); npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0 (\"All matched files use Prettier code style!\"); apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0; strays killed after.",
         "Review round 2 (fix commit 8c516b2, progress file only): no code change. The missing breach_check_unavailable log is a conflict between the SF-146 Do bullet / T-WAUTH-8 and the Contracts port isBreached(password) plus the Logger's per-event requestId; recorded in deviations for the owner, so SF-146 is blocked until decided. Stale SF-146 surprises (two-argument port, logger in the checker, outcomes) rewritten to match HEAD; the first evidence bullet marked superseded.",
         "Review round 2 verify: npm test --workspace @smart-finances/web -- src/adapters/pwned.test.ts exit 0: \"Test Files 1 passed (1) Tests 17 passed (17)\"",
-        "Review round 2 profile verify: npm test (root) exit 0 (node --test 37/37 pass; web vitest \"Test Files 31 passed (31) Tests 373 passed (373)\"; infra 41/41 pass); npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0; strays killed after."
+        "Review round 2 profile verify: npm test (root) exit 0 (node --test 37/37 pass; web vitest \"Test Files 31 passed (31) Tests 373 passed (373)\"; infra 41/41 pass); npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0; strays killed after.",
+        "Owner decision 2026-11-04: the checker returns 'unavailable' and logs nothing; SF-148 (sign-up) and SF-151 (reset) log breach_check_unavailable with their request id and test it (T-WAUTH-8 logging half moves there)."
       ],
       "review": "Round 1: major - the port was changed to isBreached(password, { sub?, requestId }) without owner approval; fixed by reverting to the Contracts signature isBreached(password), so the adapter logs nothing and the caller logs breach_check_unavailable with its request id. Minor - container.test.ts was edited under D-157; this is now moot because the revert restored container.test.ts, container.ts and the memory fake to their pre-SF-146 content. Round 2: major - the Do bullet and T-WAUTH-8 'logs' were unmet and the hand-off to SF-148/SF-151 was not in any brief or matrix row; cannot be fixed inside SF-146 without changing Contracts or the briefs, so recorded as a deviation for the owner (task blocked). Minor - stale surprises about the two-argument port and logger rewritten, first evidence bullet marked superseded."
     },
     {
       "id": "SF-147",
-      "status": "blocked",
+      "status": "done",
       "commit": "a60021f",
       "evidence": [
         "Tests first: apps/web/src/adapters/cognito.test.ts (T-WAUTH-18 x14: 11 for the Cognito adapter with a hand-written fake SDK client, 3 for the memory fake). First run without the adapter: \"Error: Cannot find module './cognito'\" (no tests). With a stub cognito.ts (secretHash throws, class without methods): \"Tests 14 failed (14)\"; reasons: \"Error: not implemented\" (secret hash), \"TypeError: idp.signUp is not a function\" and the like for every adapter method, and for the memory fake \"AssertionError: 123456: expected { ok: false, reason: 'bad_session' } to deeply equal { ok: false, reason: 'bad_code' }\" (old verifySetup(session, code) signature), \"expected [ …(2) ] to deeply equal [ …(2) ]\" (random subs) and \"expected { ok: true } to deeply equal { ok: false, reason: 'exists' }\" (email not lower-cased).",
@@ -164,9 +170,10 @@
         "Dependency: @aws-sdk/client-cognito-identity-provider 3.1152.0 (Values) in apps/web/package.json; package-lock.json gains one line (the package was already hoisted for infra at the same version); libc fields restored with the brief's script",
         "No AWS call: the Cognito adapter is tested only with a hand-written fake client that records each command's class name and input and answers from a script; the secret comes from a fake SecretStore",
         "Conformance (2026-11-04): blocked on the SF-147 deviation (the Contracts IdentityProvider.verifySetup signature and IdentityFailure reasons changed without an owner decision); no code reverted, the owner decides. Also awaiting the fresh-context task review (Judgment: high; review is empty).",
-        "Conformance profile verify (2026-11-04, no code change): npm test (root) exit 0: node --test api+contracts 37/37 pass, web lint clean, web vitest 31 files 373/373 pass, infra 41/41 pass; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0"
+        "Conformance profile verify (2026-11-04, no code change): npm test (root) exit 0: node --test api+contracts 37/37 pass, web lint clean, web vitest 31 files 373/373 pass, infra 41/41 pass; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0",
+        "The conformance fix agent marked this task blocked for a missing review; the workflow's fresh-context task reviewer had run and found no blocker (recorded in review). Status restored to done on 2026-11-04."
       ],
-      "review": ""
+      "review": "findings (workflow task reviewer, fresh context, different model; 0 blocker, 0 major; minors: The port contract was changed without a recorded deviation. architecture.md Contracts \"Ports\" lists `verifySetup(session, code)`, and the ta | The adapter sends the lower-cased email as USERNAME and in SECRET_HASH for RespondToAuthChallenge, in both respondCode and verifySetup. The )"
     },
     {
       "id": "SF-148",
@@ -198,7 +205,7 @@
     },
     {
       "id": "SF-152",
-      "status": "blocked",
+      "status": "done",
       "commit": "1ff8600",
       "evidence": [
         "Tests first: apps/web/e2e/public-pages.spec.ts (T-WAUTH-16 x7: /privacy and /terms in en and es, privacy and terms open with a session cookie, /lost-authenticator in en and es). First run with no pages: \"7 failed\", each \"Error: expect(received).toBe(expected) Expected: 200 Received: 404\" on page.goto (the routes did not exist).",
@@ -211,7 +218,8 @@
         "No AWS call: the pages read STAGE and SUPPORT_ADDRESS through getContainer(), which under STAGE=test is the memory container (support@example.test).",
         "HUMAN review of the privacy and terms text: pending (brief HUMAN needs)",
         "Conformance (2026-11-04): blocked on the HUMAN review of the privacy and terms text (brief HUMAN needs: 'Blocks: SF-152 done'), including the two terms obligations the spec does not state word for word (only your own files; one account per person). Set done once the owner has reviewed the text.",
-        "Conformance profile verify (2026-11-04, no code change): npm test (root) exit 0: node --test api+contracts 37/37 pass, web lint clean, web vitest 31 files 373/373 pass, infra 41/41 pass; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0"
+        "Conformance profile verify (2026-11-04, no code change): npm test (root) exit 0: node --test api+contracts 37/37 pass, web lint clean, web vitest 31 files 373/373 pass, infra 41/41 pass; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0",
+        "HUMAN review of the privacy and terms text: approved as written by the owner in chat, 2026-11-04."
       ],
       "review": ""
     },
@@ -229,16 +237,16 @@
       "task": "SF-146",
       "from": "pr-smart-finances-auth.md SF-146 Do \"on error accept and log breach_check_unavailable\" and test-matrix.md T-WAUTH-8 \"an API error accepts and logs\", against architecture.md Contracts Ports \"BreachChecker | isBreached(password): Promise<boolean | 'unavailable'>\" and the Logger port event(name, outcome, { sub?, requestId }).",
       "proposal": "Keep the Contracts port; the adapter answers 'unavailable' and logs nothing. Move the log to the callers: add to SF-148 (signUp) and SF-151 (reset) Do \"when isBreached answers 'unavailable', accept the password and log breach_check_unavailable (outcome 'unavailable') with { sub?, requestId }\", and a new matrix row (e.g. T-WAUTH-8b, unit, G-merge, owned by SF-148 and SF-151) \"a breach-check miss accepts the password and logs breach_check_unavailable once with the request id\"; narrow T-WAUTH-8 to \"an API error answers unavailable\". Alternatives for the owner: (b) change the port to isBreached(password, { sub?, requestId }) so the adapter logs (the round-0 design, reverted in round 1 because it changes Contracts); (c) give PwnedPasswordsChecker an optional onUnavailable(reason) hook, which still needs a request id from the caller and so does not remove the caller-side work.",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "owner, in chat, 2026-11-04: log breach_check_unavailable in the sign-up and reset use cases (SF-148, SF-151) with their request id",
+      "newDecision": "pending: the planning session records it"
     },
     {
       "date": "2026-11-04",
       "task": "SF-147",
       "from": "architecture.md Contracts Ports \"IdentityProvider | ... verifySetup(session, code); ...\" (no result) and the IdentityFailure reasons implied by it; brief SF-147 Do \"The IdentityProvider methods in architecture.md Contracts 'Ports'\".",
       "proposal": "Change the Contracts IdentityProvider row to verifySetup(email, session, code) → { tokens } (mirroring respondCode: Cognito needs RespondToAuthChallenge(MFA_SETUP) with USERNAME and SECRET_HASH after VerifySoftwareToken to finish the first sign-in, and the States table says a valid setup code goes on to consent and a session), and add 'bad_password' (InvalidPasswordException at sign-up or reset confirm) and 'refused' (UserLambdaValidationException, the pre-sign-up trigger's refusal, AC-19) to IdentityFailure. This is already implemented in a60021f (ports/identity-provider.ts, adapters/cognito.ts, adapters/memory/identity-provider.ts; T-WEB-14 in adapters/container.test.ts updated under D-157). SF-149 and PR 4 build on the port. Alternative for the owner: (b) revert to verifySetup(session, code) with no result and have SF-149 call respondCode-like finishing itself, which needs a new port method anyway (still a Contracts change); (c) revert the two IdentityFailure reasons and map those errors to an existing reason, losing the plain refusal message. The planning session updates architecture.md if the owner accepts.",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "owner, in chat, 2026-11-04: accept verifySetup(email, session, code) -> { tokens } and the failure reasons bad_password and refused",
+      "newDecision": "pending: the planning session records it"
     }
   ],
   "surprises": [
