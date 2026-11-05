@@ -1,0 +1,58 @@
+/* The transactions screen: the heading and filters above the list; tokens only. */
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--t-2xl);
+  font-weight: var(--w-head);
+}
+
+.heading:focus {
+  outline: none;
+}
+
+.sub {
+  margin: 0;
+  max-width: 64ch;
+  color: var(--muted);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding-bottom: var(--s5);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s4);
+  align-items: flex-end;
+}
+
+.search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  align-items: flex-end;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.amount {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.nowrap {
+  white-space: nowrap;
+}

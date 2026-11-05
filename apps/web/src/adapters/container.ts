@@ -194,7 +194,7 @@ export const TEST_PERSON = {
  * e2e-<name>-not-secret- padded with zeros to the 43 characters of a session id. A browser test adds its name here and
  * uses that person only.
  */
-export const E2E_PEOPLE = ['overview-good', 'overview-bad', 'overview-failed', 'overview-retry'] as const;
+export const E2E_PEOPLE = ['overview-good', 'overview-bad', 'overview-failed', 'overview-retry', 'transactions-paging', 'transactions-sort'] as const;
 
 export function e2ePerson(name: (typeof E2E_PEOPLE)[number]) {
   return { sessionId: `e2e-${name}-not-secret-`.padEnd(43, '0'), sub: `e2e-person-${name}`, email: `${name}@example.com` } as const;

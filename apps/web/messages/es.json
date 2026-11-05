@@ -125,7 +125,8 @@
     "saveApprove": "Guardar y aprobar",
     "choiceKept": "Tu elección se guarda aparte del movimiento importado y se mantiene si vuelves a importar el mismo mes.",
     "fixInSource": "Corrige este en el {s}.",
-    "fixInSourceBody": "Los movimientos de esa fuente se corrigen en el archivo y se vuelven a subir. Aquí solo se cambian los de Mercado Pago."
+    "fixInSourceBody": "Los movimientos de esa fuente se corrigen en el archivo y se vuelven a subir. Aquí solo se cambian los de Mercado Pago.",
+    "nextPage": "Mostrar los {n} siguientes"
   },
   "review": {
     "sub": "Movimientos sobre los que los importadores no estaban seguros. Apruébalos o elige una categoría mejor; tus totales se actualizan en segundos.",

@@ -125,7 +125,8 @@
     "saveApprove": "Save and approve",
     "choiceKept": "Your choice is kept apart from the imported row and survives a re-import of the same month.",
     "fixInSource": "Fix this one in the {s}.",
-    "fixInSourceBody": "Rows from that source are corrected in the file and uploaded again. Only Mercado Pago rows can be changed here."
+    "fixInSourceBody": "Rows from that source are corrected in the file and uploaded again. Only Mercado Pago rows can be changed here.",
+    "nextPage": "Show the next {n}"
   },
   "review": {
     "sub": "Rows the importers weren’t sure about. Approve them or pick a better category; your totals move within seconds.",
