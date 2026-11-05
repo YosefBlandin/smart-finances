@@ -1,9 +1,21 @@
 import { readdirSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createContainer, PORT_NAMES } from './container';
+import { createContainer, getContainer, PORT_NAMES } from './container';
+import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
+import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import { CognitoIdentityProvider } from './cognito';
+import { UnwiredDataApi, UnwiredParameterStore } from './container';
+import { DynamoAccountStore } from './dynamodb/accounts';
+import { DynamoCounter } from './dynamodb/counters';
+import { DynamoPowStore } from './dynamodb/pow';
+import { DynamoPreAuthStore, DynamoSessionStore } from './dynamodb/sessions';
+import { EnvSettings } from './env-settings';
+import { JsonLogger } from './log';
 import { MemoryAccountStore } from './memory/account-store';
 import { MemoryBreachChecker } from './memory/breach-checker';
-import { MemoryClock } from './memory/clock';
+import { MemoryClock, SystemClock } from './memory/clock';
 import { MemoryCounter } from './memory/counter';
 import { MemoryDataApi } from './memory/data-api';
 import { MemoryIdentityProvider } from './memory/identity-provider';
@@ -14,8 +26,33 @@ import { MemoryPreAuthStore } from './memory/pre-auth-store';
 import { MemorySecretStore } from './memory/secret-store';
 import { MemorySessionStore } from './memory/session-store';
 import { MemorySettings } from './memory/settings';
+import { PwnedPasswordsChecker } from './pwned';
+import { SecretsManagerStore } from './secrets';
 
-afterEach(() => vi.unstubAllEnvs());
+const SHARED = Symbol.for('smart-finances.container');
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+  delete (globalThis as { [SHARED]?: unknown })[SHARED];
+});
+
+// architecture.md Contracts "Web server settings": synthetic qa values (no real pool, account or address).
+const QA_ENV = {
+  STAGE: 'qa',
+  API_URL: 'https://api.qa.example.test',
+  USER_POOL_ID: 'us-east-1_Example0',
+  WEB_CLIENT_ID: 'example-web-client-0000',
+  WEB_CLIENT_SECRET_ARN: 'arn:aws:secretsmanager:us-east-1:000000000000:secret:qa/web-client-secret',
+  HMAC_SECRET_ARN: 'arn:aws:secretsmanager:us-east-1:000000000000:secret:qa/hmac-secret',
+  SESSIONS_TABLE: 'sessions-qa-example',
+  ACCOUNTS_TABLE: 'accounts-qa-example',
+  UPLOAD_HOST: 'uploads.qa.example.test',
+  WEB_ORIGIN: 'https://qa.example.test',
+  SUPPORT_ADDRESS: 'support@example.test',
+  COMMIT_SHA: 'example0sha',
+} as const;
+const SETTING_NAMES = Object.keys(QA_ENV) as (keyof typeof QA_ENV)[];
 
 const MEMORY = {
   clock: MemoryClock,
@@ -69,10 +106,25 @@ describe('T-WEB-14: the container', () => {
     expect(await testContainer().powStore.claim('salt', MIN)).toBe(true);
   });
 
-  it('T-WEB-14: outside STAGE=test it refuses until the real adapters arrive', () => {
+  // Updated by SF-154 (D-157): outside STAGE=test the container now builds the real adapters, so an environment
+  // without the settings is refused for those settings, no longer for missing adapters.
+  it('T-WEB-14: outside STAGE=test it refuses an environment without the web server settings', () => {
     for (const stage of ['qa', 'prod', '']) {
       vi.stubEnv('STAGE', stage);
-      expect(() => createContainer(), stage).toThrow(/real adapters/);
+      for (const name of SETTING_NAMES.filter((n) => n !== 'STAGE')) vi.stubEnv(name, '');
+      expect(() => createContainer(), stage).toThrow(/Web server settings missing or invalid: .*USER_POOL_ID/);
+    }
+  });
+
+  // Conformance fix (SF-154): the memory container's fixed codes and seeded test person must never serve a deployed
+  // stage, so STAGE=test is refused where an AWS runtime says the process is deployed.
+  it('T-WEB-14: STAGE=test is refused inside an AWS runtime, by createContainer and getContainer', () => {
+    for (const marker of ['AWS_EXECUTION_ENV', 'AWS_LAMBDA_FUNCTION_NAME']) {
+      vi.unstubAllEnvs();
+      vi.stubEnv('STAGE', 'test');
+      vi.stubEnv(marker, 'set-by-the-runtime');
+      expect(() => createContainer(), marker).toThrow(/STAGE=test is refused in a deployed runtime/);
+      expect(() => getContainer(), marker).toThrow(/STAGE=test is refused in a deployed runtime/);
     }
   });
 });
@@ -176,7 +228,8 @@ describe('T-WEB-14: memory adapters keep the port rules', () => {
     const assoc = await idp.associate(first.session);
     if (!assoc.ok) throw new Error('associate failed');
     expect(assoc.secret).toMatch(/^[A-Z2-7]+$/);
-    expect(await idp.verifySetup(assoc.session, '000000')).toEqual({ ok: true });
+    const setUp = await idp.verifySetup(email, assoc.session, '000000');
+    expect(setUp.ok && 'tokens' in setUp).toBe(true);
     const second = await idp.passwordAuth(email, 'a long enough password');
     if (!second.ok || !('challenge' in second)) throw new Error('expected a challenge');
     expect(second.challenge).toBe('SOFTWARE_TOKEN_MFA');
@@ -262,5 +315,148 @@ describe('T-WEB-14: memory adapters keep the port rules', () => {
     c.logger.event('sign_in', 'ok', { requestId: 'r1' });
     expect((c.logger as MemoryLogger).events).toEqual([{ name: 'sign_in', outcome: 'ok', sub: undefined, requestId: 'r1' }]);
     expect(c.settings.get().STAGE).toBe('test');
+  });
+});
+
+// SF-154: outside STAGE=test the container builds the real adapters from the settings (D-138, D-159). Nothing here may
+// reach the network: SDK clients are only constructed, and every send and fetch is spied on and must stay unused.
+describe('T-WAUTH-19: the real container', () => {
+  const REAL = {
+    clock: SystemClock,
+    settings: EnvSettings,
+    secretStore: SecretsManagerStore,
+    parameterStore: UnwiredParameterStore,
+    logger: JsonLogger,
+    sessionStore: DynamoSessionStore,
+    preAuthStore: DynamoPreAuthStore,
+    counter: DynamoCounter,
+    powStore: DynamoPowStore,
+    accountStore: DynamoAccountStore,
+    breachChecker: PwnedPasswordsChecker,
+    identityProvider: CognitoIdentityProvider,
+    dataApi: UnwiredDataApi,
+  };
+
+  type Internals = { client?: { config: { region: () => Promise<string> } }; table?: string };
+  const inner = (adapter: unknown) => adapter as Internals;
+
+  function stubQa(overrides: Partial<Record<keyof typeof QA_ENV | 'AWS_REGION', string>> = {}) {
+    for (const [name, value] of Object.entries({ ...QA_ENV, AWS_REGION: '', ...overrides })) vi.stubEnv(name, value);
+  }
+
+  function noNetwork() {
+    const sends = [CognitoIdentityProviderClient, DynamoDBClient, DynamoDBDocumentClient, SecretsManagerClient].map((C) =>
+      vi.spyOn(C.prototype, 'send').mockImplementation(() => {
+        throw new Error('no AWS call in a unit test');
+      }),
+    );
+    const fetch = vi.fn(() => Promise.reject(new Error('no network in a unit test')));
+    vi.stubGlobal('fetch', fetch);
+    return [...sends, fetch];
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('T-WAUTH-19: with STAGE=qa and complete settings it returns the real adapter of each port, without a network call', () => {
+    const calls = noNetwork();
+    stubQa();
+    const c = createContainer();
+    expect(Object.keys(c).sort()).toEqual([...PORT_NAMES].sort());
+    for (const [name, Adapter] of Object.entries(REAL)) expect(c[name as keyof typeof c], name).toBeInstanceOf(Adapter);
+    expect(c.settings.get()).toMatchObject({ ...QA_ENV, REGION: 'us-east-1' });
+    for (const spy of calls) expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('T-WAUTH-19: the DynamoDB stores use the tables from the settings and share one client', () => {
+    noNetwork();
+    stubQa();
+    const c = createContainer();
+    for (const store of [c.sessionStore, c.preAuthStore, c.counter, c.powStore]) expect(inner(store).table).toBe(QA_ENV.SESSIONS_TABLE);
+    expect(inner(c.accountStore).table).toBe(QA_ENV.ACCOUNTS_TABLE);
+    const client = inner(c.sessionStore).client;
+    expect(client).toBeInstanceOf(DynamoDBDocumentClient);
+    for (const store of [c.preAuthStore, c.counter, c.powStore, c.accountStore]) expect(inner(store).client).toBe(client);
+  });
+
+  it("T-WAUTH-19: every SDK client takes the region from the settings: the runtime's, else us-east-1 (D-159)", async () => {
+    noNetwork();
+    for (const [runtime, expected] of [
+      ['', 'us-east-1'],
+      ['eu-west-1', 'eu-west-1'],
+    ]) {
+      stubQa({ AWS_REGION: runtime });
+      delete (globalThis as { [SHARED]?: unknown })[SHARED];
+      const c = createContainer();
+      expect(c.settings.get().REGION).toBe(expected);
+      for (const adapter of [c.secretStore, c.identityProvider, c.sessionStore, c.accountStore]) {
+        expect(await inner(adapter).client!.config.region(), runtime).toBe(expected);
+      }
+    }
+  });
+
+  it('T-WAUTH-19: one container per process: every call outside STAGE=test returns the same one', () => {
+    noNetwork();
+    stubQa();
+    const c = createContainer();
+    expect(createContainer()).toBe(c);
+    expect(getContainer()).toBe(c);
+  });
+
+  it('T-WAUTH-19: a missing or invalid setting fails with an error naming the setting, never its value', () => {
+    noNetwork();
+    stubQa({ USER_POOL_ID: '' });
+    expect(() => createContainer()).toThrow(/Web server settings missing or invalid: USER_POOL_ID$/);
+    const leaked = 'not-an-arn-but-a-pasted-secret-value';
+    stubQa({ WEB_CLIENT_SECRET_ARN: leaked });
+    let message = '';
+    try {
+      createContainer();
+    } catch (e) {
+      message = e instanceof Error ? e.message : String(e);
+    }
+    expect(message).toMatch(/WEB_CLIENT_SECRET_ARN/);
+    expect(message).not.toContain(leaked);
+    stubQa({ WEB_ORIGIN: 'http://qa.example.test' });
+    expect(() => createContainer()).toThrow(/WEB_ORIGIN/);
+    // A failed build is not kept: once the settings are fixed the next call builds the container.
+    stubQa();
+    expect(createContainer().settings.get().WEB_ORIGIN).toBe(QA_ENV.WEB_ORIGIN);
+  });
+
+  it('T-WAUTH-19: until PR 4 the data API fails closed on every method and logs once', async () => {
+    noNetwork();
+    stubQa();
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const api = createContainer().dataApi;
+    const names = [
+      'listTransactions',
+      'totals',
+      'rates',
+      'putRate',
+      'review',
+      'putReview',
+      'listImports',
+      'getImport',
+      'requestImport',
+      'exportCsv',
+      'erase',
+    ] as const satisfies readonly (keyof typeof api)[];
+    for (const name of names) {
+      const call = api[name] as (token: string, input: unknown) => Promise<unknown>;
+      expect(await call('example-token', {}), name).toEqual({ ok: false, kind: 'failed' });
+    }
+    const lines = log.mock.calls.map((args) => JSON.parse(String(args[0])) as Record<string, string>);
+    expect(lines.filter((l) => l.event === 'adapter_unavailable' && l.outcome === 'data_api')).toHaveLength(1);
+  });
+
+  it('T-WAUTH-19: until PR 4 the parameter store fails closed (a refusal, never a missing value) and logs once', async () => {
+    noNetwork();
+    stubQa();
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const params = createContainer().parameterStore;
+    await expect(params.get('/smart-finances/qa/imports-paused')).rejects.toThrow(/not wired/);
+    await expect(params.get('/smart-finances/qa/imports-paused')).rejects.toThrow(/not wired/);
+    const lines = log.mock.calls.map((args) => JSON.parse(String(args[0])) as Record<string, string>);
+    expect(lines.filter((l) => l.event === 'adapter_unavailable' && l.outcome === 'parameter_store')).toHaveLength(1);
   });
 });

@@ -319,11 +319,13 @@
       "signInLink": "Sign in",
       "errWeak": "That password is too short or too common. Use at least 12 characters and avoid common words.",
       "errLimit": "Too many sign-ups from this connection. Try again in an hour.",
-      "errBot": "The check didn’t pass, so we haven’t created an account. Reload the page and try again, or write to {contact}."
+      "errBot": "The check didn’t pass, so we haven’t created an account. Reload the page and try again, or write to {contact}.",
+      "errAccept": "Tick the box to accept the privacy notice and the terms.",
+      "errRefused": "We can’t create an account with this address right now."
     },
     "confirm": {
       "title": "Check your email",
-      "lead": "We sent a 6-digit code to {email}. The account is created once you enter it. The code works for 15 minutes.",
+      "lead": "We sent a 6-digit code to {email}. The account is created once you enter it.",
       "submit": "Confirm email",
       "confirming": "Confirming…",
       "resend": "Send a new code",
@@ -332,7 +334,9 @@
       "resent": "We sent a new code. The old one no longer works.",
       "resentWait": "You can ask for another one in 30 seconds.",
       "errWrong": "That code doesn’t match. Check the digits and try again.",
-      "errExpired": "This code has expired. Ask for a new one."
+      "errExpired": "This code has expired. Ask for a new one.",
+      "errLocked": "Too many wrong codes. Start again in a few minutes.",
+      "errStart": "This sign-up has expired. Start again."
     },
     "setup": {
       "title": "Set up your authenticator",
@@ -344,7 +348,10 @@
       "keyNote": "(example)",
       "qrLabel": "QR code, example",
       "submit": "Turn on authenticator",
-      "errWrong": "That code didn’t work. Codes change every 30 seconds, so type the newest one."
+      "errWrong": "That code didn’t work. Codes change every 30 seconds, so type the newest one.",
+      "errExpired": "Your setup timed out. Delete the Cuenta entry you just added in your authenticator app, then sign in again.",
+      "qrAlt": "QR code with your authenticator key",
+      "turningOn": "Turning on…"
     },
     "signIn": {
       "title": "Sign in",
@@ -353,14 +360,19 @@
       "forgot": "Forgot your password?",
       "newHere": "New here?",
       "create": "Create an account",
-      "errWrong": "That email and password don’t match. Check both and try again."
+      "errWrong": "That email and password don’t match. Check both and try again.",
+      "signingIn": "Signing in…",
+      "errExpired": "Your sign-in timed out. Sign in again.",
+      "errLocked": "Too many wrong codes. Sign in again.",
+      "passwordChanged": "Your password was changed, and every session on every device was signed out. Sign in with your new password."
     },
     "code": {
       "title": "Enter your code",
       "lead": "Open your authenticator app and type the 6-digit code for Cuenta.",
       "submit": "Sign in",
       "errWrong": "That code didn’t work. Type the newest one from your app.",
-      "lost": "Lost your authenticator?"
+      "lost": "Lost your authenticator?",
+      "checking": "Checking…"
     },
     "reset": {
       "title": "Reset your password",
@@ -368,7 +380,8 @@
       "submit": "Send code",
       "sentTitle": "Check your email",
       "sentLead": "If {email} has an account, a code is on its way. It can take a minute.",
-      "next": "Enter the code"
+      "next": "Enter the code",
+      "sending": "Sending…"
     },
     "resetConfirm": {
       "title": "Choose a new password",
@@ -377,7 +390,11 @@
       "newPassword": "New password",
       "submit": "Save new password",
       "resend": "Send a new code",
-      "errWrong": "That code doesn’t match or has expired. Check your email, or ask for a new one."
+      "errWrong": "That code doesn’t match or has expired. Check your email, or ask for a new one.",
+      "saving": "Saving…",
+      "resent": "If there’s an account, a new code is on its way. The old one no longer works.",
+      "errLocked": "Too many wrong codes. Ask for a new code and start again.",
+      "errStart": "This reset has expired. Start again."
     },
     "lost": {
       "title": "Lost your authenticator?",
@@ -385,7 +402,9 @@
       "step1": "Write to {contact} from the email you signed up with.",
       "step2": "Say that you lost your authenticator. Never send your password or a code.",
       "step3": "We check it’s you and reset it. You set up a new one the next time you sign in.",
-      "wait": "A person answers, so it can take a day or two."
+      "wait": "Once we confirm it’s you, we wait 72 hours before the reset, so nobody else can do it quickly.",
+      "proof": "We reply to that address only, and ask two or three things only you would know, such as roughly when you signed up or which files you imported.",
+      "after": "After the reset, every session on every device ends."
     },
     "consent": {
       "title": "Your data, in plain words",
@@ -406,7 +425,11 @@
       "record": "We record that you accepted, with the date and the version of this page.",
       "submit": "Accept and continue",
       "saving": "Saving…",
-      "decline": "No thanks, sign out"
+      "decline": "No thanks, sign out",
+      "leadFirst": "Read this, then accept to start using Cuenta.",
+      "errChanged": "This page changed while you were reading it. Read it again, then accept.",
+      "versions": "Privacy notice {privacy} · Terms {terms}",
+      "declining": "Signing out…"
     },
     "delete": {
       "reauthTitle": "Confirm it’s you",
@@ -459,9 +482,85 @@
     },
     "idle": {
       "banner": "You were signed out after 30 minutes without activity. Sign in to pick up where you left off."
+    },
+    "forbidden": "This form didn’t come from this site, so we didn’t send it. Reload the page and try again.",
+    "proofFailed": "The automatic check didn’t pass. Reload the page and try again.",
+    "limited": "Too many tries from this connection. Try again in {minutes} minutes.",
+    "invalid": "Some of what you typed isn’t valid. Check it and try again.",
+    "unavailable": "Something went wrong on our side. Reload the page and try again.",
+    "sessionEnded": "Your session ended. Sign in again.",
+    "consentNeeded": "Accept the updated privacy notice and terms first.",
+    "ended": {
+      "title": "Your session ended",
+      "lead": "Sign in again to pick up where you left off.",
+      "submit": "Sign in again",
+      "leaving": "Signing out…"
     }
   },
   "ui": {
     "typeToConfirm": "Type {word} to confirm"
+  },
+  "legal": {
+    "common": {
+      "version": "Version {version}",
+      "readOnly": "This page is for reading. You accept it once, when you create your account. If it changes, Cuenta shows you the new version and asks again before any money screen opens.",
+      "testStageTitle": "This is a test version",
+      "testStage": "This copy of Cuenta is a test stage, not the finished service. Anything stored here may be wiped at any time, so keep your own copy of your files.",
+      "contactTitle": "Questions",
+      "contact": "Write to {contact} from the email you signed up with.",
+      "toTerms": "Read the terms",
+      "toPrivacy": "Read the privacy notice",
+      "home": "Back to Cuenta"
+    },
+    "privacy": {
+      "title": "Privacy notice",
+      "lead": "What Cuenta keeps about you, where it lives, how long we keep it, and how to remove it.",
+      "keepTitle": "What we keep",
+      "keepAccount": "Your email address, and what the sign-in service needs to check your password and your authenticator code.",
+      "keepFiles": "The files you import, and every row inside them with its original text.",
+      "keepChoices": "Your review choices and your dollar rates.",
+      "keepConsent": "Which version of this notice and of the terms you accepted, in which language, and when.",
+      "keepSession": "While you’re signed in, a session on our server. Your browser holds only a random id for it in a cookie, and a second cookie with your language.",
+      "keepSecurity": "Security records, such as sign-ins, failed tries and password resets, with your account id and the time. They never hold your email, password, codes or network address.",
+      "keepLimits": "To slow down abuse, we count tries per email and per connection. The counters hold a scrambled code, not the email or the address, and expire within a day.",
+      "keepMonitoring": "How pages load and any errors on the page, so we can keep the site working. This uses no cookies, no account id, and nothing after the ? in an address.",
+      "whereTitle": "Where it lives",
+      "where": "On Amazon Web Services (AWS), in the us-east-1 region in the United States, in Cuenta’s own cloud account. Your data is filed under your sign-in, and no other account can read it.",
+      "leavesTitle": "What leaves Cuenta",
+      "leavesEmail": "Sign-up and reset codes reach you by email from the sign-in service.",
+      "leavesPwned": "When you choose a password, our server asks the free Pwned Passwords service whether it has appeared in a known data breach. Only the first 5 characters of a scrambled form of the password (its SHA-1 hash) leave our server, never the password itself or your email.",
+      "leavesNone": "Nothing you import is sent anywhere else.",
+      "howLongTitle": "How long we keep it",
+      "howLongData": "Your files, rows, review choices and rates: until you erase them or delete your account. After that, backups keep them for 35 days, then they’re gone for good.",
+      "howLongConsent": "The record of what you accepted: until you delete your account. Erasing your data keeps it.",
+      "howLongSession": "A session ends when you sign out, after 30 idle minutes, after 12 hours at most, or when you close the browser.",
+      "howLongSignUp": "A sign-up that is never confirmed with the email code is removed after 24 hours.",
+      "howLongLogs": "Security records and server logs: one month.",
+      "removeTitle": "What you can do",
+      "removeExport": "See and export everything you imported, at any time, from Your data.",
+      "removeErase": "Erase all your data from Your data. You type DELETE to confirm, and backups drop it after 35 days.",
+      "removeDelete": "Delete your account from Your data. That erases your data, your sign-in and the record of what you accepted, and signs you out on every device.",
+      "removeAsk": "For anything else about your data, write to {contact} from the email you signed up with."
+    },
+    "terms": {
+      "title": "Terms",
+      "lead": "The rules for using Cuenta, in plain words.",
+      "whatTitle": "What Cuenta is",
+      "what": "Cuenta shows where your money goes, from files you bring yourself. It reads those files and shows you your own figures.",
+      "check": "The figures come from your files. Check anything important against the original statement.",
+      "notTitle": "What Cuenta doesn’t do",
+      "notAdvice": "It gives no investment or financial advice and picks no products for you.",
+      "notMoney": "It never moves money and never connects to a bank. You bring the files.",
+      "accountTitle": "Your account",
+      "accountOne": "One account is for one person. Keep your password and your authenticator to yourself, and sign out when you’re done.",
+      "accountOwn": "Bring only your own files: Cuenta is for your own money.",
+      "accountLost": "If you lose your authenticator, you can’t reset it on your own. See <lost>Lost your authenticator?</lost>",
+      "limitsTitle": "Fair use",
+      "limits": "To keep Cuenta working for everyone, it limits how many tries and requests come from one person or one connection. Past the limit, it asks you to wait before trying again.",
+      "leaveTitle": "Leaving",
+      "leave": "You can delete your account at any time from Your data. The privacy notice says what is removed and when.",
+      "changesTitle": "When these terms change",
+      "changes": "If the terms or the privacy notice change, Cuenta shows you the new version and asks you to accept it before any money screen opens. The version is at the top of each page."
+    }
   }
 }

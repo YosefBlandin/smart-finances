@@ -1,7 +1,9 @@
 import type { Clock } from '@/ports/clock';
-import type { IdentityFailure, IdentityProvider, Tokens } from '@/ports/identity-provider';
+import type { IdentityFailure, IdentityProvider, Lang, Tokens } from '@/ports/identity-provider';
 
 // The test identity fake: every email code is 123456 and every authenticator code is 000000 (PR 3 relies on these).
+// Like the Cognito adapter it lower-cases the email; subs are deterministic (the nth sign-up of a fake gets the same
+// sub every run); codeEmails records each code email the pool would send, with its language.
 export const TEST_EMAIL_CODE = '123456';
 export const TEST_AUTHENTICATOR_CODE = '000000';
 const HOUR = 3_600_000;
@@ -13,11 +15,17 @@ const fail = (reason: IdentityFailure) => ({ ok: false as const, reason });
 const ok = { ok: true as const };
 const random = (n = 16) => [...crypto.getRandomValues(new Uint8Array(n))].map((b) => b.toString(16).padStart(2, '0')).join('');
 const BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+const login = (email: string) => email.trim().toLowerCase();
+const subFor = (n: number) => `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
+
+export type CodeEmail = { email: string; kind: 'signup' | 'resend' | 'forgot'; lang: Lang };
 
 export class MemoryIdentityProvider implements IdentityProvider {
   private readonly users = new Map<string, User>();
   private readonly challenges = new Map<string, Challenge>();
   private readonly refreshTokens = new Map<string, string>();
+  private signUps = 0;
+  readonly codeEmails: CodeEmail[] = [];
   constructor(private readonly clock: Clock) {}
 
   private bySub(sub: string) {
@@ -34,22 +42,30 @@ export class MemoryIdentityProvider implements IdentityProvider {
     return session;
   }
 
-  async signUp(email: string, password: string) {
+  async signUp(rawEmail: string, password: string, lang: Lang) {
+    const email = login(rawEmail);
     if (this.users.has(email)) return fail('exists');
-    this.users.set(email, { sub: crypto.randomUUID(), email, password, status: 'UNCONFIRMED', authenticator: false, resetPending: false });
+    this.signUps += 1;
+    this.users.set(email, { sub: subFor(this.signUps), email, password, status: 'UNCONFIRMED', authenticator: false, resetPending: false });
+    this.codeEmails.push({ email, kind: 'signup', lang });
     return ok;
   }
-  async confirm(email: string, code: string) {
+  async confirm(rawEmail: string, code: string) {
+    const email = login(rawEmail);
     const user = this.users.get(email);
     if (!user) return fail('not_found');
     if (code !== TEST_EMAIL_CODE) return fail('bad_code');
     user.status = 'CONFIRMED';
     return ok;
   }
-  async resend(email: string) {
-    return this.users.has(email) ? ok : fail('not_found');
+  async resend(rawEmail: string, lang: Lang) {
+    const email = login(rawEmail);
+    if (!this.users.has(email)) return fail('not_found');
+    this.codeEmails.push({ email, kind: 'resend', lang });
+    return ok;
   }
-  async passwordAuth(email: string, password: string) {
+  async passwordAuth(rawEmail: string, password: string) {
+    const email = login(rawEmail);
     const user = this.users.get(email);
     if (!user || user.password !== password) return fail('bad_credentials');
     if (user.status !== 'CONFIRMED') return fail('unconfirmed');
@@ -63,16 +79,19 @@ export class MemoryIdentityProvider implements IdentityProvider {
     const secret = [...crypto.getRandomValues(new Uint8Array(32))].map((b) => BASE32[b % 32]).join('');
     return { ok: true as const, secret, session: this.challenge(c.email, 'MFA_SETUP_ASSOCIATED') };
   }
-  async verifySetup(session: string, code: string) {
+  async verifySetup(rawEmail: string, session: string, code: string) {
+    const email = login(rawEmail);
     const c = this.challenges.get(session);
     const user = c && this.users.get(c.email);
-    if (c?.step !== 'MFA_SETUP_ASSOCIATED' || !user) return fail('bad_session');
+    if (c?.step !== 'MFA_SETUP_ASSOCIATED' || c.email !== email || !user) return fail('bad_session');
     if (code !== TEST_AUTHENTICATOR_CODE) return fail('bad_code');
     this.challenges.delete(session);
     user.authenticator = true;
-    return ok;
+    // Like Cognito: answering MFA_SETUP after the verified code completes the sign-in.
+    return { ok: true as const, tokens: this.tokens(user.sub) };
   }
-  async respondCode(email: string, session: string, code: string) {
+  async respondCode(rawEmail: string, session: string, code: string) {
+    const email = login(rawEmail);
     const c = this.challenges.get(session);
     const user = this.users.get(email);
     if (c?.step !== 'SOFTWARE_TOKEN_MFA' || c.email !== email || !user) return fail('bad_session');
@@ -80,13 +99,18 @@ export class MemoryIdentityProvider implements IdentityProvider {
     this.challenges.delete(session);
     return { ok: true as const, tokens: this.tokens(user.sub) };
   }
-  async forgot(email: string) {
+  async forgot(rawEmail: string, lang: Lang) {
+    const email = login(rawEmail);
     const user = this.users.get(email);
-    if (user) user.resetPending = true;
+    if (user) {
+      user.resetPending = true;
+      this.codeEmails.push({ email, kind: 'forgot', lang });
+    }
     // The same reply whether or not the account exists, so the answer reveals nothing.
     return ok;
   }
-  async confirmForgot(email: string, code: string, password: string) {
+  async confirmForgot(rawEmail: string, code: string, password: string) {
+    const email = login(rawEmail);
     const user = this.users.get(email);
     if (!user?.resetPending || code !== TEST_EMAIL_CODE) return fail('bad_code');
     user.password = password;
@@ -103,7 +127,7 @@ export class MemoryIdentityProvider implements IdentityProvider {
     return ok;
   }
   async adminGet(email: string) {
-    const user = this.users.get(email);
+    const user = this.users.get(login(email));
     return user ? { ok: true as const, sub: user.sub, status: user.status } : fail('not_found');
   }
   async adminDelete(sub: string) {

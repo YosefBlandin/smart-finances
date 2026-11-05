@@ -1,0 +1,99 @@
+/* The privacy notice, the terms and the lost-authenticator page: one readable column of text. Tokens only (D-57). */
+.page {
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  padding: var(--s6) var(--s4);
+  background: var(--paper);
+}
+
+.card {
+  width: 100%;
+  max-width: 680px;
+  height: fit-content;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+  padding: var(--s6);
+  border-radius: var(--r-l);
+  background: var(--surface);
+  box-shadow: var(--lift);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.brand {
+  font-weight: var(--w-head);
+}
+
+.title {
+  font-size: var(--t-xl);
+  font-weight: var(--w-head);
+}
+
+/* The heading takes focus after a navigation (AC-10) without a ring, as in the shell. */
+.title:focus {
+  outline: none;
+}
+
+.version {
+  font-size: var(--t-s);
+  color: var(--muted);
+}
+
+.lead {
+  color: var(--muted);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.heading {
+  font-size: var(--t-m);
+  font-weight: var(--w-head);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding-left: var(--s5);
+}
+
+.note {
+  font-size: var(--t-s);
+  color: var(--muted);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s4);
+}
+
+/* Text links reach the touch target under a coarse pointer (D-22). */
+.links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  color: var(--ink);
+}
+
+@media (pointer: coarse) {
+  .links a {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: var(--s5) var(--s4);
+  }
+}

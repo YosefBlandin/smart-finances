@@ -1,0 +1,49 @@
+/* The sign-in, setup and code screens. Tokens only (D-57). */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding-left: var(--s5);
+}
+
+.qr {
+  display: block;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto;
+}
+
+.qrLight {
+  fill: var(--qr-light);
+}
+
+.qrDark {
+  fill: var(--qr-dark);
+}
+
+.key {
+  font-family: var(--font-data);
+  font-size: var(--t-s);
+  overflow-wrap: anywhere;
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-s);
+  background: var(--paper);
+}
+
+.small {
+  font-size: var(--t-s);
+  color: var(--muted);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s4);
+  font-size: var(--t-s);
+}

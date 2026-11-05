@@ -14,10 +14,15 @@ export type ShellProps = {
   stage?: string;
   /** Rows waiting for review (D-44); 0 until PR 4 reads the review data. */
   reviewCount: number;
+  /**
+   * The Sign out server action (D-115: a post; SF-151): the Sign out row is its form's submit button. Given by the money
+   * layout, so ui/ does not import app/.
+   */
+  signOut: (form: FormData) => Promise<void>;
   children: ReactNode;
 };
 
-export async function Shell({ address, stage, reviewCount, children }: ShellProps) {
+export async function Shell({ address, stage, reviewCount, signOut, children }: ShellProps) {
   const t = await getTranslations();
   const locale = await getLocale();
   const other = locale === 'es' ? 'en' : 'es';
@@ -57,13 +62,15 @@ export async function Shell({ address, stage, reviewCount, children }: ShellProp
           </span>
         </button>
       </LangForm>
-      {/* Sign out becomes a server action in PR 3 (SF-151); until then the row is in place without an action. */}
-      <button type="button" className={styles.row}>
-        <span className={styles.rowLabel}>
-          <Icon name="signOut" size="lg" />
-          <span>{t('shell.signOut')}</span>
-        </span>
-      </button>
+      {/* Sign out posts the server action (works without JavaScript too); it opens /sign-in. */}
+      <form action={signOut}>
+        <button type="submit" className={styles.row}>
+          <span className={styles.rowLabel}>
+            <Icon name="signOut" size="lg" />
+            <span>{t('shell.signOut')}</span>
+          </span>
+        </button>
+      </form>
     </div>
   );
 
