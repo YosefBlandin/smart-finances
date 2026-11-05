@@ -33,9 +33,13 @@
     },
     {
       "id": "SF-162",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "b46696f",
+      "evidence": [
+        "Tests first (T-WSCR-2, T-WSCR-3, apps/web/src/domain/money.test.ts): npm test --workspace @smart-finances/web -- src/domain/money.test.ts exit 1: \"Error: Cannot find module './money' imported from .../src/domain/money.test.ts\", \"Test Files 1 failed (1)\" (expected: overviewModel did not exist).",
+        "Built: domain/money.ts overviewModel(month, totals, rates) → { earnedArs, earnedUsd, spentArs, keptArs, keptPct, typicalPct?, typicalMonths, bad, overArs?, noRate, rate? } over the GET /totals months (native view) and the GET /rates items; arsCents(usdCents, rate) in integers, half away from zero; TYPICAL_MIN 3, TYPICAL_MAX 6. One fix round inside the first run: a month with no data gave spentArs -0 (now 0).",
+        "Verify: npm test --workspace @smart-finances/web -- src/domain/money.test.ts exit 0: \"Test Files 1 passed (1)\", \"Tests 19 passed (19)\". apps/web npx tsc --noEmit exit 0; eslint src/domain clean; prettier clean."
+      ],
       "review": ""
     },
     {
@@ -114,6 +118,8 @@
     "SF-161: D-157 test update: adapters/container.test.ts (T-WAUTH-19) expected UnwiredDataApi in the real container and a fail-closed data API; it now expects HttpDataApi and that a token without a person is refused with no network call.",
     "SF-161: apps/web/fixtures/hostile.json is created as the Do asks, though the Files line does not list it. sample.json already holds 3 hostile rows (img onerror, =HYPERLINK, the 2,000-character one); hostile.json adds all 8 adversarial rows of data/synthetic/transactions.csv (source mercadopago, needs_review) and one import whose skipped reasons carry the hostile text (for SF-170 on the imports screen).",
     "SF-161: the memory data API is one data set for every allowed token, not per person; only TEST_PERSON's token is allowed in the STAGE=test container. A person signed up in the browser tests (memory tokens are random, not JWTs) gets unauthorized from it; SF-172's second signed-in test person needs its token allowed (MemoryDataApi.allowToken) or a per-person memory store.",
-    "SF-161: under STAGE=test the person limit is 5 data requests a minute (domain/limits.ts) and TEST_PERSON's memory data API counts them, so screen browser tests (SF-164 to SF-168) that read more than 5 times a minute as TEST_PERSON will meet the 429 path; they may need fresh persons or waits."
+    "SF-161: under STAGE=test the person limit is 5 data requests a minute (domain/limits.ts) and TEST_PERSON's memory data API counts them, so screen browser tests (SF-164 to SF-168) that read more than 5 times a minute as TEST_PERSON will meet the 429 path; they may need fresh persons or waits.",
+    "SF-162: the brief's result shape gains earnedUsd (dollars received, cents) and rate? for D-31's second Earned line (\"USD 1,922.00 at ARS 1,375.00 per dollar\"); the listed fields are unchanged.",
+    "SF-162: choices the brief leaves open: a month that earned nothing has keptPct 0 (bad when it spent anything, overArs the whole spend); typical month takes the latest up to 6 earlier months that have both totals and a rate; keptPct and typicalPct stay exact and screens round (D-30); a month with no rate leaves its dollars out of the pesos, like the API's dollar view; currencies other than ARS and USD are not counted."
   ]
 }
