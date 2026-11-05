@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v8
 ---
 # Web UI: design system and screens: decisions
 
@@ -178,6 +178,16 @@ status: executing
 | D-161 | Housekeeping, when delete-function-name is missing, skips a stuck deletion whole and counts it: no erase, sign-out, user delete or row removal until the data service's delete function exists. Narrows D-104. | 2-way | user, 2026-11-04 (PR 2 deviations and follow-ups) | accepted |
 | D-162 | Browser monitoring ids (rum-app-monitor-id, rum-identity-pool-id, rum-guest-role-arn) stay stage parameters: the web server reads them through ParameterStore and passes them to the client component; they are not branch variables. | 2-way | user, 2026-11-04 (PR 2 deviations and follow-ups) | accepted |
 | D-163 | Before the first qa deploy, the stage parameters support-address, alarm-email, monthly-budget-usd (qa), and signup-open (true on qa, D-118) must exist; the agent sets them on qa (D-155). api-url, bucket-name and web-client-id are written by the data and API stacks, which deploy first. | 2-way | user, 2026-11-04 (PR 2 deviations and follow-ups) | accepted |
+| D-164 | The breach checker only answers unavailable; the sign-up and reset use cases log breach_check_unavailable with their request id and accept the password. Narrows D-117. | 2-way | user, 2026-11-04 (SF-146 deviation) | accepted |
+| D-165 | IdentityProvider.verifySetup(email, session, code) returns { tokens }, finishing the first sign-in, and IdentityFailure adds bad_password (the pool's password policy) and refused (the pre-sign-up trigger). | 2-way | user, 2026-11-04 (SF-147 deviation) | accepted |
+| D-166 | Sign out is signOutAction in app/(app)/actions.ts: guarded as a money action with allowDeleting; the Shell takes it as a prop from the (app) layout, so ui/ never imports app/. A session the guard reads as ended still has any left-over row deleted and its refresh token revoked. | 2-way | user, 2026-11-05 (SF-151 deviation, conformance fix) | accepted |
+| D-167 | PR 3 wires every real adapter into the container for qa, staging and prod (SF-154); until PR 4, DataApi answers failed and ParameterStore rejects, so callers fail closed, and each logs adapter_unavailable once per process. | 2-way | user, 2026-11-05 (PR 3 deviation) | accepted |
+| D-168 | The Interfaces between the PRs keep PR 3's shapes as built: use cases take their request context and cookie ids from the caller, because application/ may not read cookies or headers (D-138). | 2-way | user, 2026-11-05 (SF-142, SF-143, SF-149, SF-150 deviations) | accepted |
+| D-169 | The csp-nonce meta keeps the first load's nonce on the client (ui/NonceMeta.tsx), so styles React Aria adds after a server-action redirect carry the nonce the page allows (SF-155). | 2-way | user, 2026-11-05 (SF-153 surprise) | accepted |
+| D-170 | After a reset, signing out everywhere is tried twice; the __Host-notice cookie (10 minutes, HttpOnly) is set only when it worked, else reset signout_failed is logged and sign-in shows no notice. Narrows D-92 and D-122. | 2-way | user, 2026-11-05 (PR 3 conformance major, accepted fix) | accepted |
+| D-171 | STAGE=test is refused when an AWS runtime marker (AWS_EXECUTION_ENV or AWS_LAMBDA_FUNCTION_NAME) is set, so the memory container's fixed codes and seeded test person can never serve a deployed stage. | 2-way | user, 2026-11-05 (PR 3 conformance fix) | accepted |
+| D-172 | qa opens sign-up with the account's default Lambda concurrency (10): the owner is its only user. Staging and prod still wait for the raise. Narrows D-95 for qa. | 2-way | user, 2026-11-05 | accepted |
+| D-173 | The Amplify log group /aws/amplify/<app id> did not exist on qa; the agent creates it on qa by CLI before the web stack, which keeps referencing it by name. Staging and prod check it the same way. Narrows D-112. | 2-way | user, 2026-11-05 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:

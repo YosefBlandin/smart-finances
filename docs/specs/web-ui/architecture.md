@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v8
 ---
 # Web UI: design system and screens: architecture
 
@@ -190,14 +190,14 @@ Every port is a TypeScript interface in apps/web/src/ports/; results never throw
 | PowStore | claim(saltHash, ttl): Promise<boolean> (true only the first time) |
 | AccountStore | getAccount(sub); putConsent(sub, consent); markDeleting(sub, now); reserveImport(sub, { day, bytes, importId }): Promise<{ ok } \| { ok: false, reason: 'daily' \| 'bytes' \| 'running' }>; releaseImport(sub, importId, finalBytes); resetStoredBytes(sub); deleteAccountRow(sub) |
 | BreachChecker | isBreached(password): Promise<boolean \| 'unavailable'> |
-| IdentityProvider | signUp(email, password, lang); confirm(email, code); resend(email, lang); passwordAuth(email, password) → { tokens } \| { challenge: 'MFA_SETUP' \| 'SOFTWARE_TOKEN_MFA', session }; associate(session) → { secret, session }; verifySetup(session, code); respondCode(email, session, code) → { tokens }; forgot(email, lang); confirmForgot(email, code, password); refresh(sub, refreshToken) → tokens; revoke(refreshToken); adminGet(email) → { sub, status }; adminDelete(sub); adminGlobalSignOut(sub) |
+| IdentityProvider | signUp(email, password, lang); confirm(email, code); resend(email, lang); passwordAuth(email, password) → { tokens } \| { challenge: 'MFA_SETUP' \| 'SOFTWARE_TOKEN_MFA', session }; associate(session) → { secret, session }; verifySetup(email, session, code) → { tokens }; respondCode(email, session, code) → { tokens }; forgot(email, lang); confirmForgot(email, code, password); refresh(sub, refreshToken) → tokens; revoke(refreshToken); adminGet(email) → { sub, status }; adminDelete(sub); adminGlobalSignOut(sub) |
 | DataApi | one method per route in @smart-finances/contracts (listTransactions, totals, rates, putRate, review, putReview, listImports, getImport, requestImport, exportCsv, erase), each (token, input) → { ok, data } \| { ok: false, kind: 'unauthorized' \| 'not_found' \| 'conflict' \| 'limited' \| 'failed', code?, retryAfter? } |
-Tokens = { access, id, refresh, expiresAt }. The Cognito username is the email for sign-in calls and the sub for refresh (secret hash).
+Tokens = { access, id, refresh, expiresAt }. IdentityFailure: exists, not_found, unconfirmed, bad_credentials, bad_code, expired_code, bad_session, bad_password, refused, revoked, limited, failed (D-165). The Cognito username is the email for sign-in calls and the sub for refresh (secret hash).
 
 ### Interfaces between the PRs
 What each PR (pr-smart-finances*.md) provides to the later ones. A later PR imports these names; it never redefines them. Paths are under apps/web/src unless stated.
 - PR 1: packages/contracts (@smart-finances/contracts: FIELDS, KINDS, CATEGORIES, Zod schemas per data route); apps/web scripts test, e2e (STAGE=test, port 3000), lint, storybook, test-storybook, lhci; messages/en.json and es.json with next-intl; ui/ parts with stories; queries/provider.tsx and prefetch(); ports/ interfaces and adapters/memory/; adapters/container.ts; (app) layout and (auth) group; fixtures in apps/web/fixtures/sample.json. Until PR 3, code reads process.env (STAGE, COMMIT_SHA, UPLOAD_HOST, WEB_ORIGIN) with test defaults.
-- PR 3: ports Settings, SecretStore, Logger, SessionStore, PreAuthStore, Counter, PowStore, BreachChecker, IdentityProvider, AccountStore with real adapters; application/session.ts getSession() → { sub, email, accessToken, … } | null, createSession, refreshIfNeeded, signOutEverywhere(sub); domain/limits.ts and application hit(scope, value) → { ok, retryAfterSeconds }; app/guarded.ts guarded(schema, opts, fn) → { ok, data } | { ok: false, messageKey, retryAfterSeconds? }; application/guard.ts requireMoneyAccess({ allowDeleting? }); application/auth/signIn.ts signIn(email, password, { reauth? }); legal/versions.ts TERMS_VERSION and PRIVACY_VERSION ("2026-11-01"); the memory identity fake (email code 123456, authenticator code 000000); e2e/helpers/signIn.ts.
+- PR 3 (as built, D-168): ports Settings, SecretStore, Logger, SessionStore, PreAuthStore, Counter, PowStore, BreachChecker, IdentityProvider, AccountStore with real adapters, wired in adapters/container.ts (getContainer(); DataApi and ParameterStore fail closed until PR 4 replaces UnwiredDataApi and UnwiredParameterStore, D-167); application/session.ts createSessions(deps) → { readSession(id), getSession(id) → Session | null, createSession({ sub, tokens, preAuthId?, previousSessionId? }) → { id, session }, refreshIfNeeded(session), endSession(id), signOutEverywhere(sub) → { ok, removed }, startPreAuth, readPreAuth, updatePreAuth, endPreAuth }, with app/cookies.ts readSessionCookie, setSessionCookie, clearSessionCookie; application/limits.ts createLimits(deps).hit(scope, value) → { ok, retryAfterSeconds } with hit('ip-auth', ip), hit('auth-fail', { email, ip }), hit('code-email', email), hit('person', sub) (the event counts even when refused; hit logs nothing, the caller logs rate_limited); app/guarded.ts guarded(schema, opts, fn) → { ok, data } | { ok: false, messageKey, retryAfterSeconds? } and requireMoneyAccess({ allowDeleting? }) (reads __Host-sid; for layouts and route handlers) over application/guard.ts createGuard(deps).requireMoneyAccess(sessionId, { allowDeleting? }) → { ok: true, session, account } | { ok: false, reason: 'signed-out', why } | { ok: false, reason: 'consent' | 'deleting' }; application/auth/signIn.ts createSignIn(deps) → { signIn(email, password, ctx), verifySetup(code, ctx), verifyCode(code, ctx), setupView, codeStep } with ctx { requestId, ip, lang, preAuthId?, sessionId?, reauth?: { sub } }; legal/versions.ts TERMS_VERSION and PRIVACY_VERSION ("2026-11-01"); the memory identity fake (email code 123456, authenticator code 000000); STAGE=test seeds TEST_PERSON (adapters/container.ts) with a session and consent; e2e/helpers/signIn.ts signIn(page), newPerson, setAddress, submit.
 - PR 4: ports DataApi and ParameterStore with adapters; application/data/* use cases; app/api/data/* JSON routes and export; queries/ hooks; domain/money.ts overviewModel; application/account/deleteAccount.ts; /goodbye.
 
 ### Web routes
@@ -224,6 +224,7 @@ Search values: month (yyyy-mm), view (native or usd), kind, category, sort. Free
 - __Host-pre: 32 random bytes; Secure; HttpOnly; SameSite=Strict; Path=/; Max-Age 900; deleted when sign-in completes.
 - CSRF: every post's Origin must equal the stage's web address from the settings; missing or null is refused (403); no GET changes state; sign-out is a post (D-115).
 - lang: en or es; SameSite=Lax; one year.
+- __Host-notice: password-changed; Secure; HttpOnly; SameSite=Lax; Path=/; Max-Age 600; set after a reset only when every session ended (D-122, D-170).
 Nothing else is written to browser storage.
 
 ### Sessions table (DynamoDB, on demand, TTL on expires_at)
@@ -274,7 +275,7 @@ Length 12 to 128, any characters, no composition rules or expiry; breached passw
 amplify.yml writes these into apps/web/.env.production before next build; no secret value is ever a variable.
 
 ### Security events (web server log, one JSON line each)
-{ "event": "signup" | "signup_confirm" | "signin" | "signin_fail" | "mfa_setup" | "reset" | "signout" | "account_delete" | "rate_limited" | "breached_password" | "breach_check_unavailable" | "health", "outcome", "sub"?, "request_id", "ts" }. Never an email, password, code, token, IP or imported text.
+{ "event": "signup" | "signup_confirm" | "signin" | "signin_fail" | "mfa_setup" | "reset" | "signout" | "account_delete" | "rate_limited" | "breached_password" | "breach_check_unavailable" | "adapter_unavailable" | "health", "outcome", "sub"?, "request_id", "ts" }. Never an email, password, code, token, IP or imported text.
 
 ### Alarms (D-80, one SNS topic per stage)
 | Alarm | Source | Threshold |

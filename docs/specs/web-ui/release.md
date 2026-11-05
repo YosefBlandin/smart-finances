@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v8
 ---
 # Web UI: design system and screens: release
 
@@ -30,10 +30,10 @@ status: executing
 - <HUMAN: turn auto-build off on each Amplify branch, or let the web stack do it on its first deploy; qa done 2026-10-30> · Blocks: first qa build
 - <HUMAN, or the agent on qa (D-155): set the D-163 stage parameters (support-address, alarm-email, monthly-budget-usd on qa, signup-open true on qa per D-118, false on staging and prod)> · Blocks: the first qa deploy
 - <HUMAN: redeploy the OIDC stack with Amplify job rights and amplify-app-id read (D-113); again when staging and prod apps exist> · Blocks: the first qa deploy
-- <HUMAN: read-only check that /aws/amplify/<app id> exists before the first web stack deploy (D-112)> · Blocks: the web stack
+- <HUMAN, or the agent on qa (D-173): check that /aws/amplify/<app id> exists before the first web stack deploy, and create it when missing (D-112)> · Blocks: the web stack
 - <HUMAN: confirm the SNS alarm email subscription> · Blocks: G-promote
 - <HUMAN: verify an SES domain identity and request SES production access> · Blocks: sign-up on staging and prod (D-77)
-- <HUMAN: raise the account's Lambda concurrency quota and confirm it> · Blocks: setting signup-open to true on any stage, qa included (D-95, D-118)
+- <HUMAN: raise the account's Lambda concurrency quota and confirm it> · Blocks: setting signup-open to true on staging and prod (D-95; qa opens without it, D-172)
 - <HUMAN: send Q-8 to a lawyer and record the answer> · Blocks: public sign-up on every stage (D-98)
 - <HUMAN: walk one sign-up, setup, sign-in, reset and delete account on qa with a test address> · Blocks: G-merge sign-off of the auth tasks
 - <HUMAN: who promotes to production: the owner> · Blocks: G-promote

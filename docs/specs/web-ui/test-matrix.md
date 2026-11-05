@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v8
 ---
 # Web UI: design system and screens: test matrix
 
@@ -46,16 +46,16 @@ status: executing
 | T-WAUTH-5 | AC-17, D-120 | SF-143 | unit | G-merge | Counters refuse at each limit and reset at the window edge; keys hold no raw email or IP. |
 | T-WAUTH-6 | AC-19, D-120 | SF-144 | unit | G-merge | A proof-of-work answer is accepted once, refused when reused, wrong or older than 10 minutes. |
 | T-WAUTH-7 | AC-17, AC-19, D-115, D-153 | SF-145 | unit | G-merge | An action with a missing, null or foreign Origin gets auth.forbidden; an auth action without proof of work is refused; middleware sends Referrer-Policy same-origin. |
-| T-WAUTH-8 | AC-12, AC-20, D-117 | SF-146 | unit | G-merge | A breached password is refused; only 5 hash characters are sent; an API error accepts and logs. |
+| T-WAUTH-8 | AC-12, AC-20, D-117, D-164 | SF-146 | unit | G-merge | A breached password is refused; only 5 hash characters are sent; an API error answers unavailable, and sign-up and reset then accept and log breach_check_unavailable once. |
 | T-WAUTH-9 | AC-12, D-106 | SF-148 | unit | G-merge | Sign-up again with an unconfirmed email replaces it, so only the new password works. |
 | T-WAUTH-10 | AC-12, D-75 | SF-148 | unit | G-merge | Known and unknown emails get the same reply and timing; code emails stop at the cap. |
 | T-WAUTH-11 | AC-1, AC-13 | SF-149 | unit | G-merge | First sign-in walks setup then code; no session before the code. |
 | T-WAUTH-12 | AC-1, D-91 | SF-149 | unit | G-merge | An expired challenge returns to the password step; 5 wrong codes start over. |
 | T-WAUTH-13 | AC-14, D-87, D-145 | SF-150 | unit | G-merge | No money route answers without a consent row or with an older version; resetStoredBytes keeps consent. |
-| T-WAUTH-14 | AC-20, D-92 | SF-151 | unit | G-merge | After a reset, a session opened before it is refused and the authenticator is still asked. |
+| T-WAUTH-14 | AC-20, D-92, D-170 | SF-151 | unit | G-merge | After a reset, a session opened before it is refused and the authenticator is still asked; a failed sign-out everywhere is retried once and names no notice. |
 | T-WAUTH-15 | AC-16 | SF-151 | unit | G-merge | Sign-out is a post that removes the row and revokes the refresh token. |
 | T-WAUTH-16 | AC-14, D-103 | SF-152 | e2e | G-merge | Privacy, terms and lost-authenticator pages render in both languages with one version id. |
-| T-WAUTH-17 | AC-1, AC-12, AC-13, AC-17, AC-19, AC-20 | SF-153 | e2e | G-merge | On the fake sign-in service, sign-up to sign-out and a limit refusal work in both languages. |
+| T-WAUTH-17 | AC-1, AC-12, AC-13, AC-17, AC-19, AC-20, D-169 | SF-153 | e2e | G-merge | On the fake sign-in service, sign-up to sign-out and a limit refusal work in both languages, with no content-policy violation. |
 | T-WSCR-1 | AC-6, AC-15, D-133 | SF-161 | unit | G-merge | The data API adapter sends the bearer token, parses replies with the contracts, maps statuses and times out at 5 seconds. |
 | T-WSCR-2 | AC-2, D-85 | SF-162 | unit | G-merge | Typical month uses 3 to 6 earlier rated months and none below 3. |
 | T-WSCR-3 | AC-11 | SF-162 | unit | G-merge | A month spending more than it earned is the bad case with the overspend amount. |
@@ -79,6 +79,7 @@ status: executing
 | T-WEB-16 | D-127, D-130 | SF-110 | unit | G-merge | prefetch() dehydrates a query that the client provider reads without a request. |
 | T-WEB-17 | D-134 | SF-113 | int | G-merge | Lighthouse on phone settings meets LCP 2.5 s, CLS 0.1 and 200 KB first-load JavaScript per route. |
 | T-WINF-15 | D-135 | SF-130 | unit | G-merge | Synth: the RUM monitor and guest pool exist; the guest role may only put RUM events to that monitor. |
+| T-WAUTH-19 | D-167, D-171 | SF-154 | unit | G-merge | Outside STAGE=test the container builds every PR 3 port from a real adapter with no AWS call; DataApi and ParameterStore fail closed; STAGE=test is refused in an AWS runtime. |
 | T-WAUTH-18 | AC-1, AC-12, D-73 | SF-147 | unit | G-merge | The Cognito adapter sends the secret hash and language metadata; the memory fake accepts only its fixed codes. |
 | T-WSCR-18 | AC-6, D-127 | SF-163 | unit | G-merge | Every /api/data route refuses without session and consent and returns contract-shaped JSON. |
 | T-WSCR-19 | D-131 | SF-166 | e2e | G-merge | A review choice shows at once; a refused one rolls back with a plain message. |
