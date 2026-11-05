@@ -5,7 +5,7 @@ import type { AccountStore } from '@/ports/account-store';
 import type { BreachChecker } from '@/ports/breach-checker';
 import type { Clock } from '@/ports/clock';
 import type { Counter } from '@/ports/counter';
-import type { DataApi } from '@/ports/data-api';
+import type { DataApi, DataApiFailure } from '@/ports/data-api';
 import type { IdentityProvider } from '@/ports/identity-provider';
 import type { Logger } from '@/ports/logger';
 import type { ParameterStore } from '@/ports/parameter-store';
@@ -13,7 +13,14 @@ import type { PowStore } from '@/ports/pow-store';
 import type { PreAuthStore } from '@/ports/pre-auth-store';
 import type { SecretStore } from '@/ports/secret-store';
 import type { SessionStore } from '@/ports/session-store';
-import type { Settings } from '@/ports/settings';
+import type { Settings, WebSettings } from '@/ports/settings';
+import { CognitoIdentityProvider } from './cognito';
+import { DynamoAccountStore } from './dynamodb/accounts';
+import { DynamoCounter } from './dynamodb/counters';
+import { DynamoPowStore } from './dynamodb/pow';
+import { documentClient, DynamoPreAuthStore, DynamoSessionStore } from './dynamodb/sessions';
+import { EnvSettings, parseSettings } from './env-settings';
+import { JsonLogger } from './log';
 import { MemoryAccountStore } from './memory/account-store';
 import { MemoryBreachChecker } from './memory/breach-checker';
 import { MemoryClock, SystemClock } from './memory/clock';
@@ -26,8 +33,9 @@ import { MemoryPowStore } from './memory/pow-store';
 import { MemoryPreAuthStore } from './memory/pre-auth-store';
 import { MemorySecretStore } from './memory/secret-store';
 import { MemorySessionStore } from './memory/session-store';
-import { parseSettings } from './env-settings';
 import { MemorySettings } from './memory/settings';
+import { PwnedPasswordsChecker } from './pwned';
+import { SecretsManagerStore } from './secrets';
 
 // One adapter per port (architecture.md Contracts "Ports"). app/ reaches application/ through this file only (D-138).
 export type Container = {
@@ -80,11 +88,96 @@ export function memoryContainer(settings: Settings = new MemorySettings(), clock
   };
 }
 
-// The only place that reads STAGE to choose behaviour. Real adapters are added by PR 3 and PR 4.
+// PR 4 adds the data API and parameter store adapters. Until then a real stage fails closed on both: the data API
+// answers 'failed' (the screens show their failed state) and a parameter read is refused (never read as "not set",
+// which could mean "imports not paused"). Each logs once per process, so the log shows why without a line per request.
+function logOnce(logger: Logger, outcome: string): () => void {
+  let logged = false;
+  return () => {
+    if (logged) return;
+    logged = true;
+    logger.event('adapter_unavailable', outcome, { requestId: 'container' });
+  };
+}
+
+export class UnwiredDataApi implements DataApi {
+  private readonly log: () => void;
+  constructor(logger: Logger) {
+    this.log = logOnce(logger, 'data_api');
+  }
+  private readonly failed = async (): Promise<DataApiFailure> => {
+    this.log();
+    return { ok: false, kind: 'failed' };
+  };
+  listTransactions = this.failed;
+  totals = this.failed;
+  rates = this.failed;
+  putRate = this.failed;
+  review = this.failed;
+  putReview = this.failed;
+  listImports = this.failed;
+  getImport = this.failed;
+  requestImport = this.failed;
+  exportCsv = this.failed;
+  erase = this.failed;
+}
+
+export class UnwiredParameterStore implements ParameterStore {
+  private readonly log: () => void;
+  constructor(logger: Logger) {
+    this.log = logOnce(logger, 'parameter_store');
+  }
+  async get(): Promise<string | undefined> {
+    this.log();
+    throw new Error('The parameter store is not wired until PR 4');
+  }
+}
+
+/**
+ * The real adapters of qa, staging and prod, built from the settings (D-138). Every AWS SDK client takes the region
+ * from the settings (the runtime's, else us-east-1; D-159) and is only constructed here: nothing is sent until a use
+ * case calls a port. The five DynamoDB stores share one document client; secrets are read at run time by ARN (D-73).
+ */
+export function realContainer(settings: Settings, clock: Clock = new SystemClock()): Container {
+  const s: WebSettings = settings.get();
+  const region = s.REGION;
+  const logger = new JsonLogger({ clock });
+  const secretStore = new SecretsManagerStore({ region, clock });
+  const client = documentClient(region);
+  const sessions = { client, tableName: s.SESSIONS_TABLE };
+  return {
+    clock,
+    settings,
+    secretStore,
+    parameterStore: new UnwiredParameterStore(logger),
+    logger,
+    sessionStore: new DynamoSessionStore({ ...sessions, clock }),
+    preAuthStore: new DynamoPreAuthStore({ ...sessions, clock }),
+    counter: new DynamoCounter(sessions),
+    powStore: new DynamoPowStore({ ...sessions, clock }),
+    accountStore: new DynamoAccountStore({ client, tableName: s.ACCOUNTS_TABLE }),
+    breachChecker: new PwnedPasswordsChecker(),
+    identityProvider: new CognitoIdentityProvider({
+      region,
+      userPoolId: s.USER_POOL_ID,
+      clientId: s.WEB_CLIENT_ID,
+      clientSecretArn: s.WEB_CLIENT_SECRET_ARN,
+      secretStore,
+      clock,
+    }),
+    dataApi: new UnwiredDataApi(logger),
+  };
+}
+
+/**
+ * The only place that reads STAGE to choose behaviour. STAGE=test: fresh memory adapters on each call (the test
+ * defaults, with any setting the environment names, a local port say, taking precedence). Any other stage: the one real
+ * container of this process (getContainer), so SDK clients and the secret cache are reused across requests. A missing
+ * or invalid setting throws an error naming the setting, never its value.
+ */
 export function createContainer(): Container {
-  // STAGE=test: the test defaults, with any setting the environment names (a local port, say) taking precedence.
   if (process.env.STAGE === 'test') return memoryContainer(new MemorySettings(parseSettings(process.env)));
-  throw new Error(`No real adapters yet for STAGE=${process.env.STAGE ?? ''}; PR 3 and PR 4 add them.`);
+  return getContainer();
 }
 
 /**
@@ -123,7 +216,8 @@ const SHARED = Symbol.for('smart-finances.container');
 type WithShared = typeof globalThis & { [SHARED]?: Container };
 
 // One container per server process, for server actions (guarded()): under STAGE=test the memory stores must keep a
-// proof-of-work claim or a counter from one request to the next, and real adapters reuse their SDK clients. It lives on
+// proof-of-work claim or a counter from one request to the next, and real adapters reuse their SDK clients and the
+// secret cache (on a real stage createContainer() returns this one too). It lives on
 // globalThis so every bundle of the app sees the same one. A failed build is not kept, so the next call tries again.
 // Under STAGE=test it also holds TEST_PERSON.
 export function getContainer(): Container {
@@ -134,7 +228,7 @@ export function getContainer(): Container {
       seedTestPerson(c);
       g[SHARED] = c;
     } else {
-      g[SHARED] = createContainer();
+      g[SHARED] = realContainer(new EnvSettings(process.env));
     }
   }
   return g[SHARED];
