@@ -285,7 +285,7 @@
       "from": "SF-124 Files (infra/lib/api-stack.ts, infra/lib/data-stack.ts, infra/test/api-stack.test.ts); D-81, D-88, T-WINF-6",
       "proposal": "Allow SF-124 to also edit two existing tests that assert the behaviour D-81/D-88 remove: infra/test/data-stack.test.ts T-INF-3 (drop the bucket CorsConfiguration POST-from-webOrigins assertion and the 'no CORS when webOrigins is empty' line; assert no CorsConfiguration instead) and infra/test/stacks.test.ts T-INF-6 (reader names gain web-client-id; webOrigins no longer reach the bucket CORS, keep the api.webOrigins assertions or move origins to the web stack in SF-127). No production-code change beyond the task's Files. Also note: dev gets no web stack (SF-131), so after this task the dev bucket has no CORS rule and local uploads from http://localhost:3000 to the dev bucket stop working unless SF-127 or a follow-up covers dev",
       "decidedBy": "owner, in chat, 2026-11-04: SF-124 may update infra/test/data-stack.test.ts (T-INF-3) and infra/test/stacks.test.ts (T-INF-6) to the new behaviour; the dev bucket's missing browser rule is accepted, since local development points at qa",
-      "newDecision": "pending: the planning session records it"
+      "newDecision": "D-157, D-158 (locked-v7)"
     },
     {
       "date": "2026-11-04",
@@ -293,7 +293,7 @@
       "from": "architecture.md Contracts \"Alarms\" row 'API errors and throttles | HTTP API 5xx and 429 | over 2%, or any 429 for 5 minutes' (D-80); SF-129 Files (infra/lib/alarms-stack.ts, infra/test/alarms-stack.test.ts)",
       "proposal": "HTTP APIs publish no 429 or throttle metric to CloudWatch (only Count, 4xx, 5xx, Latency, IntegrationLatency, DataProcessed), and the API stack has no access log, so 'any 429 for 5 minutes' cannot be built inside SF-129's Files. Committed (7a47d11) everything else, including the 5xx-over-2% half as smart-finances-<stage>-api-errors. Options: (a) let SF-129 (or SF-131) also edit infra/lib/api-stack.ts and infra/test/api-stack.test.ts to add a JSON access log on the default stage (one-month log group; fields requestId, status, routeKey only: no IP, no identity, no path values) and add to AlarmsStack a metric filter { $.status = 429 } and an api-throttles alarm (Sum 5 min > 0), reading the log group name from a new api-access-log-group stage parameter or the fixed name; (b) alarm on 4xx instead (noisy: every 401 counts); (c) drop the 429 half and change the contract row. Recommend (a).",
       "decidedBy": "owner, in chat, 2026-11-04: option (a), SF-129 adds a JSON access log to the HTTP API in infra/lib/api-stack.ts (status, route, request time; no IP, identity or user agent), one-month retention, a metric filter on status 429 and the any-429-for-5-minutes alarm",
-      "newDecision": "pending: the planning session records it"
+      "newDecision": "D-160 (locked-v7)"
     },
     {
       "date": "2026-11-04",
@@ -301,7 +301,7 @@
       "from": "architecture.md Contracts 'Web server settings' (AWS_REGION as a branch variable)",
       "proposal": "Amplify reserves the AWS_ prefix for environment variables, so the branch-variables resource must not write AWS_REGION; the web server reads the region from the runtime and falls back to us-east-1 (D-89).",
       "decidedBy": "owner, in chat, 2026-11-04",
-      "newDecision": "pending: the planning session updates the settings table"
+      "newDecision": "D-159 (locked-v7)"
     },
     {
       "date": "2026-11-04",
@@ -309,15 +309,15 @@
       "from": "SF-132 Files (.github/workflows/deploy.yml, infra/lib/github-oidc-stack.ts, scripts/amplify-release.mjs, scripts/amplify-release.test.mjs); D-93, D-113; existing test T-CI-1 (apps/api/test/ci.test.mjs, SF-10)",
       "proposal": "T-CI-1 asserts that deploy.yml has exactly two 'cdk deploy' lines, so deploying the web and alarms stacks as SF-132 requires turns root npm test red. Allow SF-132 to also edit apps/api/test/ci.test.mjs T-CI-1: keep its existing order checks (npm ci < npm test < credentials < data < API), add web and alarms deploy lines after API and the 'node scripts/amplify-release.mjs' release line after alarms, and change the count to exactly four cdk deploy lines. Tried in a scratch copy: passes against the trial deploy.yml. No other change outside the task's Files. Trial patch kept outside the repo (see SF-132 evidence)",
       "decidedBy": "owner, in chat, 2026-11-04: SF-132 may update T-CI-1 in apps/api/test/ci.test.mjs; standing rule for PRs 2 to 4: an existing test that asserts behaviour a task's decisions change may be updated in that task and recorded as a surprise; production code outside a task's Files still stops",
-      "newDecision": "pending: the planning session records the standing rule as a decision"
+      "newDecision": "D-157 (locked-v7)"
     },
     {
       "date": "2026-11-04",
       "task": "conformance (SF-126, SF-129, SF-131)",
       "from": "pr-smart-finances-infra.md HUMAN needs (alarm-email and monthly-budget-usd listed as blocking only the SF-129 qa check); release.md HUMAN needs (support-address listed as blocking only the auth tasks' qa check) and Rollout order step 2",
       "proposal": "Conformance finding (major, spec lens): WebStack reads support-address, api-url, bucket-name and web-client-id at deploy time and AlarmsStack reads alarm-email (and monthly-budget-usd on qa); a missing parameter fails that stack's deploy. On the qa merge CI deploys data, then API (sign-up on, new client, audience already live), then fails at the web or alarms stack and never starts the Amplify job. Planning session: update release.md (HUMAN needs and Rollout order step 1/2) and the brief's HUMAN needs so support-address, alarm-email and, on qa, monthly-budget-usd are set before the first qa deploy (Blocks: the qa merge / first CI deploy, not only the SF-129 or auth qa checks); the PR body lists this as the first HUMAN step. No code change: the fix lives only in release.md and pr-smart-finances-infra.md, which the executor may not edit.",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "owner, recorded at the locked-v7 re-lock (D-163)",
+      "newDecision": "D-163 (locked-v7)"
     }
   ],
   "surprises": [

@@ -89,6 +89,7 @@ status: executing
 | Brief | Date | Tasks matched | Test ids found | Off-brief changes | Verdict |
 |---|---|---|---|---|---|
 | pr-smart-finances.md | 2026-10-31 | 15/15 | T-WEB-1 to T-WEB-17 | vitest.config.ts JSX, ui/ShellNav.tsx, playwright.config.ts production build, .gitignore (now D-149 to D-152) | pass: 0 blocker, 0 major, 16 minor after fixes; merged as PR #8 |
+| pr-smart-finances-auth.md | 2026-11-05 | 16/16 (SF-154, SF-155 owner-added) | T-WAUTH-1 to T-WAUTH-19 | (app)/actions.ts, Shell.tsx, (app) layout, adapters/memory/clock.ts, __Host-notice cookie, adapter_unavailable (now D-164 to D-171) | pass after fixes: 0 blocker, 1 major (reset said every session ended when the global sign-out failed; fixed, D-170), 6 minor (4 fixed; 1 paperwork; 1 deferred: the wrong-code count on the pre-auth row is not atomic, bounded by the pool lockout and the address limit, needs an atomic PreAuthStore increment); merged as PR #13 |
 
 ## Outcome
 <!-- At G-close. One line per AC: pass, fail or partial, and where it was verified, for example: - AC-1: pass, T-E2E-1 on production. Then the merge sha per repo. -->
@@ -97,6 +98,9 @@ status: executing
 <!-- Every defect found after G-handoff. Origin: spec-gap (the spec was silent), spec-wrong (the spec was wrong), executor (the brief was right, the code was not), env (tools, access, CI). -->
 | Defect | Origin | Found at | Fixed in | Kit change |
 |---|---|---|---|---|
+| React Aria's pressable style blocked after a server-action redirect: the csp-nonce meta took each request's nonce | spec-gap | SF-149 surprise, SF-153 walk | SF-155 (D-169) | none |
+| A reset whose global sign-out failed still told the person every session ended | executor | PR 3 conformance review | SF-151 fix (D-170) | none |
+| /aws/amplify/<app id> missing although D-112 assumed the console made it | spec-wrong | qa read-only check, 2026-11-05 | created by CLI on qa (D-173) | none |
 
 ## Metrics
 | Metric | Value |

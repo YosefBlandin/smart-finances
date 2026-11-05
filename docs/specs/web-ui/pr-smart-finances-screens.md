@@ -102,10 +102,10 @@ status: executing
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-161 · Data API port and adapter, with the memory adapter on fixtures
 - Implements: AC-6, AC-15, D-53, D-101, D-133 · After: SF-160 · Judgment: high
-- Files: apps/web/src/ports/DataApi.ts, apps/web/src/adapters/data-api.ts (new), apps/web/src/adapters/memory/data-api.ts, apps/web/src/adapters/data-api.test.ts (new)
+- Files: apps/web/src/ports/data-api.ts, apps/web/src/adapters/data-api.ts (new), apps/web/src/adapters/memory/data-api.ts, apps/web/src/adapters/data-api.test.ts (new)
 - Tests first: T-WSCR-1
 - Do:
-  - One method per route; bearer access token; 5-second timeout; replies parsed with @smart-finances/contracts; 401 refresh once then sign out, 403 and 404 not found, 409, 429 and 5xx failed with retry; counts the person’s requests.
+  - One method per route; bearer access token; 5-second timeout; replies parsed with @smart-finances/contracts; 401 refresh once then sign out, 403 and 404 not found, 409, 429 and 5xx failed with retry; counts the person’s requests with createLimits(deps).hit('person', sub). In adapters/container.ts the real adapter replaces UnwiredDataApi (D-167).
   - Memory adapter: apps/web/fixtures/sample.json plus the adversarial rows of data/synthetic/transactions.csv copied into apps/web/fixtures/hostile.json; payments-report rows are source mercadopago. A limited result redirects server renders to /too-many and makes JSON routes answer 429.
 - Verify: `npm test --workspace @smart-finances/web -- src/adapters/data-api.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
@@ -122,7 +122,7 @@ status: executing
 - Files: apps/web/src/application/data/ (new: read use cases), apps/web/src/app/api/data/ (new: transactions, totals, rates, review, imports, imports/[id], export), apps/web/src/queries/ (new hooks), apps/web/src/app/api/data/data.test.ts (new)
 - Tests first: T-WSCR-18
 - Do:
-  - Each route calls requireMoneyAccess and a read use case and returns parsed JSON; export streams the CSV.
+  - Each route calls requireMoneyAccess() from app/guarded.ts (D-168) and a read use case and returns parsed JSON; export streams the CSV.
   - Hooks: useTransactions (infinite, cursor), useTotals, useRates, useReview, useImports, useImport (polls until final); query keys include month, view and filters.
 - Verify: `npm test --workspace @smart-finances/web -- src/app/api/data/data.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
@@ -131,6 +131,7 @@ status: executing
 - Files: apps/web/src/app/(app)/overview/ (page prefetches and hydrates), apps/web/src/screens/overview/ (new), apps/web/e2e/overview.spec.ts (new)
 - Tests first: T-WSCR-4, T-WSCR-5
 - Do:
+  - Browser tests open money screens with the seeded TEST_PERSON cookie (adapters/container.ts) or e2e/helpers/signIn.ts signIn(page) (D-168).
   - Colour field, kept bar, waiting line, band strip, headline sections, SVG charts with table alternatives; each section shows its own skeleton or failed note.
   - Money figures carry data-money and the bad one data-tone="bad"; in 2026-03 exactly one [data-money][data-tone=bad].
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/overview.spec.ts` → pass
@@ -157,7 +158,7 @@ status: executing
 - Files: apps/web/src/application/data/requestImport.ts (new), apps/web/src/app/(app)/imports/, apps/web/src/screens/imports/ (new), apps/web/src/application/data/requestImport.test.ts (new), apps/web/e2e/imports.spec.ts (new)
 - Tests first: T-WSCR-8, T-WSCR-9
 - Do:
-  - requestImport checks the name and size with SOURCES from @smart-finances/contracts, reserves a slot with AccountStore.reserveImport (D-114; the day is UTC) and checks imports-paused ("true" pauses) through ParameterStore (adapters/ssm.ts, new); the getImport use case behind /api/data/imports/[id] releases or corrects it at the final status.
+  - requestImport checks the name and size with SOURCES from @smart-finances/contracts, reserves a slot with AccountStore.reserveImport (D-114; the day is UTC) and checks imports-paused ("true" pauses) through ParameterStore (adapters/ssm.ts, new, replacing UnwiredParameterStore in adapters/container.ts, D-167); the getImport use case behind /api/data/imports/[id] releases or corrects it at the final status.
   - Upload with fetch and FormData to the presigned URL; skipped rows per D-86; source names and file-name rules from the data spec’s POST /imports.
 - Verify: `npm test --workspace @smart-finances/web -- src/application/data/requestImport.test.ts` and `npm run e2e --workspace @smart-finances/web -- e2e/imports.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
@@ -174,7 +175,7 @@ status: executing
 - Files: apps/web/src/application/account/deleteAccount.ts (new), apps/web/src/domain/deletion.ts (new), apps/web/src/app/(app)/data/delete/ (new), apps/web/src/app/goodbye/ (new), apps/web/src/application/account/deleteAccount.test.ts (new), apps/web/e2e/delete-account.spec.ts (new)
 - Tests first: T-WSCR-11, T-WSCR-12
 - Do:
-  - Action 1 with { email, password, code }: signIn reauth plus the code, no running_import_id, then markDeleting. Action 2 (allowDeleting): erase until 202, signOutEverywhere, adminDelete (not found is done), deleteAccountRow; set a 5-minute signed HttpOnly goodbye cookie with the counts and go to /goodbye, a public route that reads it.
+  - Action 1 with { email, password, code }: createSignIn(deps).signIn(email, password, { requestId, ip, lang, reauth: { sub } }) then verifyCode(code, ctx) (D-168), no running_import_id, then markDeleting. Action 2 (allowDeleting): erase until 202, createSessions(deps).signOutEverywhere(sub), adminDelete (not found is done), deleteAccountRow; set a 5-minute signed HttpOnly goodbye cookie with the counts and go to /goodbye, a public route that reads it.
   - The delete buttons use the danger Button variant (D-146).
   - domain/deletion.ts holds the step order; a test fails each step and finishes it.
 - Verify: `npm test --workspace @smart-finances/web -- src/application/account/deleteAccount.test.ts` → pass

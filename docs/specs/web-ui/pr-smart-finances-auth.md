@@ -145,7 +145,7 @@ status: executing
 - Files: apps/web/src/ports/BreachChecker.ts, apps/web/src/adapters/pwned.ts (new), apps/web/src/adapters/pwned.test.ts (new)
 - Tests first: T-WAUTH-8
 - Do:
-  - GET https://api.pwnedpasswords.com/range/<first 5 of SHA-1, upper case> with Add-Padding: true, 2-second timeout; refuse when the suffix appears; on error accept and log breach_check_unavailable.
+  - GET https://api.pwnedpasswords.com/range/<first 5 of SHA-1, upper case> with Add-Padding: true, 2-second timeout; refuse when the suffix appears; on error answer unavailable; the sign-up and reset use cases log breach_check_unavailable (D-164).
 - Verify: `npm test --workspace @smart-finances/web -- src/adapters/pwned.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
 ### SF-147 · Identity provider port and Cognito adapter
@@ -186,10 +186,10 @@ status: executing
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
 ### SF-151 · Reset the password and sign out
 - Implements: AC-16, AC-20, D-92, D-122 · After: SF-149 · Judgment: high
-- Files: apps/web/src/application/auth/{reset,signOut}.ts (new), apps/web/src/app/(auth)/reset/ (new), apps/web/src/app/(auth)/sign-in/page.tsx (shows the notice), apps/web/src/application/auth/reset.test.ts (new)
+- Files: apps/web/src/application/auth/{reset,signOut}.ts (new), apps/web/src/app/(auth)/reset/ (new), apps/web/src/app/(auth)/sign-in/page.tsx (shows the notice), apps/web/src/application/auth/reset.test.ts (new), apps/web/src/app/(app)/actions.ts (new), apps/web/src/ui/Shell.tsx, apps/web/src/app/(app)/layout.tsx (D-166)
 - Tests first: T-WAUTH-14, T-WAUTH-15
 - Do:
-  - Forgot (same reply for any email, capped), confirm with the breached check, adminGet for the sub, signOutEverywhere, then a 10-minute HttpOnly notice cookie so sign-in says "your password was changed" (D-122).
+  - Forgot (same reply for any email, capped), confirm with the breached check, adminGet for the sub, signOutEverywhere (tried twice), then, only when it worked, a 10-minute HttpOnly notice cookie (D-170) so sign-in says "your password was changed" (D-122).
   - Sign out is a server action: delete the row, revoke the refresh token, clear __Host-sid.
 - Verify: `npm test --workspace @smart-finances/web -- src/application/auth/reset.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
@@ -207,6 +207,24 @@ status: executing
 - Tests first: T-WAUTH-17
 - Do:
   - Under STAGE=test walk sign-up, confirm, setup, code, consent, reset, sign out and an ip-auth refusal in both languages; helpers/signIn.ts signs a test person in for PR 4.
+- Verify: `npm run e2e --workspace @smart-finances/web -- e2e/auth.spec.ts` → pass
+- Done when: verify is green, evidence is in progress-smart-finances-auth.json
+
+### SF-154 · Wire the real adapters into the container
+- Implements: D-167, D-171 · After: SF-151 · Judgment: high
+- Files: apps/web/src/adapters/container.ts, apps/web/src/adapters/container.test.ts
+- Tests first: T-WAUTH-19
+- Do:
+  - For STAGE qa, staging or prod, build one container per process from the real adapters; DataApi and ParameterStore fail closed and log adapter_unavailable once; STAGE=test is refused in an AWS runtime.
+- Verify: `npm test --workspace @smart-finances/web -- src/adapters/container.test.ts` → pass
+- Done when: verify is green, evidence is in progress-smart-finances-auth.json, and the reviewer has no blocker
+
+### SF-155 · Keep the first nonce in the csp-nonce meta
+- Implements: D-169 · After: SF-153 · Judgment: normal
+- Files: apps/web/src/ui/NonceMeta.tsx (new), apps/web/src/app/layout.tsx, apps/web/e2e/auth.spec.ts
+- Tests first: T-WAUTH-17 (no policy violation allowed)
+- Do:
+  - A client component renders the meta from the first nonce it was given; the root layout uses it.
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/auth.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-auth.json
 

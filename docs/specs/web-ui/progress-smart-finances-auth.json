@@ -326,7 +326,7 @@
       "from": "pr-smart-finances-auth.md SF-146 Do \"on error accept and log breach_check_unavailable\" and test-matrix.md T-WAUTH-8 \"an API error accepts and logs\", against architecture.md Contracts Ports \"BreachChecker | isBreached(password): Promise<boolean | 'unavailable'>\" and the Logger port event(name, outcome, { sub?, requestId }).",
       "proposal": "Keep the Contracts port; the adapter answers 'unavailable' and logs nothing. Move the log to the callers: add to SF-148 (signUp) and SF-151 (reset) Do \"when isBreached answers 'unavailable', accept the password and log breach_check_unavailable (outcome 'unavailable') with { sub?, requestId }\", and a new matrix row (e.g. T-WAUTH-8b, unit, G-merge, owned by SF-148 and SF-151) \"a breach-check miss accepts the password and logs breach_check_unavailable once with the request id\"; narrow T-WAUTH-8 to \"an API error answers unavailable\". Alternatives for the owner: (b) change the port to isBreached(password, { sub?, requestId }) so the adapter logs (the round-0 design, reverted in round 1 because it changes Contracts); (c) give PwnedPasswordsChecker an optional onUnavailable(reason) hook, which still needs a request id from the caller and so does not remove the caller-side work.",
       "decidedBy": "owner, in chat, 2026-11-04: log breach_check_unavailable in the sign-up and reset use cases (SF-148, SF-151) with their request id",
-      "newDecision": "pending: the planning session records it"
+      "newDecision": "D-164 (locked-v8)"
     },
     {
       "date": "2026-11-04",
@@ -334,7 +334,7 @@
       "from": "architecture.md Contracts Ports \"IdentityProvider | ... verifySetup(session, code); ...\" (no result) and the IdentityFailure reasons implied by it; brief SF-147 Do \"The IdentityProvider methods in architecture.md Contracts 'Ports'\".",
       "proposal": "Change the Contracts IdentityProvider row to verifySetup(email, session, code) → { tokens } (mirroring respondCode: Cognito needs RespondToAuthChallenge(MFA_SETUP) with USERNAME and SECRET_HASH after VerifySoftwareToken to finish the first sign-in, and the States table says a valid setup code goes on to consent and a session), and add 'bad_password' (InvalidPasswordException at sign-up or reset confirm) and 'refused' (UserLambdaValidationException, the pre-sign-up trigger's refusal, AC-19) to IdentityFailure. This is already implemented in a60021f (ports/identity-provider.ts, adapters/cognito.ts, adapters/memory/identity-provider.ts; T-WEB-14 in adapters/container.test.ts updated under D-157). SF-149 and PR 4 build on the port. Alternative for the owner: (b) revert to verifySetup(session, code) with no result and have SF-149 call respondCode-like finishing itself, which needs a new port method anyway (still a Contracts change); (c) revert the two IdentityFailure reasons and map those errors to an existing reason, losing the plain refusal message. The planning session updates architecture.md if the owner accepts.",
       "decidedBy": "owner, in chat, 2026-11-04: accept verifySetup(email, session, code) -> { tokens } and the failure reasons bad_password and refused",
-      "newDecision": "pending: the planning session records it"
+      "newDecision": "D-165 (locked-v8)"
     },
     {
       "date": "2026-11-04",
@@ -342,7 +342,7 @@
       "from": "pr-smart-finances-auth.md SF-151 Files (application/auth/{reset,signOut}.ts, app/(auth)/reset/, app/(auth)/sign-in/page.tsx, reset.test.ts) against its Do \"Sign out is a server action: delete the row, revoke the refresh token, clear __Host-sid\" and D-115 \"sign-out is a post\": the only Sign out control is the row in apps/web/src/ui/Shell.tsx (PR 1; its comment says it becomes a server action in SF-151), rendered by apps/web/src/app/(app)/layout.tsx, and neither file nor a home for the action (no (app) actions file) is in the Files. SF-153 walks sign out in the browser and has only e2e Files.",
       "proposal": "Add to SF-151's Files: apps/web/src/app/(app)/actions.ts (new: signOutAction = guarded(z.object({}), { kind: 'money', allowDeleting: true }, ...) calling createSignOut(container)(await readSessionCookie(), { requestId }), then clearSessionCookie() and redirect('/sign-in')), apps/web/src/ui/Shell.tsx (the Sign out row becomes a <form action={signOut}> with a submit button; Shell takes the action as a prop so ui/ does not import app/) and apps/web/src/app/(app)/layout.tsx (passes signOutAction). Alternatives for the owner: (b) guarded kind 'auth' instead of 'money', which needs a PowField in the shell form and a proof-of-work fetch on every money page; (c) a plain Origin-checked action outside guarded(), against D-125 'every form through guarded()'.",
       "decidedBy": "owner, in chat, 2026-11-05: SF-151 may add apps/web/src/app/(app)/actions.ts and wire Sign out in apps/web/src/ui/Shell.tsx and apps/web/src/app/(app)/layout.tsx",
-      "newDecision": "pending: the planning session records it (locked-v8)"
+      "newDecision": "D-166 (locked-v8)"
     },
     {
       "date": "2026-11-04",
@@ -350,7 +350,7 @@
       "from": "architecture.md Interfaces between the PRs 'PR 3: ports Settings, SecretStore, Logger, SessionStore, PreAuthStore, Counter, PowStore, BreachChecker, IdentityProvider, AccountStore with real adapters' and Components ('container.ts picks real adapters'); release.md qa checks (the HUMAN walk of sign-up, setup, sign-in, reset and sign out on qa; the compute role reading the secret and tables). No task's Do or Files wires them: createContainer() still throws 'No real adapters yet for STAGE=...' outside STAGE=test (surprises of SF-141, SF-142, SF-143, SF-144, SF-146, SF-147, SF-150, SF-152 defer it to 'a later task'). PORT_NAMES also holds PR 4's dataApi and parameterStore, which have no real adapter yet.",
       "proposal": "Owner decides who wires the real adapters and which gate tests the real path. (a) Recommended: a new PR 3 task (e.g. SF-154, After SF-151, Judgment: high, Files apps/web/src/adapters/container.ts and adapters/container.test.ts) that builds the real container for STAGE in qa|staging|prod: EnvSettings, SecretsManagerStore, JsonLogger, DynamoSessionStore/PreAuthStore, DynamoCounter, DynamoPowStore, DynamoAccountStore, PwnedPasswordsChecker and CognitoIdentityProvider, with dataApi and parameterStore as stubs that fail closed (throw, so guarded() answers auth.unavailable) until PR 4; T-WEB-14 extended with a fake-client check that every PR 3 port is a real adapter and the PR 4 ports refuse. (b) Scope the refusal to PR 4: PR 4's brief gets container.ts in a task's Files and wires all ports there; then release.md step 5 (the qa walk) and the G-merge HUMAN gate stay blocked until PR 4 merges. Until the owner decides, the qa walk (release step 5) is blocked by this gap; release.md is not edited here.",
       "decidedBy": "owner, in chat, 2026-11-05: option (a), a new PR 3 task SF-154 wires every real adapter into the container for qa, staging and prod; PR 4's DataApi and ParameterStore fail closed until PR 4",
-      "newDecision": "pending: the planning session records it (locked-v8)"
+      "newDecision": "D-167 (locked-v8)"
     },
     {
       "date": "2026-11-04",
@@ -358,7 +358,7 @@
       "from": "architecture.md Interfaces between the PRs 'application/session.ts getSession() → { sub, email, accessToken, … } | null, createSession, refreshIfNeeded, signOutEverywhere(sub)'.",
       "proposal": "Change the Interfaces line to: application/session.ts createSessions({ sessionStore, preAuthStore, identityProvider, clock }) → { readSession(id) → { status: 'active', session } | { status: 'none' | 'idle' | 'expired' }, getSession(id) → Session | null, createSession({ sub, tokens, preAuthId?, previousSessionId? }) → { id, session }, refreshIfNeeded(session), endSession(id), signOutEverywhere(sub) → { ok, removed }, startPreAuth/readPreAuth/updatePreAuth/endPreAuth }, with app/cookies.ts readSessionCookie/setSessionCookie/clearSessionCookie supplying the id. Reason: application/ may not import next/headers (D-138 lint zones), so a no-argument getSession() cannot live there. Alternative: (b) add an app/ wrapper getSession() over the cookie and the shared container (as app/guarded.ts does for requireMoneyAccess) and keep the Interfaces line, pointing it at app/ instead of application/.",
       "decidedBy": "owner, in chat, 2026-11-05: accept the interface shapes as built",
-      "newDecision": "pending: the planning session records it (locked-v8)"
+      "newDecision": "D-168 (locked-v8)"
     },
     {
       "date": "2026-11-04",
@@ -366,7 +366,7 @@
       "from": "architecture.md Interfaces between the PRs 'domain/limits.ts and application hit(scope, value) → { ok, retryAfterSeconds }' (value untyped).",
       "proposal": "Record the value shape per scope in the Interfaces line: hit('ip-auth', ip | undefined), hit('auth-fail', { email, ip }), hit('code-email', email), hit('person', sub) → { ok, retryAfterSeconds } (0 when ok); the event is counted even when refused, a counter or secret failure throws, and hit() logs nothing (the caller logs rate_limited with its request id). Also record that the Counter port has only incr, so failure limits count each attempt (surprise 23).",
       "decidedBy": "owner, in chat, 2026-11-05: accept the interface shapes as built",
-      "newDecision": "pending: the planning session records it (locked-v8)"
+      "newDecision": "D-168 (locked-v8)"
     },
     {
       "date": "2026-11-04",
@@ -374,7 +374,7 @@
       "from": "architecture.md Interfaces between the PRs 'application/auth/signIn.ts signIn(email, password, { reauth? })'.",
       "proposal": "Change the line to: application/auth/signIn.ts createSignIn(deps) → { signIn(email, password, ctx), verifySetup(code, ctx), verifyCode(code, ctx), setupView(preAuthId), codeStep(preAuthId) } with ctx { requestId, ip, lang, preAuthId?, sessionId?, reauth?: { sub } }. Reason: application/ may not read cookies or headers (D-138), so the request context comes from the caller; PR 4's delete-account re-sign-in passes reauth: { sub } with the same context. Alternative: (b) an app/ wrapper signIn(email, password, { reauth? }) that fills the context from headers and cookies, keeping the Interfaces signature.",
       "decidedBy": "owner, in chat, 2026-11-05: accept the interface shapes as built",
-      "newDecision": "pending: the planning session records it (locked-v8)"
+      "newDecision": "D-168 (locked-v8)"
     },
     {
       "date": "2026-11-04",
@@ -382,7 +382,7 @@
       "from": "architecture.md Interfaces between the PRs 'application/guard.ts requireMoneyAccess({ allowDeleting? })'.",
       "proposal": "Change the line to: app/guarded.ts requireMoneyAccess({ allowDeleting? }) (reads __Host-sid and the shared container; for the money layout and PR 4's route handlers) over application/guard.ts createGuard(deps, versions?) → { requireMoneyAccess(sessionId, { allowDeleting? }), consentView, acceptConsent, declineConsent } and recordFirstConsent(deps, sub, { versions?, lang }); the result is { ok: true, session, account } | { ok: false, reason: 'signed-out', why } | { ok: false, reason: 'consent' | 'deleting' } (surprise 62). Reason: application/ may not read cookies (D-138). The no-argument signature PR 4 imports exists, at app/guarded.ts rather than application/guard.ts.",
       "decidedBy": "owner, in chat, 2026-11-05: accept the interface shapes as built",
-      "newDecision": "pending: the planning session records it (locked-v8)"
+      "newDecision": "D-168 (locked-v8)"
     },
     {
       "date": "2026-11-05",
@@ -390,7 +390,7 @@
       "from": "pr-smart-finances-auth.md task list (no task owns apps/web/src/app/layout.tsx)",
       "proposal": "New task SF-155: keep the first load's nonce in the csp-nonce meta (ui/NonceMeta.tsx, app/layout.tsx), and the auth walks allow no policy violation.",
       "decidedBy": "owner, in chat, 2026-11-05: new task SF-155 in PR 3",
-      "newDecision": "pending: the planning session records it (locked-v8)"
+      "newDecision": "D-169 (locked-v8)"
     },
     {
       "date": "2026-11-05",
@@ -398,7 +398,7 @@
       "from": "D-95 and release.md HUMAN need 'raise the account's Lambda concurrency quota ... Blocks: setting signup-open to true on any stage, qa included'",
       "proposal": "Set signup-open=true on qa with the default quota of 10; no quota request.",
       "decidedBy": "owner, in chat, 2026-11-05: forget the quota raise for qa, the owner is the only user",
-      "newDecision": "pending: the planning session records it (locked-v8)"
+      "newDecision": "D-172 (locked-v8)"
     },
     {
       "date": "2026-11-05",
@@ -406,7 +406,7 @@
       "from": "D-112 'The console-created app already has its log group' (read-only check 2026-11-05: /aws/amplify/<app id> does not exist; the app is platform WEB)",
       "proposal": "The agent creates /aws/amplify/<app id> on qa with the CLI before the web stack deploy; the web stack keeps referencing it by name and sets 30-day retention.",
       "decidedBy": "owner, in chat, 2026-11-05: the agent creates it on qa by CLI",
-      "newDecision": "pending: the planning session records it (locked-v8)"
+      "newDecision": "D-173 (locked-v8)"
     }
   ],
   "surprises": [
