@@ -27,7 +27,8 @@
       "evidence": [
         "Tests first (T-WSCR-1, apps/web/src/adapters/data-api.test.ts): npm test --workspace @smart-finances/web -- src/adapters/data-api.test.ts exit 1: \"Error: Cannot find module './data-api' imported from .../src/adapters/data-api.test.ts\", \"Test Files 1 failed (1)\" (expected: the HTTP adapter and fixtureSeed did not exist).",
         "Built: adapters/data-api.ts HttpDataApi (one method per route; Bearer access token; 5-second budget covering the body, aborted on timeout; input checked and reply parsed with @smart-finances/contracts; 401 refreshes once and retries, then deletes the session row, revokes and answers unauthorized; 403/404 not_found; 409 conflict; 429 failed 'throttled', 5xx failed 'server', both with retryAfter; network, timeout and off-contract replies failed; every call first counted with createLimits(deps).hit('person', sub), limited with retryAfter, counter failure fails closed). Exports tokenSub, countPersonRequest, DATA_API_TIMEOUT_MS, DataApiFetch. memory/data-api.ts: fixtureSeed() (sample.json + fixtures/hostile.json in the contract shapes) and optional person limits. container.ts: HttpDataApi replaces UnwiredDataApi in realContainer (D-167; the class is removed); STAGE=test's shared container gives TEST_PERSON a fixture-seeded MemoryDataApi with the person limit. ports/data-api.ts unchanged.",
-        "Verify: npm test --workspace @smart-finances/web -- src/adapters/data-api.test.ts exit 0: \"Test Files 1 passed (1)\", \"Tests 30 passed (30)\". Full web vitest: 36 files, 492 passed. apps/web npx tsc --noEmit exit 0; eslint src clean; prettier clean."
+        "Verify: npm test --workspace @smart-finances/web -- src/adapters/data-api.test.ts exit 0: \"Test Files 1 passed (1)\", \"Tests 30 passed (30)\". Full web vitest: 36 files, 492 passed. apps/web npx tsc --noEmit exit 0; eslint src clean; prettier clean.",
+        "Owner decision on review finding M1 (2026-11-05): export keeps buffering (the data API builds the whole CSV in one reply, RK-13) with its own 25 s budget. Fail-first: \"AssertionError: expected undefined to be 25000\"; after: data-api.test.ts \"Tests 31 passed (31)\"; web lint exit 0; web vitest \"Test Files 38 passed (38) Tests 567 passed (567)\"."
       ],
       "review": "findings (fresh-context reviewer, sonnet): 0 blocker, 2 major, 4 minor; fixed: useImport polling (stops at stalled, backs off 3 s doubling to 30 s, stops after 23 reads, under 10 minutes), throttled retries wait the reply's Retry-After (capped at 30 s, a longer wait is not retried), 401/403 tests assert no data API method is called, respond.ts answers only the contracts' 409 codes (conflict, source_file_only; else conflict), query-key and no-token assertions (332bd5d); open: M1 export buffering (owner decision pending)"
     },
@@ -76,7 +77,8 @@
         "Built: app/(app)/transactions/page.tsx reads the first page for the address through createDataReads().listTransactions (limit PAGE_SIZE 50), redirectIfLimited, setQueryData under dataKeys.transactions and HydrationBoundary. screens/transactions/: model.ts (readAddress, writeAddress, filtersOf, toggleSort; sort in the address as date-asc, amount-desc, amount-asc, the default date-desc left out), Transactions.tsx (island: address state, history.replaceState), Filters/View.tsx (MonthPicker, SelectField kind from KINDS and category from CATEGORIES, search form with free text kept in state), List/Container.tsx (useTransactions; skeleton, empty, failed with retry) and List/View.tsx (DataTable with date and amount sort headers, aria-sort; original text raw; exact cents with data-money; next page button busy while loading). New message key transactions.nextPage (en, es). E2E_PEOPLE gains transactions-paging and transactions-sort.",
         "Fix round 1: both tests failed only on 2 content-policy violations each ('Applying inline style violates ... style-src'): the server-rendered React Aria selects; the selects now render after hydration with a skeleton until then.",
         "Verify: npm run e2e --workspace @smart-finances/web -- e2e/transactions.spec.ts exit 0: \"2 passed (13.0s)\". e2e/overview.spec.ts re-run: 3 passed. npm test --workspace @smart-finances/web: 38 files, 552 passed. npm run lint --workspace @smart-finances/web exit 0 (eslint clean, Prettier clean). apps/web npx tsc --noEmit exit 0.",
-        "After review fixes (332bd5d, a8c8f1f), run one at a time: npm run lint --workspace @smart-finances/web exit 0 (\"All matched files use Prettier code style!\"); apps/web npx tsc --noEmit exit 0; npm test --workspace @smart-finances/web exit 0: \"Test Files  38 passed (38)\", \"Tests  566 passed (566)\"; npm run e2e --workspace @smart-finances/web exit 1: \"1 failed\", \"39 passed (1.7m)\": e2e/shell.spec.ts:158 \"T-WEB-10: after a navigation focus moves to the main heading\": \"expect(locator).toBeFocused() failed ... <h1 tabindex=\\\"-1\\\" class=\\\"Transactions_heading__nzK86\\\">Transactions</h1> - unexpected value \\\"inactive\\\"\" (SF-165 surprise; not fixed: the page is outside the files this round may change). In 2 of 4 whole-suite runs e2e/auth.spec.ts:203 \"T-WAUTH-17: the 21st auth post ... in en\" also failed with \"TimeoutError: page.waitForResponse: Timeout 60000ms exceeded\" (a sign-in click sent no server action); alone it passes (\"5 passed (40.0s)\") and it passed in the other 2 whole runs: intermittent under full-suite load, PR 3's spec, untouched here."
+        "After review fixes (332bd5d, a8c8f1f), run one at a time: npm run lint --workspace @smart-finances/web exit 0 (\"All matched files use Prettier code style!\"); apps/web npx tsc --noEmit exit 0; npm test --workspace @smart-finances/web exit 0: \"Test Files  38 passed (38)\", \"Tests  566 passed (566)\"; npm run e2e --workspace @smart-finances/web exit 1: \"1 failed\", \"39 passed (1.7m)\": e2e/shell.spec.ts:158 \"T-WEB-10: after a navigation focus moves to the main heading\": \"expect(locator).toBeFocused() failed ... <h1 tabindex=\\\"-1\\\" class=\\\"Transactions_heading__nzK86\\\">Transactions</h1> - unexpected value \\\"inactive\\\"\" (SF-165 surprise; not fixed: the page is outside the files this round may change). In 2 of 4 whole-suite runs e2e/auth.spec.ts:203 \"T-WAUTH-17: the 21st auth post ... in en\" also failed with \"TimeoutError: page.waitForResponse: Timeout 60000ms exceeded\" (a sign-in click sent no server action); alone it passes (\"5 passed (40.0s)\") and it passed in the other 2 whole runs: intermittent under full-suite load, PR 3's spec, untouched here.",
+        "Focus fix 46bbc40: the Transactions h1 is the page's first element again (no wrapper), so Next.js focuses it after a navigation (T-WEB-10 'after a navigation focus moves to the main heading' was red after the review fixes). After: npm run e2e -- e2e/shell.spec.ts e2e/transactions.spec.ts exit 0, \"15 passed (17.8s)\"."
       ],
       "review": ""
     },
@@ -130,7 +132,32 @@
       "review": ""
     }
   ],
-  "deviations": [],
+  "deviations": [
+    {
+      "date": "2026-11-05",
+      "task": "SF-161, SF-163",
+      "from": "pr-smart-finances-screens.md SF-163 Do 'export streams the CSV' and D-101 (5-second data timeout)",
+      "proposal": "Export buffers (the API's GET /export is one buffered reply, data spec RK-13) with its own 25 s timeout.",
+      "decidedBy": "owner, in chat, 2026-11-05: buffer, export gets 25 s",
+      "newDecision": "pending: the planning session records it"
+    },
+    {
+      "date": "2026-11-05",
+      "task": "SF-164, SF-165",
+      "from": "pr-smart-finances-screens.md SF-165 Do 'in the address via router.replace'",
+      "proposal": "Update the address with window.history.replaceState, since router.replace re-renders the server page and reads twice against the person limit (D-127 kept).",
+      "decidedBy": "owner, in chat, 2026-11-05: accept history.replaceState",
+      "newDecision": "pending: the planning session records it"
+    },
+    {
+      "date": "2026-11-05",
+      "task": "SF-165",
+      "from": "pr-smart-finances-screens.md Files (ui/primitives/Field is a PR 1 file); D-57 content policy",
+      "proposal": "The shared Select breaks style-src when server-rendered; SF-165 renders its selects after load. SF-171 may also touch apps/web/src/ui/primitives/Field to render selects on the server within the policy, and SF-165/SF-167 drop the workaround then.",
+      "decidedBy": "owner, in chat, 2026-11-05: fix Field in SF-171",
+      "newDecision": "pending: the planning session records it"
+    }
+  ],
   "surprises": [
     "SF-161: D-157 test update: adapters/container.test.ts (T-WAUTH-19) expected UnwiredDataApi in the real container and a fail-closed data API; it now expects HttpDataApi and that a token without a person is refused with no network call.",
     "SF-161: apps/web/fixtures/hostile.json is created as the Do asks, though the Files line does not list it. sample.json already holds 3 hostile rows (img onerror, =HYPERLINK, the 2,000-character one); hostile.json adds all 8 adversarial rows of data/synthetic/transactions.csv (source mercadopago, needs_review) and one import whose skipped reasons carry the hostile text (for SF-170 on the imports screen).",
