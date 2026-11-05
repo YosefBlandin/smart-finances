@@ -43,18 +43,13 @@ const TEXT = {
   },
 } as const;
 
-// After a server action redirects into the (app) pages, React Aria's usePress adds <style id="react-aria-pressable-style">
-// (touch-action for pressables) with no nonce, since the page has no csp-nonce meta for it to read; the policy blocks it.
-// Known and recorded for the owner (progress file, SF-153 surprise; the fix is in the root layout, outside this task), so
-// only that one style, named by its hash, is let through; any other violation fails the walk.
-const KNOWN_PRESSABLE_STYLE = 'sha256-38RhXrc7EdReTKsOm23ZPOCUgniTUUcjky8QOOrQx6o=';
-
-// style-src has no 'unsafe-inline' and script-src no 'unsafe-eval' (D-57, D-151): a page that breaks either logs it.
+// style-src has no 'unsafe-inline' and script-src no 'unsafe-eval' (D-57, D-151): a page that breaks either logs it. No
+// violation is allowed, including React Aria's pressable style after a server-action redirect (SF-155).
 function watchPolicy(page: Page): string[] {
   const violations: string[] = [];
   page.on('console', (m) => {
     const text = m.text();
-    if (/Content Security Policy/i.test(text) && !text.includes(KNOWN_PRESSABLE_STYLE)) violations.push(`${new URL(page.url()).pathname}: ${text}`);
+    if (/Content Security Policy/i.test(text)) violations.push(`${new URL(page.url()).pathname}: ${text}`);
   });
   return violations;
 }
