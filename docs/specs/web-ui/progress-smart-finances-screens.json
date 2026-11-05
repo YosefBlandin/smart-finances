@@ -67,9 +67,14 @@
     },
     {
       "id": "SF-165",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "0bb6a98",
+      "evidence": [
+        "Tests first (T-WSCR-6, apps/web/e2e/transactions.spec.ts): npm run e2e --workspace @smart-finances/web -- e2e/transactions.spec.ts exit 1: \"2 failed\", each \"expect(locator).toHaveCount(expected) failed ... Expected: 50 Received: 0\" (table rows) after the h1 'Transactions' matched (expected: the placeholder page had no list).",
+        "Built: app/(app)/transactions/page.tsx reads the first page for the address through createDataReads().listTransactions (limit PAGE_SIZE 50), redirectIfLimited, setQueryData under dataKeys.transactions and HydrationBoundary. screens/transactions/: model.ts (readAddress, writeAddress, filtersOf, toggleSort; sort in the address as date-asc, amount-desc, amount-asc, the default date-desc left out), Transactions.tsx (island: address state, history.replaceState), Filters/View.tsx (MonthPicker, SelectField kind from KINDS and category from CATEGORIES, search form with free text kept in state), List/Container.tsx (useTransactions; skeleton, empty, failed with retry) and List/View.tsx (DataTable with date and amount sort headers, aria-sort; original text raw; exact cents with data-money; next page button busy while loading). New message key transactions.nextPage (en, es). E2E_PEOPLE gains transactions-paging and transactions-sort.",
+        "Fix round 1: both tests failed only on 2 content-policy violations each ('Applying inline style violates ... style-src'): the server-rendered React Aria selects; the selects now render after hydration with a skeleton until then.",
+        "Verify: npm run e2e --workspace @smart-finances/web -- e2e/transactions.spec.ts exit 0: \"2 passed (13.0s)\". e2e/overview.spec.ts re-run: 3 passed. npm test --workspace @smart-finances/web: 38 files, 552 passed. npm run lint --workspace @smart-finances/web exit 0 (eslint clean, Prettier clean). apps/web npx tsc --noEmit exit 0."
+      ],
       "review": ""
     },
     {
@@ -138,6 +143,9 @@
     "SF-164: month changes on the overview use window.history.replaceState (Next.js keeps useSearchParams in step) instead of a server navigation, and the totals read covers three years up to now, so a month change asks only for that month's places (one read) and the server does not read again.",
     "SF-164: choices the brief leaves open: without ?month= the overview shows the latest month with data (2026-10 in the fixtures, which has no rate); the amounts view switch (Pesos and dollars / All in dollars) is not on the overview; category colours follow spending over the three years read, not all time (D-25); places are the month's biggest 200 expenses summed by place, pesos only; the h1 'Overview' is screen-reader only (overview.md 'Page frame').",
     "SF-164: D-157 test update: src/i18n/i18n.test.ts (T-WEB-5) pinned 7 plural messages; overview.placesCount makes 8.",
-    "SF-164: a 401 from a prefetch read is treated like a failed read (the section asks again and shows its failed note), not as signed out: persons signed up in the browser tests have memory tokens the STAGE=test data API refuses (SF-161 surprise), and showing 'session ended' would break e2e/auth.spec.ts."
+    "SF-164: a 401 from a prefetch read is treated like a failed read (the section asks again and shows its failed note), not as signed out: persons signed up in the browser tests have memory tokens the STAGE=test data API refuses (SF-161 surprise), and showing 'session ended' would break e2e/auth.spec.ts.",
+    "SF-165: the brief says 'via router.replace'; the island uses window.history.replaceState instead (Next.js keeps useSearchParams in step with it). router.replace re-renders the server page, whose prefetch reads the same page again: two counted reads per change, against 5 a minute under STAGE=test, and the list would wait for the server. D-127 (no page load, address in sync) holds. Flagged for the owner: if router.replace is required, this is a deviation to decide.",
+    "SF-165: ui/primitives/Field SelectField (React Aria Select) rendered on the server emits its hidden native select with a style attribute, which the content policy refuses (2 violations per page). The transactions filters render their selects after hydration, with skeletons until then. Proposal: fix it once in the primitive (render the selects client-only, or drop the hidden select when no form name is given), since SF-167's source select will meet the same.",
+    "SF-165: choices the brief leaves open: without ?month= the list shows this month (no totals read to find the latest month with data); the month picker offers the 36 months up to now, all enabled and without the no-rate mark (that would need a totals and a rates read); view is kept in the address when present but has no control and no effect, since GET /transactions has no view; free text applies when the search form is sent, not per keystroke; the list rows have no category square (D-34), because the colour order needs all-time totals; 'Showing {a} of {b}' is not shown (the API gives no total)."
   ]
 }
