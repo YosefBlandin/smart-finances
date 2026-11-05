@@ -5,7 +5,7 @@ import type { AccountStore } from '@/ports/account-store';
 import type { BreachChecker } from '@/ports/breach-checker';
 import type { Clock } from '@/ports/clock';
 import type { Counter } from '@/ports/counter';
-import type { DataApi, DataApiFailure } from '@/ports/data-api';
+import type { DataApi } from '@/ports/data-api';
 import type { IdentityProvider } from '@/ports/identity-provider';
 import type { Logger } from '@/ports/logger';
 import type { ParameterStore } from '@/ports/parameter-store';
@@ -15,6 +15,7 @@ import type { SecretStore } from '@/ports/secret-store';
 import type { SessionStore } from '@/ports/session-store';
 import type { Settings, WebSettings } from '@/ports/settings';
 import { CognitoIdentityProvider } from './cognito';
+import { HttpDataApi } from './data-api';
 import { DynamoAccountStore } from './dynamodb/accounts';
 import { DynamoCounter } from './dynamodb/counters';
 import { DynamoPowStore } from './dynamodb/pow';
@@ -25,7 +26,7 @@ import { MemoryAccountStore } from './memory/account-store';
 import { MemoryBreachChecker } from './memory/breach-checker';
 import { MemoryClock, SystemClock } from './memory/clock';
 import { MemoryCounter } from './memory/counter';
-import { MemoryDataApi } from './memory/data-api';
+import { fixtureSeed, MemoryDataApi } from './memory/data-api';
 import { MemoryIdentityProvider } from './memory/identity-provider';
 import { MemoryLogger } from './memory/logger';
 import { MemoryParameterStore } from './memory/parameter-store';
@@ -88,9 +89,9 @@ export function memoryContainer(settings: Settings = new MemorySettings(), clock
   };
 }
 
-// PR 4 adds the data API and parameter store adapters. Until then a real stage fails closed on both: the data API
-// answers 'failed' (the screens show their failed state) and a parameter read is refused (never read as "not set",
-// which could mean "imports not paused"). Each logs once per process, so the log shows why without a line per request.
+// PR 4 adds the parameter store adapter (SF-167). Until then a real stage fails closed on it: a parameter read is refused
+// (never read as "not set", which could mean "imports not paused"), and logged once per process, so the log shows why
+// without a line per request. The data API adapter is wired (SF-161, D-167).
 function logOnce(logger: Logger, outcome: string): () => void {
   let logged = false;
   return () => {
@@ -98,28 +99,6 @@ function logOnce(logger: Logger, outcome: string): () => void {
     logged = true;
     logger.event('adapter_unavailable', outcome, { requestId: 'container' });
   };
-}
-
-export class UnwiredDataApi implements DataApi {
-  private readonly log: () => void;
-  constructor(logger: Logger) {
-    this.log = logOnce(logger, 'data_api');
-  }
-  private readonly failed = async (): Promise<DataApiFailure> => {
-    this.log();
-    return { ok: false, kind: 'failed' };
-  };
-  listTransactions = this.failed;
-  totals = this.failed;
-  rates = this.failed;
-  putRate = this.failed;
-  review = this.failed;
-  putReview = this.failed;
-  listImports = this.failed;
-  getImport = this.failed;
-  requestImport = this.failed;
-  exportCsv = this.failed;
-  erase = this.failed;
 }
 
 export class UnwiredParameterStore implements ParameterStore {
@@ -145,27 +124,30 @@ export function realContainer(settings: Settings, clock: Clock = new SystemClock
   const secretStore = new SecretsManagerStore({ region, clock });
   const client = documentClient(region);
   const sessions = { client, tableName: s.SESSIONS_TABLE };
+  const sessionStore = new DynamoSessionStore({ ...sessions, clock });
+  const counter = new DynamoCounter(sessions);
+  const identityProvider = new CognitoIdentityProvider({
+    region,
+    userPoolId: s.USER_POOL_ID,
+    clientId: s.WEB_CLIENT_ID,
+    clientSecretArn: s.WEB_CLIENT_SECRET_ARN,
+    secretStore,
+    clock,
+  });
   return {
     clock,
     settings,
     secretStore,
     parameterStore: new UnwiredParameterStore(logger),
     logger,
-    sessionStore: new DynamoSessionStore({ ...sessions, clock }),
+    sessionStore,
     preAuthStore: new DynamoPreAuthStore({ ...sessions, clock }),
-    counter: new DynamoCounter(sessions),
+    counter,
     powStore: new DynamoPowStore({ ...sessions, clock }),
     accountStore: new DynamoAccountStore({ client, tableName: s.ACCOUNTS_TABLE }),
     breachChecker: new PwnedPasswordsChecker(),
-    identityProvider: new CognitoIdentityProvider({
-      region,
-      userPoolId: s.USER_POOL_ID,
-      clientId: s.WEB_CLIENT_ID,
-      clientSecretArn: s.WEB_CLIENT_SECRET_ARN,
-      secretStore,
-      clock,
-    }),
-    dataApi: new UnwiredDataApi(logger),
+    identityProvider,
+    dataApi: new HttpDataApi({ counter, clock, secretStore, settings, sessionStore, identityProvider, logger }),
   };
 }
 
@@ -210,11 +192,18 @@ function seedTestPerson(c: Container) {
   const part = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
   const token = (claims: object) => `${part({ alg: 'none' })}.${part(claims)}.test`;
   const { sub, email } = TEST_PERSON;
+  const accessToken = token({ sub, exp: Math.floor((now + SESSION_ABSOLUTE_MS) / 1000), token_use: 'access' });
+  // The money screens read the fixtures (sample plus hostile rows) through a memory data API that counts the person's
+  // requests like the real one (5 a minute under STAGE=test), so the 429 page can be reached (SF-161, SF-172).
+  const dataApi = new MemoryDataApi(c.clock, { limits: c, logger: c.logger });
+  dataApi.seed(fixtureSeed());
+  dataApi.allowToken(accessToken);
+  c.dataApi = dataApi;
   // The memory stores apply these at once (their methods do not await), so the person exists before the first request.
   void c.sessionStore.create({
     idHash: createHash('sha256').update(TEST_PERSON.sessionId).digest('hex'),
     sub,
-    accessToken: token({ sub, exp: Math.floor((now + SESSION_ABSOLUTE_MS) / 1000), token_use: 'access' }),
+    accessToken,
     idToken: token({ sub, email, token_use: 'id' }),
     refreshToken: 'test-person-refresh',
     createdAt: now,

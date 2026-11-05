@@ -6,7 +6,8 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { CognitoIdentityProvider } from './cognito';
-import { UnwiredDataApi, UnwiredParameterStore } from './container';
+import { UnwiredParameterStore } from './container';
+import { HttpDataApi } from './data-api';
 import { DynamoAccountStore } from './dynamodb/accounts';
 import { DynamoCounter } from './dynamodb/counters';
 import { DynamoPowStore } from './dynamodb/pow';
@@ -334,7 +335,7 @@ describe('T-WAUTH-19: the real container', () => {
     accountStore: DynamoAccountStore,
     breachChecker: PwnedPasswordsChecker,
     identityProvider: CognitoIdentityProvider,
-    dataApi: UnwiredDataApi,
+    dataApi: HttpDataApi,
   };
 
   type Internals = { client?: { config: { region: () => Promise<string> } }; table?: string };
@@ -423,30 +424,14 @@ describe('T-WAUTH-19: the real container', () => {
     expect(createContainer().settings.get().WEB_ORIGIN).toBe(QA_ENV.WEB_ORIGIN);
   });
 
-  it('T-WAUTH-19: until PR 4 the data API fails closed on every method and logs once', async () => {
-    noNetwork();
+  // SF-161 (D-167): the real data API adapter replaces the fail-closed one; a token without a person never leaves.
+  it('T-WAUTH-19: the data API is the HTTP adapter, and a token without a person is refused without a request', async () => {
+    const calls = noNetwork();
     stubQa();
-    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const api = createContainer().dataApi;
-    const names = [
-      'listTransactions',
-      'totals',
-      'rates',
-      'putRate',
-      'review',
-      'putReview',
-      'listImports',
-      'getImport',
-      'requestImport',
-      'exportCsv',
-      'erase',
-    ] as const satisfies readonly (keyof typeof api)[];
-    for (const name of names) {
-      const call = api[name] as (token: string, input: unknown) => Promise<unknown>;
-      expect(await call('example-token', {}), name).toEqual({ ok: false, kind: 'failed' });
-    }
-    const lines = log.mock.calls.map((args) => JSON.parse(String(args[0])) as Record<string, string>);
-    expect(lines.filter((l) => l.event === 'adapter_unavailable' && l.outcome === 'data_api')).toHaveLength(1);
+    expect(api).toBeInstanceOf(HttpDataApi);
+    expect(await api.rates('example-token', {})).toEqual({ ok: false, kind: 'unauthorized' });
+    for (const spy of calls) expect(spy).not.toHaveBeenCalled();
   });
 
   it('T-WAUTH-19: until PR 4 the parameter store fails closed (a refusal, never a missing value) and logs once', async () => {
