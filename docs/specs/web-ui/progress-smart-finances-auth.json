@@ -106,7 +106,8 @@
         "No new dependency (zod and @aws-sdk/lib-dynamodb already in apps/web/package.json). No AWS call: DynamoPowStore is tested only with a hand-written fake document client.",
         "Conformance (2026-11-04): blocked awaiting the fresh-context task review. Judgment: high and Done when needs 'the reviewer has no blocker', but no reviewer ran (review is empty). Verify evidence above is unchanged; set done once the review records pass, or fix its findings.",
         "Conformance profile verify (2026-11-04, no code change): npm test (root) exit 0: node --test api+contracts 37/37 pass, web lint clean, web vitest 31 files 373/373 pass, infra 41/41 pass; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0",
-        "The conformance fix agent marked this task blocked for a missing review; the workflow's fresh-context task reviewer had run and found no blocker (recorded in review). Status restored to done on 2026-11-04."
+        "The conformance fix agent marked this task blocked for a missing review; the workflow's fresh-context task reviewer had run and found no blocker (recorded in review). Status restored to done on 2026-11-04.",
+        "Conformance fix 3c31d8f: T-WAUTH-6 'serves a fresh challenge' got a 30 s timeout; it solves a real proof of work and timed out at 5 s once under the full parallel vitest run (passes alone, twice)."
       ],
       "review": "findings (workflow task reviewer, fresh context, different model; 0 blocker, 0 major; minors: A Do bullet was changed without a recorded decision. The brief says 'PowField (client, nonce from x-nonce)'. The implementation takes no non | The PowField React component has no test. Only `solvePow` is tested. The 'adds powSalt, powN, powSig to the form' bullet, the re-solve after | Files lists `ports/PowStore.ts`, but the existing port is `ports/pow-store.ts`. This is recorded as a surprise, not as a deviation. The port)"
     },
@@ -251,7 +252,8 @@
         "Browser smoke (round 2, not committed; scratchpad spec, production build, STAGE=test, CI=1, --retries=0): \"3 passed (1.7m)\": sign up, confirm 123456, sign in, setup 000000, then Sign out from the rail on /transactions lands on /sign-in with no __Host-sid, /overview then redirects to sign-in and the replayed old cookie shows 'Your session ended'; no content-policy messages after the click; the same with JavaScript disabled (plain form post); and from the narrow menu panel at 390 px.",
         "Whole e2e suite (round 2, scratchpad config, production build): \"30 passed (57.2s)\" (T-WEB-10's Sign out row checks unchanged)",
         "Profile verify (round 2): root npm test first run exit 1: one timeout outside this task, src/application/pow.test.ts 'T-WAUTH-6 serves a fresh challenge, never cached, that the use case accepts once' at 5015 ms (alone 2378 ms, 13/13 pass); second run exit 0: node --test api+contracts 37/37, web lint clean, web vitest 35 files 451/451, infra 41/41; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0 (\"All matched files use Prettier code style!\"); apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0; strays killed after.",
-        "No new dependency. No AWS call: everything runs over the memory adapters (STAGE=test)."
+        "No new dependency. No AWS call: everything runs over the memory adapters (STAGE=test).",
+        "Conformance fix 338833e (major finding): a reset whose global sign-out fails is retried once; if it still fails the reply names no notice (no 'every session ended' cookie) and reset signout_failed is logged; a sign-out post the guard reads as ended still deletes a left-over row and revokes its refresh token. Fail-first: \"Tests 3 failed | 19 passed (22)\" (expected no notice, adminGlobalSignOut called 1 time not 2, row still present); after: \"Tests 22 passed (22)\"."
       ],
       "review": "findings (workflow task reviewer, fresh context, different model; 0 blocker, 0 major; minors: sign-out behind guarded() kind money may refuse an idle or expired session's sign-out | a refusal other than sessionEnded or consentNeeded is not turned into a clean sign-out)"
     },
@@ -271,7 +273,8 @@
         "HUMAN review of the privacy and terms text: pending (brief HUMAN needs)",
         "Conformance (2026-11-04): blocked on the HUMAN review of the privacy and terms text (brief HUMAN needs: 'Blocks: SF-152 done'), including the two terms obligations the spec does not state word for word (only your own files; one account per person). Set done once the owner has reviewed the text.",
         "Conformance profile verify (2026-11-04, no code change): npm test (root) exit 0: node --test api+contracts 37/37 pass, web lint clean, web vitest 31 files 373/373 pass, infra 41/41 pass; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0; apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0",
-        "HUMAN review of the privacy and terms text: approved as written by the owner in chat, 2026-11-04."
+        "HUMAN review of the privacy and terms text: approved as written by the owner in chat, 2026-11-04.",
+        "Conformance fix 8063e55: app/privacy/_legal/versions.ts re-exports PRIVACY_VERSION and TERMS_VERSION from legal/versions.ts, so the shown and accepted versions cannot drift."
       ],
       "review": ""
     },
@@ -287,19 +290,31 @@
         "Profile verify: npm run lint --workspace @smart-finances/web exit 0 (eslint 0 problems; \"All matched files use Prettier code style!\").",
         "Profile verify: cd apps/web && npx tsc --noEmit exit 0.",
         "Profile verify: npm run build --workspace @smart-finances/web exit 0.",
-        "Not run: browser tests (not in this task's verify; the STAGE=test path of getContainer is unchanged)."
+        "Not run: browser tests (not in this task's verify; the STAGE=test path of getContainer is unchanged).",
+        "Conformance fix 94c2da4: STAGE=test throws when AWS_EXECUTION_ENV or AWS_LAMBDA_FUNCTION_NAME is set. Fail-first: \"AssertionError: AWS_EXECUTION_ENV: expected [Function] to throw an error\"; after: container.test.ts \"Tests 22 passed (22)\"."
       ],
       "review": "findings (workflow task reviewer, fresh context, different model; 0 blocker, 0 major; minors: test id T-WAUTH-19 is not in test-matrix.md yet | stubs log 'adapter_unavailable', not in the Security events list | adapters/memory/clock.ts touched outside the stated Files)"
     },
     {
       "id": "SF-153",
       "status": "done",
-      "commit": "",
+      "commit": "3285262 (drafts), a2ed5c9 (evidence)",
       "evidence": [
         "Drafts from the cloud run (3285262) finished on the owner's machine, 2026-11-05: Claude Code desktop, claude-opus-5-5.",
         "Fail-first: the flows under test were already built (SF-148 to SF-152), so the specs passed on their first run. Mutation check instead: with the one allowed React Aria style hash removed from the policy watcher, the two walks fail: \"2 failed\", each \"/overview: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'nonce-...''\" (twice per walk). The file was restored after the run.",
         "Verify: npm run e2e --workspace @smart-finances/web -- e2e/auth.spec.ts exit 0: \"5 passed (50.5s)\" (walk en, walk es, sign-in from the sign-up browser, 21st auth post refused en, es), production build then next start with STAGE=test (D-151).",
         "npm run lint --workspace @smart-finances/web exit 0 (eslint 0 problems; Prettier clean); apps/web npx tsc --noEmit exit 0."
+      ],
+      "review": "n/a (Judgment: normal)"
+    },
+    {
+      "id": "SF-155",
+      "status": "done",
+      "commit": "01ab830",
+      "evidence": [
+        "Owner-added task (in chat, 2026-11-05, from the SF-153 surprise): keep the first load's nonce in the csp-nonce meta. Files: apps/web/src/ui/NonceMeta.tsx (new), apps/web/src/app/layout.tsx, apps/web/e2e/auth.spec.ts (the walks drop their one allowed style hash). No brief block yet: the locked-v8 re-lock adds it.",
+        "Tests first: with the allowance removed, npm run e2e --workspace @smart-finances/web -- e2e/auth.spec.ts -g \"sign-up, confirm, setup\" exit 1: \"2 failed\", \"/overview: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'nonce-...''\".",
+        "Verify: npm run e2e --workspace @smart-finances/web -- e2e/auth.spec.ts exit 0: \"5 passed (2.7m)\"; npm run lint --workspace @smart-finances/web exit 0."
       ],
       "review": "n/a (Judgment: normal)"
     }
@@ -367,6 +382,30 @@
       "from": "architecture.md Interfaces between the PRs 'application/guard.ts requireMoneyAccess({ allowDeleting? })'.",
       "proposal": "Change the line to: app/guarded.ts requireMoneyAccess({ allowDeleting? }) (reads __Host-sid and the shared container; for the money layout and PR 4's route handlers) over application/guard.ts createGuard(deps, versions?) → { requireMoneyAccess(sessionId, { allowDeleting? }), consentView, acceptConsent, declineConsent } and recordFirstConsent(deps, sub, { versions?, lang }); the result is { ok: true, session, account } | { ok: false, reason: 'signed-out', why } | { ok: false, reason: 'consent' | 'deleting' } (surprise 62). Reason: application/ may not read cookies (D-138). The no-argument signature PR 4 imports exists, at app/guarded.ts rather than application/guard.ts.",
       "decidedBy": "owner, in chat, 2026-11-05: accept the interface shapes as built",
+      "newDecision": "pending: the planning session records it (locked-v8)"
+    },
+    {
+      "date": "2026-11-05",
+      "task": "SF-153",
+      "from": "pr-smart-finances-auth.md task list (no task owns apps/web/src/app/layout.tsx)",
+      "proposal": "New task SF-155: keep the first load's nonce in the csp-nonce meta (ui/NonceMeta.tsx, app/layout.tsx), and the auth walks allow no policy violation.",
+      "decidedBy": "owner, in chat, 2026-11-05: new task SF-155 in PR 3",
+      "newDecision": "pending: the planning session records it (locked-v8)"
+    },
+    {
+      "date": "2026-11-05",
+      "task": "qa release",
+      "from": "D-95 and release.md HUMAN need 'raise the account's Lambda concurrency quota ... Blocks: setting signup-open to true on any stage, qa included'",
+      "proposal": "Set signup-open=true on qa with the default quota of 10; no quota request.",
+      "decidedBy": "owner, in chat, 2026-11-05: forget the quota raise for qa, the owner is the only user",
+      "newDecision": "pending: the planning session records it (locked-v8)"
+    },
+    {
+      "date": "2026-11-05",
+      "task": "qa release",
+      "from": "D-112 'The console-created app already has its log group' (read-only check 2026-11-05: /aws/amplify/<app id> does not exist; the app is platform WEB)",
+      "proposal": "The agent creates /aws/amplify/<app id> on qa with the CLI before the web stack deploy; the web stack keeps referencing it by name and sets 30-day retention.",
+      "decidedBy": "owner, in chat, 2026-11-05: the agent creates it on qa by CLI",
       "newDecision": "pending: the planning session records it (locked-v8)"
     }
   ],
@@ -460,6 +499,15 @@
     "SF-154 (D-157): T-WEB-14 'outside STAGE=test it refuses until the real adapters arrive' in apps/web/src/adapters/container.test.ts became 'outside STAGE=test it refuses an environment without the web server settings' (expects 'Web server settings missing or invalid: ...USER_POOL_ID'). The surprises of SF-141, SF-144 and SF-152 that say the container refuses outside STAGE=test until real adapters are wired no longer hold: qa now builds the real container when its settings are complete.",
     "SF-154: no fresh-context reviewer ran in this executor (no subagent tool here); review is left empty for the workflow's reviewer.",
     "2026-11-05: the owner stopped the cloud run to continue on their own machine. SF-153 (browser tests) is in progress with draft files committed; the conformance review for the whole PR has not run yet.",
-    "SF-153: after a server-action redirect into the (app) pages, React Aria's pressable <style> is blocked by style-src. Cause: the root layout (apps/web/src/app/layout.tsx, PR 1) renders <meta name=\"csp-nonce\" nonce> from each request's nonce; the redirect re-renders the layout over RSC with a new request's nonce, while the document keeps the policy (and nonce) of its first load, so React Aria stamps the style with a nonce the page does not allow. A direct load shows none (SF-149 surprise). The walks allow only that style's hash (sha256-38RhXrc7EdReTKsOm23ZPOCUgniTUUcjky8QOOrQx6o=) and fail on any other violation. Fix proposal (outside SF-153's Files, owner decides): keep the first nonce on the client, e.g. a small client component that renders the meta from useState(initial nonce), so later RSC renders do not change it."
-  ]
+    "SF-153: after a server-action redirect into the (app) pages, React Aria's pressable <style> is blocked by style-src. Cause: the root layout (apps/web/src/app/layout.tsx, PR 1) renders <meta name=\"csp-nonce\" nonce> from each request's nonce; the redirect re-renders the layout over RSC with a new request's nonce, while the document keeps the policy (and nonce) of its first load, so React Aria stamps the style with a nonce the page does not allow. A direct load shows none (SF-149 surprise). The walks allow only that style's hash (sha256-38RhXrc7EdReTKsOm23ZPOCUgniTUUcjky8QOOrQx6o=) and fail on any other violation. Fix proposal (outside SF-153's Files, owner decides): keep the first nonce on the client, e.g. a small client component that renders the meta from useState(initial nonce), so later RSC renders do not change it.",
+    "Conformance review (fresh context, Claude Code spec-reviewer on sonnet, 2026-11-05): 0 blocker, 1 major, 6 minor. Fixed: the major (reset sign-out fail-open, SF-151), sign-out of an ended session (SF-151, the sessionEnded half; a refusal for 'unavailable' still does nothing, because that refusal may come before the Origin check), the two legal version sources (SF-152), STAGE=test in a deployed runtime (SF-154), the final verify (recorded at the end). Deferred to the re-lock as a follow-up: the wrong-code count is read-modify-write on the pre-auth row, so parallel guesses can pass 5 before the row ends (bounded by the pool lockout and 20 auth posts per 5 minutes per address); the fix needs an atomic increment on the PreAuthStore port. Paperwork for the re-lock: the __Host-notice cookie is not in Contracts 'Cookies'; adapter_unavailable is not in 'Security events'; T-WAUTH-19 has no matrix row.",
+    "SF-144's T-WAUTH-6 solves a real proof of work; under the full parallel vitest run on this machine it once took over 5 s (timeout), so CI on a slow runner could flake the same way; it now has 30 s."
+  ],
+  "final": {
+    "tests": "root npm test exit 0 (web lint, web vitest \"Test Files 35 passed (35) Tests 462 passed (462)\", infra \"pass 41 fail 0\") on 01ab830",
+    "lint": "npm run lint --workspace @smart-finances/web exit 0 (eslint 0 problems; Prettier clean)",
+    "typecheck": "npm run build --workspace @smart-finances/infra exit 0; apps/web npx tsc --noEmit exit 0",
+    "e2e": "npm run e2e --workspace @smart-finances/web exit 0: \"35 passed (2.2m)\" (auth, headers, public-pages, shell, states), production build with STAGE=test"
+  },
+  "conformance": "fresh-context spec-reviewer (sonnet), 2026-11-05: 0 blocker, 1 major (fixed, SF-151), 6 minor (4 fixed: SF-151, SF-152, SF-154, final verify; 1 deferred: atomic wrong-code count; 1 paperwork for locked-v8)"
 }
