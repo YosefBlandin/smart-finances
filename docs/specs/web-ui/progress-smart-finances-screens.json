@@ -44,9 +44,14 @@
     },
     {
       "id": "SF-163",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "9931af2",
+      "evidence": [
+        "Tests first (T-WSCR-18, apps/web/src/app/api/data/data.test.ts): npm test --workspace @smart-finances/web -- src/app/api/data/data.test.ts exit 1: \"Tests 37 failed (37)\", each \"Error: Cannot find module '/src/app/api/data/<route>/route'\" (or '/respond') (expected: no routes yet).",
+        "Built: application/data/reads.ts createDataReads({ dataApi }) → { listTransactions, getTotals, getRates, getReview, listImports, getImport, exportCsv }, each (session, input) with the session's access token only. app/api/data/respond.ts: dataRoute(read, ok?) (requireMoneyAccess() from app/guarded.ts, D-168: 401 unauthorized, 403 consent or forbidden; then 404, 409, 429 limited with Retry-After, 400 bad_request, 502 data API failure, 503 unexpected; Cache-Control private, no-store), searchValues, errorResponse, NO_STORE, redirectIfLimited(result) → /too-many?wait=N for server renders. Routes: GET /api/data/transactions, totals, rates, review, imports, imports/[id], export (text/csv attachment smart-finances-export.csv). queries/keys.ts (no 'use client'): dataKeys, transactionFilters, PAGE_SIZE 50, FINAL_IMPORT_STATUSES, reply types. queries/data.ts: useTransactions (infinite, cursor), useTotals, useRates, useReview, useImports, useImport (polls every 3 s until final; stops on a refusal), getJson, DataError, retryable, dataPath.",
+        "Hook tests (4, same file, jsdom, fetch stubbed to call the route handlers) were added after the routes went green, so they have no fail-first run.",
+        "Verify: npm test --workspace @smart-finances/web -- src/app/api/data/data.test.ts exit 0: \"Test Files 1 passed (1)\", \"Tests 41 passed (41)\". Full web vitest: 38 files, 552 passed. npm run lint --workspace @smart-finances/web exit 0 (eslint clean, Prettier clean); apps/web npx tsc --noEmit exit 0."
+      ],
       "review": ""
     },
     {
@@ -120,6 +125,9 @@
     "SF-161: the memory data API is one data set for every allowed token, not per person; only TEST_PERSON's token is allowed in the STAGE=test container. A person signed up in the browser tests (memory tokens are random, not JWTs) gets unauthorized from it; SF-172's second signed-in test person needs its token allowed (MemoryDataApi.allowToken) or a per-person memory store.",
     "SF-161: under STAGE=test the person limit is 5 data requests a minute (domain/limits.ts) and TEST_PERSON's memory data API counts them, so screen browser tests (SF-164 to SF-168) that read more than 5 times a minute as TEST_PERSON will meet the 429 path; they may need fresh persons or waits.",
     "SF-162: the brief's result shape gains earnedUsd (dollars received, cents) and rate? for D-31's second Earned line (\"USD 1,922.00 at ARS 1,375.00 per dollar\"); the listed fields are unchanged.",
-    "SF-162: choices the brief leaves open: a month that earned nothing has keptPct 0 (bad when it spent anything, overArs the whole spend); typical month takes the latest up to 6 earlier months that have both totals and a rate; keptPct and typicalPct stay exact and screens round (D-30); a month with no rate leaves its dollars out of the pesos, like the API's dollar view; currencies other than ARS and USD are not counted."
+    "SF-162: choices the brief leaves open: a month that earned nothing has keptPct 0 (bad when it spent anything, overArs the whole spend); typical month takes the latest up to 6 earlier months that have both totals and a rate; keptPct and typicalPct stay exact and screens round (D-30); a month with no rate leaves its dollars out of the pesos, like the API's dollar view; currencies other than ARS and USD are not counted.",
+    "SF-163: the read use cases live in one file, application/data/reads.ts, so SF-166 (review.ts, setRate.ts), SF-167 (requestImport.ts) and SF-168 (erase.ts) can still create their files as new. SF-167's getImport release or correction at the final status will need reads.ts (or the imports/[id] route), which its Files line does not list.",
+    "SF-163: the brief's SF-161 line 'a limited result redirects server renders to /too-many' is provided as redirectIfLimited() in app/api/data/respond.ts for the money pages' prefetch (SF-164 on); /too-many itself arrives with SF-172, so until then that redirect lands on the not-found page.",
+    "SF-163: free text q reaches the JSON route as a query value of the browser's fetch (never the page address, D-82); it can appear in the hosting's request logs."
   ]
 }
