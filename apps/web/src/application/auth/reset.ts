@@ -90,7 +90,7 @@ export function createReset(deps: ResetDeps) {
   async function runConfirm(
     input: { code: string; password: string },
     ctx: ResetContext,
-  ): Promise<AuthReply<{ next: '/sign-in'; notice: typeof RESET_NOTICE.value }>> {
+  ): Promise<AuthReply<{ next: '/sign-in'; notice?: typeof RESET_NOTICE.value }>> {
     const { requestId } = ctx;
     const row = await step(ctx.preAuthId);
     if (!row) return refuse(RESET_MESSAGES.start);
@@ -132,17 +132,32 @@ export function createReset(deps: ResetDeps) {
       }
     }
 
-    // The password changed: everyone is signed out, everywhere (D-92). A failure here cannot undo the change, so it is
-    // logged for the owner and the person still goes on to sign in with the new password.
+    // The password changed: everyone is signed out, everywhere (D-92), tried twice. A failure cannot undo the change, so
+    // it is logged for the owner and the person still goes on to sign in with the new password, but without the notice
+    // that says every session ended, since that would not be true.
     await sessions.endPreAuth(ctx.preAuthId);
-    const account = await identityProvider.adminGet(row.email);
-    if (!account.ok) {
+    const sub = await signOutEverywhere(row.email);
+    if (!sub) {
       logger.event('reset', 'signout_failed', { requestId });
-    } else {
-      const out = await sessions.signOutEverywhere(account.sub);
-      logger.event('reset', out.ok ? 'ok' : 'signout_failed', { requestId, sub: account.sub });
+      return { ok: true, data: { next: '/sign-in' } };
     }
+    logger.event('reset', 'ok', { requestId, sub });
     return { ok: true, data: { next: '/sign-in', notice: RESET_NOTICE.value } };
+  }
+
+  /** The pool's global sign-out and every session row of the person, with one retry; the sub when both worked. */
+  async function signOutEverywhere(email: string): Promise<string | undefined> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const account = await identityProvider.adminGet(email);
+        if (!account.ok) continue;
+        const out = await sessions.signOutEverywhere(account.sub);
+        if (out.ok) return account.sub;
+      } catch {
+        // A thrown SDK error counts as a failed attempt.
+      }
+    }
+    return undefined;
   }
 
   async function runResend(ctx: ResetContext): Promise<AuthReply<{ sent: true }>> {

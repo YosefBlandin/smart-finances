@@ -165,6 +165,35 @@ describe('T-WAUTH-14: after a reset, sessions opened before it are refused and t
     expect(RESET_NOTICE).toEqual({ cookie: '__Host-notice', value: 'password-changed', maxAgeSeconds: 600 });
   });
 
+  it('T-WAUTH-14: when signing out everywhere fails twice, the reply names no notice and reset signout_failed is logged once (D-92)', async () => {
+    const t = setup();
+    await signedIn(t);
+    const adminGet = vi.spyOn(t.idp, 'adminGet').mockResolvedValue({ ok: false, reason: 'failed' });
+    const done = await fullReset(t);
+    expect(done).toEqual({ ok: true, data: { next: '/sign-in' } });
+    expect(adminGet).toHaveBeenCalledTimes(2);
+    expect(t.logger.events.filter((e) => e.name === 'reset' && e.outcome !== 'requested')).toEqual([
+      { name: 'reset', outcome: 'signout_failed', sub: undefined, requestId: 'req-reset' },
+    ]);
+  });
+
+  it('T-WAUTH-14: a global sign-out that fails once is tried again; when the retry works the notice is named and the rows are gone', async () => {
+    const t = setup();
+    const { sub, sessionId } = await signedIn(t);
+    const real = t.idp.adminGlobalSignOut.bind(t.idp);
+    const signOut = vi
+      .spyOn(t.idp, 'adminGlobalSignOut')
+      .mockResolvedValueOnce({ ok: false, reason: 'failed' } as never)
+      .mockImplementation(real);
+    const done = await fullReset(t);
+    expect(done).toEqual({ ok: true, data: { next: '/sign-in', notice: RESET_NOTICE.value } });
+    expect(signOut).toHaveBeenCalledTimes(2);
+    expect(await t.sessions.getSession(sessionId)).toBeNull();
+    expect(t.logger.events.filter((e) => e.name === 'reset' && e.outcome !== 'requested')).toEqual([
+      { name: 'reset', outcome: 'ok', sub, requestId: 'req-reset' },
+    ]);
+  });
+
   it('T-WAUTH-14: forgot gives the same reply, timing and pre-auth row for a known and an unknown email; only the known one gets a code', async () => {
     const t = setup();
     await signedIn(t);
@@ -446,6 +475,23 @@ describe('T-WAUTH-15: the Sign out row posts a server action (guarded money, all
     const s = await signedInShared();
     await s.container.sessionStore.delete(sessionIdHash(s.sessionId));
     await expect(signOutAction(new FormData())).rejects.toMatchObject(redirectTo('/sign-in?reason=idle'));
+    expect(request.sets).toEqual([{ name: SESSION_COOKIE, value: '', maxAge: 0 }]);
+  });
+
+  it('T-WAUTH-15: a session the guard reads as ended because its refresh failed still has its row deleted and its refresh token revoked', async () => {
+    const s = await signedInShared();
+    const idHash = sessionIdHash(s.sessionId);
+    const row = await s.container.sessionStore.get(idHash);
+    if (!row) throw new Error('no session row');
+    const part = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
+    const expired = `${part({ alg: 'none' })}.${part({ sub: s.sub, exp: Math.floor(Date.now() / 1000) - 60, token_use: 'access' })}.test`;
+    await s.container.sessionStore.delete(idHash);
+    await s.container.sessionStore.create({ ...row, accessToken: expired });
+    const refresh = vi.spyOn(s.idp, 'refresh').mockResolvedValue({ ok: false, reason: 'failed' });
+    await expect(signOutAction(new FormData())).rejects.toMatchObject(redirectTo('/sign-in?reason=idle'));
+    refresh.mockRestore();
+    expect(await s.container.sessionStore.get(idHash)).toBeUndefined();
+    expect(await s.idp.refresh(s.sub, s.refreshToken)).toEqual({ ok: false, reason: 'revoked' });
     expect(request.sets).toEqual([{ name: SESSION_COOKIE, value: '', maxAge: 0 }]);
   });
 

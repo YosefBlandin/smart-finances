@@ -38,13 +38,16 @@ const confirmGuarded = guarded(ConfirmInput, { kind: 'auth' }, async (input, { c
   const result = await createReset(container).confirm(input, await context(requestId, ip));
   if (!result.ok) return result;
   await clearPreAuthCookie();
-  (await cookies()).set(RESET_NOTICE.cookie, result.data.notice, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: RESET_NOTICE.maxAgeSeconds,
-  });
+  // Only when every session really ended (the use case names the notice then).
+  if (result.data.notice) {
+    (await cookies()).set(RESET_NOTICE.cookie, result.data.notice, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: RESET_NOTICE.maxAgeSeconds,
+    });
+  }
   redirect(result.data.next);
 });
 
