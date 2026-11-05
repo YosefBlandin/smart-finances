@@ -170,13 +170,25 @@ export function realContainer(settings: Settings, clock: Clock = new SystemClock
 }
 
 /**
+ * STAGE=test, but never inside an AWS runtime: the memory container takes fixed codes and holds a seeded test person, so
+ * a deployed process that is handed STAGE=test by mistake refuses to start instead of opening that door.
+ */
+function isTestStage(): boolean {
+  if (process.env.STAGE !== 'test') return false;
+  if (process.env.AWS_EXECUTION_ENV || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    throw new Error('STAGE=test is refused in a deployed runtime (AWS_EXECUTION_ENV or AWS_LAMBDA_FUNCTION_NAME is set)');
+  }
+  return true;
+}
+
+/**
  * The only place that reads STAGE to choose behaviour. STAGE=test: fresh memory adapters on each call (the test
  * defaults, with any setting the environment names, a local port say, taking precedence). Any other stage: the one real
  * container of this process (getContainer), so SDK clients and the secret cache are reused across requests. A missing
  * or invalid setting throws an error naming the setting, never its value.
  */
 export function createContainer(): Container {
-  if (process.env.STAGE === 'test') return memoryContainer(new MemorySettings(parseSettings(process.env)));
+  if (isTestStage()) return memoryContainer(new MemorySettings(parseSettings(process.env)));
   return getContainer();
 }
 
@@ -223,7 +235,7 @@ type WithShared = typeof globalThis & { [SHARED]?: Container };
 export function getContainer(): Container {
   const g = globalThis as WithShared;
   if (!g[SHARED]) {
-    if (process.env.STAGE === 'test') {
+    if (isTestStage()) {
       const c = memoryContainer(new MemorySettings(parseSettings(process.env)), new SystemClock());
       seedTestPerson(c);
       g[SHARED] = c;

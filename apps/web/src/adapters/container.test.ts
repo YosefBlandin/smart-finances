@@ -115,6 +115,18 @@ describe('T-WEB-14: the container', () => {
       expect(() => createContainer(), stage).toThrow(/Web server settings missing or invalid: .*USER_POOL_ID/);
     }
   });
+
+  // Conformance fix (SF-154): the memory container's fixed codes and seeded test person must never serve a deployed
+  // stage, so STAGE=test is refused where an AWS runtime says the process is deployed.
+  it('T-WEB-14: STAGE=test is refused inside an AWS runtime, by createContainer and getContainer', () => {
+    for (const marker of ['AWS_EXECUTION_ENV', 'AWS_LAMBDA_FUNCTION_NAME']) {
+      vi.unstubAllEnvs();
+      vi.stubEnv('STAGE', 'test');
+      vi.stubEnv(marker, 'set-by-the-runtime');
+      expect(() => createContainer(), marker).toThrow(/STAGE=test is refused in a deployed runtime/);
+      expect(() => getContainer(), marker).toThrow(/STAGE=test is refused in a deployed runtime/);
+    }
+  });
 });
 
 describe('T-WEB-14: memory adapters keep the port rules', () => {
