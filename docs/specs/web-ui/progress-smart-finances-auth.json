@@ -253,7 +253,7 @@
         "Profile verify (round 2): root npm test first run exit 1: one timeout outside this task, src/application/pow.test.ts 'T-WAUTH-6 serves a fresh challenge, never cached, that the use case accepts once' at 5015 ms (alone 2378 ms, 13/13 pass); second run exit 0: node --test api+contracts 37/37, web lint clean, web vitest 35 files 451/451, infra 41/41; npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0 (\"All matched files use Prettier code style!\"); apps/web npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0; strays killed after.",
         "No new dependency. No AWS call: everything runs over the memory adapters (STAGE=test)."
       ],
-      "review": ""
+      "review": "findings (workflow task reviewer, fresh context, different model; 0 blocker, 0 major; minors: sign-out behind guarded() kind money may refuse an idle or expired session's sign-out | a refusal other than sessionEnded or consentNeeded is not turned into a clean sign-out)"
     },
     {
       "id": "SF-152",
@@ -289,13 +289,15 @@
         "Profile verify: npm run build --workspace @smart-finances/web exit 0.",
         "Not run: browser tests (not in this task's verify; the STAGE=test path of getContainer is unchanged)."
       ],
-      "review": ""
+      "review": "findings (workflow task reviewer, fresh context, different model; 0 blocker, 0 major; minors: test id T-WAUTH-19 is not in test-matrix.md yet | stubs log 'adapter_unavailable', not in the Security events list | adapters/memory/clock.ts touched outside the stated Files)"
     },
     {
       "id": "SF-153",
-      "status": "todo",
+      "status": "in_progress",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "Work in progress, committed unfinished when the owner moved the work to their machine (2026-11-05): apps/web/e2e/auth.spec.ts and apps/web/e2e/helpers/signIn.ts are drafts; they have not been run green, and no fail-first output is recorded yet."
+      ],
       "review": ""
     }
   ],
@@ -453,6 +455,7 @@
     "SF-154: the task asks both PR 4 stubs to return { ok: false, kind: 'failed' }, but only the DataApi port has that result type; ParameterStore.get returns Promise<string | undefined>, where undefined means 'not set' (for imports-paused that reads as not paused, which fails open). UnwiredParameterStore.get therefore rejects ('The parameter store is not wired until PR 4'), so a caller fails closed (guarded() answers auth.unavailable). UnwiredDataApi answers { ok: false, kind: 'failed' } on all 11 methods.",
     "SF-154: 'log once' goes through the Logger port as event 'adapter_unavailable' with outcome 'data_api' or 'parameter_store' and request_id 'container' (the port needs a request id and the stubs have none), once per stub, so once per process. 'adapter_unavailable' is not in architecture.md Contracts 'Security events' (the JsonLogger does not check names); the planning session may add it or prefer another name.",
     "SF-154 (D-157): T-WEB-14 'outside STAGE=test it refuses until the real adapters arrive' in apps/web/src/adapters/container.test.ts became 'outside STAGE=test it refuses an environment without the web server settings' (expects 'Web server settings missing or invalid: ...USER_POOL_ID'). The surprises of SF-141, SF-144 and SF-152 that say the container refuses outside STAGE=test until real adapters are wired no longer hold: qa now builds the real container when its settings are complete.",
-    "SF-154: no fresh-context reviewer ran in this executor (no subagent tool here); review is left empty for the workflow's reviewer."
+    "SF-154: no fresh-context reviewer ran in this executor (no subagent tool here); review is left empty for the workflow's reviewer.",
+    "2026-11-05: the owner stopped the cloud run to continue on their own machine. SF-153 (browser tests) is in progress with draft files committed; the conformance review for the whole PR has not run yet."
   ]
 }
