@@ -2,7 +2,7 @@ import { ROUTES } from '@smart-finances/contracts/routes';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Container } from './container';
 import { memoryContainer } from './container';
-import { DATA_API_TIMEOUT_MS, HttpDataApi, type DataApiFetch } from './data-api';
+import { DATA_API_TIMEOUT_MS, EXPORT_TIMEOUT_MS, HttpDataApi, type DataApiFetch } from './data-api';
 import { MemoryClock } from './memory/clock';
 import { fixtureSeed, MemoryDataApi } from './memory/data-api';
 import { MemoryIdentityProvider } from './memory/identity-provider';
@@ -216,6 +216,25 @@ describe('T-WSCR-1: HttpDataApi maps statuses', () => {
     const pending = new HttpDataApi({ ...c, fetch: slow }).rates(TOKEN, {});
     await vi.advanceTimersByTimeAsync(5_000);
     expect(await pending).toEqual({ ok: false, kind: 'failed', code: 'timeout' });
+  });
+});
+
+describe('T-WSCR-1: export has its own 25-second budget (owner decision, PR 4 review: the API buffers the CSV, RK-13)', () => {
+  afterEach(() => vi.useRealTimers());
+  it('T-WSCR-1: export is still waiting after 5 seconds and times out at 25 seconds', async () => {
+    expect(EXPORT_TIMEOUT_MS).toBe(25_000);
+    vi.useFakeTimers();
+    let signal: AbortSignal | undefined;
+    const { api } = setup((call) => {
+      signal = call.init.signal;
+      return new Promise<Reply>(() => {});
+    });
+    const pending = api.exportCsv(TOKEN, {});
+    await vi.advanceTimersByTimeAsync(24_999);
+    expect(signal?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await pending).toEqual({ ok: false, kind: 'failed', code: 'timeout' });
+    expect(signal?.aborted).toBe(true);
   });
 });
 

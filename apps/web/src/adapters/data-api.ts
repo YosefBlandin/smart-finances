@@ -23,6 +23,9 @@ export type DataApiFetch = (
 
 /** Each API read times out at 5 seconds, the reply's body included (D-101). */
 export const DATA_API_TIMEOUT_MS = 5_000;
+/** Export alone: the API builds the whole CSV in one reply (data spec RK-13: 25 s function, 6 MB), so it gets 25 s
+ * instead of 5 (owner decision, PR 4 review); the browser still receives it whole. */
+export const EXPORT_TIMEOUT_MS = 25_000;
 /** A renewed access token is reused by calls that still hold the old one for this long, so they do not refresh again. */
 const RENEWED_FOR_MS = 60_000;
 
@@ -37,7 +40,7 @@ export type HttpDataApiDeps = LimitsDeps & {
 type Route = keyof typeof ROUTES;
 type Out<K extends Route> = z.output<(typeof ROUTES)[K]['reply']>;
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
-type Request = { method: Method; path: string; query?: unknown; body?: unknown };
+type Request = { method: Method; path: string; query?: unknown; body?: unknown; timeoutMs?: number };
 
 const fail = (kind: DataApiFailure['kind'], code?: string, retryAfter?: number): DataApiFailure => ({
   ok: false,
@@ -146,7 +149,8 @@ export class HttpDataApi implements DataApi {
   requestImport: DataApi['requestImport'] = (token, input) =>
     this.call(token, 'POST /imports', input, (b) => ({ method: 'POST', path: '/imports', body: b }));
 
-  exportCsv: DataApi['exportCsv'] = (token) => this.call(token, 'GET /export', undefined, () => ({ method: 'GET', path: '/export' }));
+  exportCsv: DataApi['exportCsv'] = (token) =>
+    this.call(token, 'GET /export', undefined, () => ({ method: 'GET', path: '/export', timeoutMs: EXPORT_TIMEOUT_MS }));
 
   erase: DataApi['erase'] = (token, input) => this.call(token, 'DELETE /data', input, (b) => ({ method: 'DELETE', path: '/data', body: b }));
 
@@ -186,7 +190,10 @@ export class HttpDataApi implements DataApi {
   }
 
   /** One request within the time budget: a status and the body text, or a timeout or network failure. */
-  private async send(token: string, { method, path, query, body }: Request): Promise<{ status: number; text: string; retryAfter?: number }> {
+  private async send(
+    token: string,
+    { method, path, query, body, timeoutMs }: Request,
+  ): Promise<{ status: number; text: string; retryAfter?: number }> {
     const url = new URL(this.deps.settings.get().API_URL.replace(/\/+$/, '') + path);
     for (const [k, v] of Object.entries((query ?? {}) as Record<string, unknown>)) if (v !== undefined) url.searchParams.set(k, String(v));
     const headers: Record<string, string> = { authorization: `Bearer ${token}`, accept: 'application/json, text/csv' };
@@ -198,7 +205,7 @@ export class HttpDataApi implements DataApi {
       timer = setTimeout(() => {
         controller.abort();
         reject(new Timeout());
-      }, this.timeoutMs);
+      }, timeoutMs ?? this.timeoutMs);
     });
     const request = (async () => {
       const res = await this.fetch(url.toString(), {
