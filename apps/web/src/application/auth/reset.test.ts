@@ -1,8 +1,8 @@
 /* eslint-disable import/no-restricted-paths -- T-WAUTH-14 and T-WAUTH-15 drive the reset and sign-out use cases over
-   the memory adapters (the STAGE=test container), which is the task's one test file; no production application code
-   imports adapters. */
-import { describe, expect, it } from 'vitest';
-import { memoryContainer, type Container } from '@/adapters/container';
+   the memory adapters (the STAGE=test container), and T-WAUTH-15 the Sign out server action of app/(app)/actions.ts,
+   which is the task's one test file; no production application code imports adapters or app/. */
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { getContainer, memoryContainer, type Container } from '@/adapters/container';
 import type { MemoryBreachChecker } from '@/adapters/memory/breach-checker';
 import { MemoryClock } from '@/adapters/memory/clock';
 import { TEST_AUTHENTICATOR_CODE, TEST_EMAIL_CODE, type MemoryIdentityProvider } from '@/adapters/memory/identity-provider';
@@ -12,6 +12,30 @@ import { createReset, MAX_RESET_ATTEMPTS, RESET_MESSAGES, RESET_NOTICE, RESET_ST
 import { createSignIn } from './signIn';
 import { createSignOut } from './signOut';
 import { REPLY_MS } from './signUp';
+import { signOutAction } from '@/app/(app)/actions';
+import { TEST_SETTINGS } from '@/adapters/memory/settings';
+import { SESSION_COOKIE } from '@/domain/session-policy';
+import { PRIVACY_VERSION, TERMS_VERSION } from '@/legal/versions';
+
+// The Sign out server action reads the request headers and __Host-sid through next/headers; here both are in memory.
+const { request } = vi.hoisted(() => ({
+  request: {
+    headers: new Headers(),
+    jar: new Map<string, string>(),
+    sets: [] as { name: string; value: string; maxAge?: number }[],
+  },
+}));
+vi.mock('next/headers', () => ({
+  headers: async () => request.headers,
+  cookies: async () => ({
+    get: (name: string) => (request.jar.has(name) ? { name, value: request.jar.get(name) } : undefined),
+    set: (name: string, value: string, opts: { maxAge?: number } = {}) => {
+      request.sets.push({ name, value, maxAge: opts.maxAge });
+      if (opts.maxAge === 0) request.jar.delete(name);
+      else request.jar.set(name, value);
+    },
+  }),
+}));
 
 // T-WAUTH-14 (AC-20, D-92, D-122), T-WAUTH-15 (AC-16) and the reset half of T-WAUTH-8's logging (D-117, owner decision
 // on the SF-146 deviation): forgot, confirm and sign-out as use cases over the memory adapters. Synthetic addresses only;
@@ -341,5 +365,95 @@ describe('T-WAUTH-15: sign-out removes the row and revokes the refresh token', (
     await t.signOut(sessionId, { requestId: 'req-3' });
     expect(await t.signOut(sessionId, { requestId: 'req-4' })).toEqual({ ok: true, data: { next: '/sign-in' } });
     expect(t.logger.events.filter((e) => e.name === 'signout').map((e) => e.outcome)).toEqual(['ok']);
+  });
+});
+
+describe('T-WAUTH-15: the Sign out row posts a server action (guarded money, allowDeleting; owner decision on the SF-151 deviation)', () => {
+  const SHARED = Symbol.for('smart-finances.container');
+  const ORIGIN = TEST_SETTINGS.WEB_ORIGIN;
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    delete (globalThis as Record<symbol, unknown>)[SHARED];
+    request.headers = new Headers();
+    request.jar.clear();
+    request.sets = [];
+  });
+
+  /** The STAGE=test shared container (the one the action uses) with one signed-in person; their cookie is set. */
+  async function signedInShared() {
+    vi.stubEnv('STAGE', 'test');
+    const container = getContainer();
+    const idp = container.identityProvider as MemoryIdentityProvider;
+    const deps = { ...container, sleep: async () => {} };
+    const signIn = createSignIn(deps);
+    await idp.signUp(EMAIL, PASSWORD, 'en');
+    await idp.confirm(EMAIL, TEST_EMAIL_CODE);
+    const pw = await signIn.signIn(EMAIL, PASSWORD, ctx(SIGN_IN_IP));
+    if (!pw.ok) throw new Error(`password step refused: ${pw.messageKey}`);
+    const done = await signIn.verifySetup(TEST_AUTHENTICATOR_CODE, ctx({ ...SIGN_IN_IP, preAuthId: pw.data.preAuthId }));
+    if (!done.ok || !('sessionId' in done.data)) throw new Error('setup refused');
+    // Consent at the current versions, so the money guard lets the post through.
+    await createGuardConsent(container, done.data.sub);
+    request.jar.set(SESSION_COOKIE, done.data.sessionId);
+    request.headers = new Headers({ origin: ORIGIN, 'x-forwarded-for': '198.51.100.7' });
+    const row = await container.sessionStore.get(sessionIdHash(done.data.sessionId));
+    if (!row) throw new Error('no session row');
+    return {
+      container,
+      idp,
+      sub: done.data.sub,
+      sessionId: done.data.sessionId,
+      refreshToken: row.refreshToken,
+      logger: container.logger as MemoryLogger,
+    };
+  }
+
+  async function createGuardConsent(container: Container, sub: string) {
+    await container.accountStore.putConsent(sub, {
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+      lang: 'en',
+      acceptedAt: Date.now(),
+    });
+  }
+
+  const redirectTo = (path: string) => ({ digest: expect.stringContaining(`;${path};`) });
+
+  it('T-WAUTH-15: the post deletes the session row, revokes the refresh token, clears __Host-sid and opens /sign-in', async () => {
+    const s = await signedInShared();
+    await expect(signOutAction(new FormData())).rejects.toMatchObject(redirectTo('/sign-in'));
+    expect(await s.container.sessionStore.get(sessionIdHash(s.sessionId))).toBeUndefined();
+    expect(await s.idp.refresh(s.sub, s.refreshToken)).toEqual({ ok: false, reason: 'revoked' });
+    expect(request.sets).toEqual([{ name: SESSION_COOKIE, value: '', maxAge: 0 }]);
+    expect(s.logger.events.filter((e) => e.name === 'signout')).toEqual([
+      { name: 'signout', outcome: 'ok', sub: s.sub, requestId: expect.any(String) },
+    ]);
+  });
+
+  it('T-WAUTH-15: a post with no Origin or another origin ends nothing and clears nothing (D-115)', async () => {
+    const s = await signedInShared();
+    for (const h of [{}, { origin: 'null' }, { origin: 'https://evil.example.test' }] as Record<string, string>[]) {
+      request.headers = new Headers(h);
+      await expect(signOutAction(new FormData())).resolves.toBeUndefined();
+    }
+    expect(await s.container.sessionStore.get(sessionIdHash(s.sessionId))).toBeDefined();
+    expect((await s.idp.refresh(s.sub, s.refreshToken)).ok).toBe(true);
+    expect(request.sets).toEqual([]);
+  });
+
+  it('T-WAUTH-15: a session that already ended still clears __Host-sid and opens sign-in with the idle note', async () => {
+    const s = await signedInShared();
+    await s.container.sessionStore.delete(sessionIdHash(s.sessionId));
+    await expect(signOutAction(new FormData())).rejects.toMatchObject(redirectTo('/sign-in?reason=idle'));
+    expect(request.sets).toEqual([{ name: SESSION_COOKIE, value: '', maxAge: 0 }]);
+  });
+
+  it('T-WAUTH-15: an account being deleted can still sign out (allowDeleting, D-104)', async () => {
+    const s = await signedInShared();
+    await s.container.accountStore.markDeleting(s.sub, Date.now());
+    await expect(signOutAction(new FormData())).rejects.toMatchObject(redirectTo('/sign-in'));
+    expect(await s.container.sessionStore.get(sessionIdHash(s.sessionId))).toBeUndefined();
+    expect(await s.idp.refresh(s.sub, s.refreshToken)).toEqual({ ok: false, reason: 'revoked' });
   });
 });
