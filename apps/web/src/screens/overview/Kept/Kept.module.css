@@ -1,0 +1,116 @@
+/* The colour field (D-21): one solid block, the answer left and Earned and Spent right; stacked under 720px. Field
+   tokens only; the red is only for the bad figure (AC-11). */
+.field {
+  --fbg: var(--field-good);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 16rem);
+  gap: var(--s6);
+  padding: var(--s6);
+  border-radius: var(--r-l);
+  background: var(--fbg);
+  color: var(--field-ink);
+}
+
+.field[data-field='bad'] {
+  --fbg: var(--field-bad);
+}
+
+.field[data-field='none'] {
+  --fbg: var(--field-none);
+}
+
+.answer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  min-width: 0;
+}
+
+.headline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin: 0;
+}
+
+.label {
+  font-size: var(--t-xs);
+  font-weight: var(--w-head);
+  text-transform: uppercase;
+  letter-spacing: var(--track-caps);
+  color: var(--field-soft);
+}
+
+.figure {
+  font-size: var(--t-display);
+  font-weight: var(--w-display);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--field-ink);
+}
+
+.figure[data-tone='bad'] {
+  color: var(--field-red);
+}
+
+.say {
+  max-width: 48ch;
+  margin: 0;
+  color: var(--field-soft);
+}
+
+.say strong {
+  font-weight: var(--w-head);
+  color: var(--field-ink);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--t-s);
+  color: var(--field-soft);
+}
+
+.figures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+  margin: 0;
+  padding-left: var(--s5);
+  border-left: 1px solid var(--field-line);
+}
+
+.figureRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+
+.amount {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  margin: 0;
+  font-size: var(--t-xl);
+  font-weight: var(--w-head);
+  font-variant-numeric: tabular-nums;
+}
+
+.second {
+  font-size: var(--t-xs);
+  font-weight: var(--w-text);
+  color: var(--field-soft);
+}
+
+@media (max-width: 720px) {
+  .field {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--s5);
+  }
+
+  .figures {
+    padding-left: 0;
+    padding-top: var(--s4);
+    border-left: 0;
+    border-top: 1px solid var(--field-line);
+  }
+}

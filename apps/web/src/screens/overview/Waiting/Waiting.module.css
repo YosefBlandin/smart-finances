@@ -1,0 +1,46 @@
+/* The waiting line: a plain list, each item one line with an amber icon, separated by hairlines (D-21). */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--s3);
+  align-items: center;
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.item:last-child {
+  border-bottom: 0;
+}
+
+.icon {
+  display: inline-flex;
+  color: var(--warn);
+}
+
+.text {
+  min-width: 0;
+}
+
+/* A small link shaped like the secondary button, at least the click target (D-22). */
+.go {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+  padding: 0 var(--s3);
+  border: 1px solid var(--control);
+  border-radius: var(--r-s);
+  color: var(--ink);
+  font-size: var(--t-s);
+  font-weight: var(--w-em);
+  text-decoration: none;
+}
+
+.go:hover {
+  background: var(--sunken);
+}

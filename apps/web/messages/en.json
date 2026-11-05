@@ -93,7 +93,11 @@
     "missingTitle": "{m} has no dollar rate.",
     "missingBody": "Its peso spending is left out of every dollar figure until you add one.",
     "addRate": "Add the rate",
-    "noName": "No name"
+    "noName": "No name",
+    "spentIncl": "includes {u} in dollars",
+    "sectionFailed": "This part of the overview didn’t load.",
+    "placesCount": "{n, plural, one {# purchase} other {# purchases}}",
+    "placesNone": "No peso spending at any place this month."
   },
   "transactions": {
     "sub": "Every row from every source, with your review choices applied. Text from files is shown exactly as it arrived.",
@@ -282,7 +286,11 @@
     "transfers": "Transfers",
     "transport": "Transport",
     "travel": "Travel",
-    "uncategorized": "Uncategorized"
+    "uncategorized": "Uncategorized",
+    "partner": "Partner",
+    "gifts": "Gifts",
+    "debt_payments": "Debt payments",
+    "cash": "Cash"
   },
   "txKinds": {
     "expense": "expense",

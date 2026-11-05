@@ -187,21 +187,37 @@ export const TEST_PERSON = {
   email: 'you@example.com',
 } as const;
 
+/**
+ * STAGE=test only: more people like TEST_PERSON, one per browser test that reads money data, because each person may
+ * make 5 data reads a minute under STAGE=test (domain/limits.ts) and one overview first view alone makes 5 (SF-164).
+ * Each has its own sub, session and token over the same fixtures; e2ePerson(name).sessionId is the cookie value:
+ * e2e-<name>-not-secret- padded with zeros to the 43 characters of a session id. A browser test adds its name here and
+ * uses that person only.
+ */
+export const E2E_PEOPLE = ['overview-good', 'overview-bad', 'overview-failed', 'overview-retry'] as const;
+
+export function e2ePerson(name: (typeof E2E_PEOPLE)[number]) {
+  return { sessionId: `e2e-${name}-not-secret-`.padEnd(43, '0'), sub: `e2e-person-${name}`, email: `${name}@example.com` } as const;
+}
+
 function seedTestPerson(c: Container) {
-  const now = c.clock.now();
-  const part = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
-  const token = (claims: object) => `${part({ alg: 'none' })}.${part(claims)}.test`;
-  const { sub, email } = TEST_PERSON;
-  const accessToken = token({ sub, exp: Math.floor((now + SESSION_ABSOLUTE_MS) / 1000), token_use: 'access' });
   // The money screens read the fixtures (sample plus hostile rows) through a memory data API that counts the person's
   // requests like the real one (5 a minute under STAGE=test), so the 429 page can be reached (SF-161, SF-172).
   const dataApi = new MemoryDataApi(c.clock, { limits: c, logger: c.logger });
   dataApi.seed(fixtureSeed());
-  dataApi.allowToken(accessToken);
   c.dataApi = dataApi;
+  for (const person of [TEST_PERSON, ...E2E_PEOPLE.map(e2ePerson)]) seedPerson(c, dataApi, person);
+}
+
+function seedPerson(c: Container, dataApi: MemoryDataApi, { sessionId, sub, email }: { sessionId: string; sub: string; email: string }) {
+  const now = c.clock.now();
+  const part = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
+  const token = (claims: object) => `${part({ alg: 'none' })}.${part(claims)}.test`;
+  const accessToken = token({ sub, exp: Math.floor((now + SESSION_ABSOLUTE_MS) / 1000), token_use: 'access' });
+  dataApi.allowToken(accessToken);
   // The memory stores apply these at once (their methods do not await), so the person exists before the first request.
   void c.sessionStore.create({
-    idHash: createHash('sha256').update(TEST_PERSON.sessionId).digest('hex'),
+    idHash: createHash('sha256').update(sessionId).digest('hex'),
     sub,
     accessToken,
     idToken: token({ sub, email, token_use: 'id' }),

@@ -93,7 +93,11 @@
     "missingTitle": "{m} no tiene cotización.",
     "missingBody": "Su gasto en pesos queda fuera de todas las cifras en dólares hasta que agregues una.",
     "addRate": "Agregar cotización",
-    "noName": "Sin nombre"
+    "noName": "Sin nombre",
+    "spentIncl": "incluye {u} en dólares",
+    "sectionFailed": "Esta parte del resumen no cargó.",
+    "placesCount": "{n, plural, one {# compra} other {# compras}}",
+    "placesNone": "Este mes no hay gastos en pesos en ningún lugar."
   },
   "transactions": {
     "sub": "Cada movimiento de cada fuente, con tus revisiones aplicadas. El texto de los archivos se muestra tal como llegó.",
@@ -282,7 +286,11 @@
     "transfers": "Transferencias",
     "transport": "Transporte",
     "travel": "Viajes",
-    "uncategorized": "Sin categoría"
+    "uncategorized": "Sin categoría",
+    "partner": "Pareja",
+    "gifts": "Regalos",
+    "debt_payments": "Pagos de deudas",
+    "cash": "Efectivo"
   },
   "txKinds": {
     "expense": "gasto",
