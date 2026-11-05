@@ -175,9 +175,9 @@ export function createContainer(): Container {
 }
 
 /**
- * STAGE=test only: one signed-in person with the current consent in the shared container, so the browser tests of the
- * money screens (e2e/shell, states and headers) open them with this __Host-sid instead of walking sign-up, the code and
- * consent each time. Synthetic: a fixed id that is no secret, a made-up sub, unsigned test tokens (the access token's exp
+ * STAGE=test only: one signed-in person with the current consent in the shared container, so a browser test of a money
+ * screen that reads no data (e2e/states) opens it with this __Host-sid instead of walking sign-up, the code and consent
+ * each time; a test that reads data uses its own person (E2E_PEOPLE). Synthetic: a fixed id that is no secret, a made-up sub, unsigned test tokens (the access token's exp
  * is 12 hours out, so no refresh is attempted). It lives only in the memory stores of a STAGE=test server; real stages
  * never build a memory container.
  */
@@ -194,7 +194,27 @@ export const TEST_PERSON = {
  * e2e-<name>-not-secret- padded with zeros to the 43 characters of a session id. A browser test adds its name here and
  * uses that person only.
  */
-export const E2E_PEOPLE = ['overview-good', 'overview-bad', 'overview-failed', 'overview-retry', 'transactions-paging', 'transactions-sort'] as const;
+export const E2E_PEOPLE = [
+  'overview-good',
+  'overview-bad',
+  'overview-failed',
+  'overview-retry',
+  'transactions-paging',
+  'transactions-sort',
+  // e2e/shell.spec.ts and e2e/headers.spec.ts (PR 1's specs, given a person each under D-157).
+  'shell-rail',
+  'shell-account',
+  'shell-scroll',
+  'shell-focus',
+  'shell-screens',
+  'shell-screens-overview',
+  'shell-topbar',
+  'shell-menu',
+  'shell-lang',
+  'shell-lang-refused',
+  'shell-lang-tablet',
+  'headers-scripts',
+] as const;
 
 export function e2ePerson(name: (typeof E2E_PEOPLE)[number]) {
   return { sessionId: `e2e-${name}-not-secret-`.padEnd(43, '0'), sub: `e2e-person-${name}`, email: `${name}@example.com` } as const;

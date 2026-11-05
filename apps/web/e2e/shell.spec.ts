@@ -1,25 +1,39 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 
 // The shell: rail on desktop (D-35 to D-42), top bar with a menu panel under 960px (D-24, D-43, D-44), the language row
 // (D-37, AC-4) and focus on the main heading after navigation (AC-10). The money layout checks the session and consent
-// (D-108, SF-150), so the tests use the STAGE=test person's __Host-sid (TEST_PERSON in src/adapters/container.ts: a live
-// session with the current consent in the test server's memory stores).
+// (D-108, SF-150), so each test opens the screens with the __Host-sid of its own STAGE=test person (E2E_PEOPLE in
+// src/adapters/container.ts: a live session with the current consent in the test server's memory stores). Own people,
+// because a person may make 5 data reads a minute under STAGE=test and one overview first view makes 5 (SF-164, D-157).
 
 const ORIGIN = 'http://localhost:3000';
 
-test.beforeEach(async ({ context }) => {
+type Person =
+  | 'shell-rail'
+  | 'shell-account'
+  | 'shell-scroll'
+  | 'shell-focus'
+  | 'shell-screens'
+  | 'shell-screens-overview'
+  | 'shell-topbar'
+  | 'shell-menu'
+  | 'shell-lang'
+  | 'shell-lang-refused'
+  | 'shell-lang-tablet';
+
+async function signInAs(context: BrowserContext, person: Person) {
   // Chrome counts localhost as secure, so a Secure cookie set for the https form of the address is sent over http too.
   await context.addCookies([
     {
       name: '__Host-sid',
-      value: 'e2e-test-person-session-not-a-secret-000000',
+      value: `e2e-${person}-not-secret-`.padEnd(43, '0'),
       url: 'https://localhost:3000/',
       secure: true,
       httpOnly: true,
       sameSite: 'Lax',
     },
   ]);
-});
+}
 
 // Every Content-Security-Policy violation the page logs or throws (style-src has no 'unsafe-inline', SF-107).
 function watchPolicy(page: Page): string[] {
@@ -41,7 +55,9 @@ test.describe('desktop rail', () => {
 
   test('T-WEB-10: the rail lists Money and Account, marks the current screen with a 2px ink line, and has no Ask or Prototype group', async ({
     page,
+    context,
   }) => {
+    await signInAs(context, 'shell-rail');
     const violations = watchPolicy(page);
     await page.goto('/overview');
     const nav = rail(page);
@@ -101,12 +117,13 @@ test.describe('desktop rail', () => {
     expect(violations).toEqual([]);
   });
 
-  test('T-WEB-10: the account area names who is signed in, then the language row and Sign out as plain rows', async ({ page }) => {
+  test('T-WEB-10: the account area names who is signed in, then the language row and Sign out as plain rows', async ({ page, context }) => {
+    await signInAs(context, 'shell-account');
     const violations = watchPolicy(page);
     await page.goto('/overview');
     const account = page.locator('[data-account]').first();
     await expect(account).toBeVisible();
-    await expect(account).toContainText('you@example.com');
+    await expect(account).toContainText('shell-account@example.com');
     await expect(account).toContainText('Authenticator on');
     const lang = account.getByRole('button', { name: 'Español' });
     await expect(lang).toHaveAttribute('lang', 'es');
@@ -122,7 +139,8 @@ test.describe('desktop rail', () => {
     expect(violations).toEqual([]);
   });
 
-  test('T-WEB-10: the rail and its account area stay in view while the page scrolls', async ({ page }) => {
+  test('T-WEB-10: the rail and its account area stay in view while the page scrolls', async ({ page, context }) => {
+    await signInAs(context, 'shell-scroll');
     await page.goto('/transactions');
     // A tall page, built through the DOM (the policy allows CSSOM styles, not style attributes).
     await page.evaluate(() => {
@@ -137,16 +155,19 @@ test.describe('desktop rail', () => {
     await expect(rail(page).getByRole('link', { name: 'Overview' })).toBeInViewport({ ratio: 1 });
   });
 
-  test('T-WEB-10: after a navigation focus moves to the main heading and the mark follows', async ({ page }) => {
+  test('T-WEB-10: after a navigation focus moves to the main heading and the mark follows', async ({ page, context }) => {
+    await signInAs(context, 'shell-focus');
     const violations = watchPolicy(page);
-    await page.goto('/overview');
+    // Starts on Imports, which reads no data yet: the overview's 5 reads plus the transactions read would pass the
+    // STAGE=test person's 5 a minute (D-157).
+    await page.goto('/imports');
     await rail(page).getByRole('link', { name: 'Transactions' }).click();
     await expect(page).toHaveURL(/\/transactions$/);
     const h1 = page.getByRole('heading', { level: 1 });
     await expect(h1).toHaveText('Transactions');
     await expect(h1).toBeFocused();
     await expect(rail(page).getByRole('link', { name: 'Transactions' })).toHaveAttribute('aria-current', 'page');
-    await expect(rail(page).getByRole('link', { name: 'Overview' })).not.toHaveAttribute('aria-current');
+    await expect(rail(page).getByRole('link', { name: 'Imports' })).not.toHaveAttribute('aria-current');
 
     // Keyboard only (AC-10): Enter on a focused rail link.
     await rail(page).getByRole('link', { name: 'Dollar rates' }).focus();
@@ -157,7 +178,7 @@ test.describe('desktop rail', () => {
     expect(violations).toEqual([]);
   });
 
-  test('T-WEB-10: every money screen renders in the shell with one h1 and no policy violation', async ({ page }) => {
+  test('T-WEB-10: every money screen renders in the shell with one h1 and no policy violation', async ({ page, context }) => {
     const violations = watchPolicy(page);
     const titles: Record<string, string> = {
       overview: 'Overview',
@@ -168,6 +189,9 @@ test.describe('desktop rail', () => {
       data: 'Your data',
     };
     for (const [path, title] of Object.entries(titles)) {
+      // The overview's first view makes all 5 of a STAGE=test person's data reads a minute, so it has a person of its own.
+      if (path === 'overview') await signInAs(context, 'shell-screens-overview');
+      else await signInAs(context, 'shell-screens');
       await page.goto(`/${path}`);
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(title);
       await expect(page.getByRole('main')).toHaveCount(1);
@@ -180,7 +204,8 @@ test.describe('desktop rail', () => {
 test.describe('top bar under 960px', () => {
   test.use({ viewport: { width: 900, height: 800 } });
 
-  test('T-WEB-10: the rail folds into a bar with the brand and a 44px menu button naming the screen', async ({ page }) => {
+  test('T-WEB-10: the rail folds into a bar with the brand and a 44px menu button naming the screen', async ({ page, context }) => {
+    await signInAs(context, 'shell-topbar');
     const violations = watchPolicy(page);
     await page.goto('/imports');
     await expect(rail(page)).toBeHidden();
@@ -197,7 +222,8 @@ test.describe('top bar under 960px', () => {
     expect(violations).toEqual([]);
   });
 
-  test('T-WEB-10: the menu opens as a panel under the bar without moving the page, and a chosen link closes it', async ({ page }) => {
+  test('T-WEB-10: the menu opens as a panel under the bar without moving the page, and a chosen link closes it', async ({ page, context }) => {
+    await signInAs(context, 'shell-menu');
     const violations = watchPolicy(page);
     await page.goto('/overview');
     const button = page.getByRole('button', { name: /Overview/ });
@@ -215,7 +241,7 @@ test.describe('top bar under 960px', () => {
     // The same links and account rows as the rail.
     await expect(panel.getByRole('link')).toHaveText([...MONEY, 'Your data']);
     await expect(panel.getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page');
-    await expect(panel).toContainText('you@example.com');
+    await expect(panel).toContainText('shell-menu@example.com');
     await expect(panel.getByRole('button', { name: 'Español' })).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Sign out' })).toBeVisible();
 
@@ -240,6 +266,7 @@ test.describe('language', () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
   test('T-WEB-11: switching language keeps the address and sets html lang', async ({ page, context }) => {
+    await signInAs(context, 'shell-lang');
     const violations = watchPolicy(page);
     await page.goto('/transactions?month=2026-05&view=usd');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
@@ -266,7 +293,8 @@ test.describe('language', () => {
     expect(violations).toEqual([]);
   });
 
-  test('T-WEB-11: a refused or failed language switch says so and keeps the page as it was', async ({ page }) => {
+  test('T-WEB-11: a refused or failed language switch says so and keeps the page as it was', async ({ page, context }) => {
+    await signInAs(context, 'shell-lang-refused');
     await page.goto('/transactions?month=2026-05');
     await page.route('**/api/lang', (route) => route.fulfill({ status: 403, contentType: 'application/json', body: '{}' }));
     await page.locator('[data-account]').first().getByRole('button', { name: 'Español' }).click();
@@ -281,7 +309,8 @@ test.describe('language', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   });
 
-  test('T-WEB-11: the menu panel switches language too, on a tablet', async ({ page }) => {
+  test('T-WEB-11: the menu panel switches language too, on a tablet', async ({ page, context }) => {
+    await signInAs(context, 'shell-lang-tablet');
     await page.setViewportSize({ width: 800, height: 900 });
     await page.goto('/rates');
     await page.getByRole('button', { name: /Dollar rates/ }).click();
