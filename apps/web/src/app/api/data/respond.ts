@@ -1,3 +1,4 @@
+import { ERROR_CODES } from '@smart-finances/contracts/routes';
 import { redirect } from 'next/navigation';
 import { getContainer } from '@/adapters/container';
 import { createDataReads, type DataReads } from '@/application/data/reads';
@@ -8,7 +9,7 @@ import { requireMoneyAccess } from '../../guarded';
 // Shared by the JSON read routes /api/data/* (D-127; architecture.md "Data access (web server)"). Each route checks the
 // session, the current consent and an active account (requireMoneyAccess, D-168), runs one read use case for that
 // session, and answers its data as JSON, or { error: { code } } with a status the browser hooks act on: 401 signed out,
-// 403 no consent or account being deleted, 404 not found, 409 conflict, 429 past the person limit with Retry-After
+// 403 no consent or account being deleted, 404 not found, 409 conflict (a code the contracts list for 409, else conflict), 429 past the person limit with Retry-After
 // (AC-17), 400 an input the contracts refuse, 502 a data API failure (retry), 503 an unexpected one. Never cached.
 
 export const NO_STORE = { 'Cache-Control': 'private, no-store' };
@@ -19,6 +20,11 @@ export function errorResponse(status: number, code: string, retryAfter?: number)
   return Response.json({ error: { code } }, { status, headers });
 }
 
+/** The 409 codes the contracts list (conflict, source_file_only); the API's code is answered only when it is one. */
+const CONFLICT_CODES: readonly string[] = Object.entries(ERROR_CODES)
+  .filter(([, status]) => status === 409)
+  .map(([code]) => code);
+
 function failure(f: DataApiFailure): Response {
   switch (f.kind) {
     case 'unauthorized':
@@ -26,7 +32,7 @@ function failure(f: DataApiFailure): Response {
     case 'not_found':
       return errorResponse(404, 'not_found');
     case 'conflict':
-      return errorResponse(409, f.code ?? 'conflict');
+      return errorResponse(409, f.code !== undefined && CONFLICT_CODES.includes(f.code) ? f.code : 'conflict');
     case 'limited':
       return errorResponse(429, 'limited', f.retryAfter ?? 60);
     default:

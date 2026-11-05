@@ -17,8 +17,9 @@ import {
 
 // The data hooks (D-127, D-130): TanStack Query over the same-origin JSON routes /api/data/*, which add the person's
 // token on the server, so the browser never holds one. Transactions page by the API's cursor (an infinite query); an
-// import is polled until it reaches a final status. A refused answer becomes a DataError with its status and code, and
-// only a failure worth repeating (502, 503, a network error) is retried.
+// import is polled, backing off, until it is final or stalled, for under 10 minutes. A refused answer becomes a
+// DataError with its status and code, and only a failure worth repeating (502, 503, a network error) is retried, after
+// the server's Retry-After when it gave one.
 
 /** An answer other than 200 from /api/data/*: 401 signed out, 403 consent, 404, 409, 429 limited (retryAfter), 5xx. */
 export class DataError extends Error {
@@ -53,11 +54,21 @@ export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T>
   throw new DataError(res.status, code, Number.isFinite(wait) && wait > 0 ? wait : undefined);
 }
 
-/** Retry twice, only for failures a retry can fix. */
+/** The longest server wait (Retry-After, seconds) a retry sits out; a longer one is not retried. */
+export const MAX_RETRY_WAIT_S = 30;
+
+/** Retry twice, only for failures a retry can fix, and not when the server asks for a wait past MAX_RETRY_WAIT_S. */
 export function retryable(failureCount: number, error: unknown): boolean {
   if (failureCount >= 2) return false;
   if (!(error instanceof DataError)) return true;
+  if (error.retryAfter !== undefined && error.retryAfter > MAX_RETRY_WAIT_S) return false;
   return error.status === 0 || error.status >= 500;
+}
+
+/** The wait before a retry: the server's Retry-After when it gave one (a throttled reply), else 1 s doubling; at most 30 s. */
+export function retryDelay(failureCount: number, error: unknown): number {
+  if (error instanceof DataError && error.retryAfter !== undefined) return Math.min(error.retryAfter, MAX_RETRY_WAIT_S) * 1_000;
+  return Math.min(1_000 * 2 ** failureCount, MAX_RETRY_WAIT_S * 1_000);
 }
 
 /** A path with its search values; empty values are left out. */
@@ -91,6 +102,7 @@ export function useTransactions(filters: TransactionFilters) {
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.cursor,
     retry: retryable,
+    retryDelay,
   });
 }
 
@@ -99,34 +111,70 @@ export function useTotals(range: TotalsRange) {
     queryKey: dataKeys.totals(range),
     queryFn: ({ signal }) => getJson<TotalsReply>(dataPath('/api/data/totals', { from: range.from, to: range.to, view: range.view }), signal),
     retry: retryable,
+    retryDelay,
   });
 }
 
 export function useRates() {
-  return useQuery({ queryKey: dataKeys.rates(), queryFn: ({ signal }) => getJson<RatesReply>('/api/data/rates', signal), retry: retryable });
+  return useQuery({
+    queryKey: dataKeys.rates(),
+    queryFn: ({ signal }) => getJson<RatesReply>('/api/data/rates', signal),
+    retry: retryable,
+    retryDelay,
+  });
 }
 
 export function useReview() {
-  return useQuery({ queryKey: dataKeys.review(), queryFn: ({ signal }) => getJson<ReviewReply>('/api/data/review', signal), retry: retryable });
+  return useQuery({
+    queryKey: dataKeys.review(),
+    queryFn: ({ signal }) => getJson<ReviewReply>('/api/data/review', signal),
+    retry: retryable,
+    retryDelay,
+  });
 }
 
 export function useImports() {
-  return useQuery({ queryKey: dataKeys.imports(), queryFn: ({ signal }) => getJson<ImportsPage>('/api/data/imports', signal), retry: retryable });
+  return useQuery({
+    queryKey: dataKeys.imports(),
+    queryFn: ({ signal }) => getJson<ImportsPage>('/api/data/imports', signal),
+    retry: retryable,
+    retryDelay,
+  });
 }
 
-/** Every intervalMs while the import is not final (3 seconds by default); no polling once it is, or while id is empty. */
-export function useImport(id: string | undefined, { intervalMs = 3_000 }: { intervalMs?: number } = {}) {
+/** How an import is polled: every 3 s, doubling to 30 s, for at most 23 reads (under 10 minutes). */
+export const IMPORT_POLL = { intervalMs: 3_000, maxIntervalMs: 30_000, maxPolls: 23 } as const;
+type ImportPoll = { intervalMs?: number; maxIntervalMs?: number; maxPolls?: number };
+
+/** Statuses after which polling stops: the final ones, and stalled, which waits for a repair rather than for time. */
+const SETTLED_IMPORT_STATUSES: readonly string[] = [...FINAL_IMPORT_STATUSES, 'stalled'];
+
+/** The wait after the reads-th read of an import (1-based), or false once maxPolls reads were made. */
+export function importPollDelay(reads: number, poll: ImportPoll = {}): number | false {
+  const { intervalMs, maxIntervalMs, maxPolls } = { ...IMPORT_POLL, ...poll };
+  if (reads >= maxPolls) return false;
+  return Math.min(intervalMs * 2 ** Math.max(reads - 1, 0), maxIntervalMs);
+}
+
+/**
+ * One import, polled while it is not settled (importPollDelay: 3 s doubling to 30 s, at most 23 reads), so an idle
+ * Imports screen stays well inside the person's data reads a minute. No polling once it is final or stalled, after a
+ * refusal (not found, signed out, limited), or while id is empty.
+ */
+export function useImport(id: string | undefined, poll: ImportPoll = {}) {
   return useQuery({
     queryKey: dataKeys.import(id ?? ''),
     queryFn: ({ signal }) => getJson<ImportRecord>(`/api/data/imports/${encodeURIComponent(id ?? '')}`, signal),
     enabled: Boolean(id),
     refetchInterval: (query) => {
-      // A refusal (not found, signed out, limited) ends the polling; a failure worth retrying keeps it.
+      // A refusal ends the polling; a failure worth retrying keeps it, within the same cap.
       const error = query.state.error;
       if (error && !retryable(0, error)) return false;
       const status = query.state.data?.status;
-      return status !== undefined && FINAL_IMPORT_STATUSES.includes(status) ? false : intervalMs;
+      if (status !== undefined && SETTLED_IMPORT_STATUSES.includes(status)) return false;
+      return importPollDelay(query.state.dataUpdateCount + query.state.errorUpdateCount, poll);
     },
     retry: retryable,
+    retryDelay,
   });
 }
