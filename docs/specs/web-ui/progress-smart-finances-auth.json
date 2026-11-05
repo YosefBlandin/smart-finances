@@ -177,7 +177,7 @@
     },
     {
       "id": "SF-148",
-      "status": "blocked",
+      "status": "done",
       "commit": "30a3999",
       "evidence": [
         "Tests first: apps/web/src/application/auth/signUp.test.ts (13 tests: T-WAUTH-9 x3, T-WAUTH-10 x7, T-WAUTH-8 logging half x3, owner decision on the SF-146 deviation). First run before any code: \"Error: Cannot find package '@/legal/versions' imported from .../src/application/auth/signUp.test.ts\" (Tests: no tests). With legal/versions.ts and stub signUp.ts/confirm.ts answering { ok: false, messageKey: 'stub' }: \"Tests 13 failed (13)\"; reasons \"AssertionError: expected false to be true\" (sign-up refused), \"Error: sign-up refused\", \"expected { ok: false, messageKey: 'stub' } to deeply equal { ok: false, …(1) }\" (errAccept, errWeak) and \"expected [] to deeply equal [ 'signup' ]\" (no security event), the expected reasons.",
@@ -189,13 +189,14 @@
         "Profile verify: apps/web npx tsc --noEmit exit 0",
         "Profile verify: npm run build --workspace @smart-finances/web exit 0 (routes /sign-up and /sign-up/confirm built as dynamic)",
         "No new dependency. No AWS call: the use cases are tested only over the memory adapters (memoryContainer with a MemoryClock).",
-        "Conformance (2026-11-04, round 2): blocked awaiting the fresh-context task review. Judgment: high and Done when needs 'the reviewer has no blocker', but no reviewer ran (review is empty) and this conformance executor has no subagent tool to run one. Verify evidence above is unchanged; set done once the review records pass, or fix its findings."
+        "Conformance (2026-11-04, round 2): blocked awaiting the fresh-context task review. Judgment: high and Done when needs 'the reviewer has no blocker', but no reviewer ran (review is empty) and this conformance executor has no subagent tool to run one. Verify evidence above is unchanged; set done once the review records pass, or fix its findings.",
+        "The workflow's fresh-context task reviewer ran with no blocker or major (see review); status restored to done on 2026-11-05."
       ],
-      "review": ""
+      "review": "findings (workflow task reviewer, fresh context, different model; 0 blocker, 0 major; minors: The reply to a new sign-up can differ from the reply to a confirmed one. The use case maps Cognito's bad_password and refused outcomes to vi | confirm treats every non-ok answer from the identity provider as a wrong code. This includes 'failed', which the Cognito adapter returns for | Fail-first evidence is only partly a behavioral failure. The first run was a module-not-found import error with 'no tests', which is not a t | TERMS_VERSION and PRIVACY_VERSION are now defined twice, in src/legal/versions.ts (SF-148) and src/app/privacy/_legal/versions.ts (SF-152).  | SF-148's own review field in the progress file is empty and the task is marked done. The brief says Judgment: high tasks need a fresh-contex)"
     },
     {
       "id": "SF-149",
-      "status": "blocked",
+      "status": "done",
       "commit": "920079e",
       "evidence": [
         "Tests first: apps/web/src/application/auth/signIn.test.ts (17 tests: T-WAUTH-11 x10, T-WAUTH-12 x7). With qrcode 1.5.4 installed and a stub signIn.ts (createSignIn answering { ok: false, messageKey: 'stub' }, empty issuerFor/otpauthUri/safeNext, MAX_CODE_ATTEMPTS 0): \"Test Files 1 failed (1) Tests 17 failed (17)\"; reasons \"AssertionError: expected false to be true\" (password step refused), \"Error: password step refused: stub\", \"expected '' to be 'Cuenta'\" (issuer), \"expected { ok: false, messageKey: 'stub' } to deeply equal { ok: false, …(1) }\" (errWrong, limited) and \"expected false to be '/sign-up/confirm'\" (unconfirmed), the expected reasons.",
@@ -208,13 +209,14 @@
         "Profile verify: apps/web npx tsc --noEmit exit 0",
         "Profile verify: npm run build --workspace @smart-finances/web exit 0 (/sign-in, /sign-in/code and /sign-in/setup built as dynamic)",
         "New dependency: qrcode 1.5.4 (brief Values; newest published on or before 2026-10-21, published 2024-08-05) pinned exact in apps/web/package.json; package-lock libc fields restored after npm install. No AWS call: the use case is tested only over the memory adapters.",
-        "Conformance (2026-11-04, round 2): blocked awaiting the fresh-context task review. Judgment: high and Done when needs 'the reviewer has no blocker', but no reviewer ran (review is empty) and this conformance executor has no subagent tool to run one. Verify evidence above is unchanged; set done once the review records pass, or fix its findings."
+        "Conformance (2026-11-04, round 2): blocked awaiting the fresh-context task review. Judgment: high and Done when needs 'the reviewer has no blocker', but no reviewer ran (review is empty) and this conformance executor has no subagent tool to run one. Verify evidence above is unchanged; set done once the review records pass, or fix its findings.",
+        "The workflow's fresh-context task reviewer ran with no blocker or major (see review); status restored to done on 2026-11-05."
       ],
-      "review": ""
+      "review": "findings (workflow task reviewer, fresh context, different model; 0 blocker, 0 major; minors: The sign-in failures limit (Contracts \"Limits\": \"sign-in or reset failures per email and address prefix, 5 per 15-minute window\") is applied | The wrong-code counter is a non-atomic read-modify-write on the pre-auth row. `wrongCode` reads `row.attempts` from an earlier `readPreAuth` | The unit tests drive only the memory identity fake, so the first-sign-in contract was never exercised against the Cognito adapter's `associa)"
     },
     {
       "id": "SF-150",
-      "status": "blocked",
+      "status": "done",
       "commit": "613183a",
       "evidence": [
         "Tests first: apps/web/src/application/guard.test.ts (T-WAUTH-13) written before any code. First run, no adapters/dynamodb/accounts.ts or application/guard.ts: \"FAIL src/application/guard.test.ts ... Error: Cannot find package '@/adapters/dynamodb/accounts' imported from .../guard.test.ts\", \"Test Files 1 failed (1) Tests no tests\" (the expected reason: the modules do not exist). With the adapter, the guard and the consent write in signIn.ts but before guarded() kind \"money\": \"Tests 4 failed | 24 passed (28)\", the 4 money-kind tests failing with \"expected { ok: false, …(1) } to deeply equal { ok: false, …(1) }\" and \"expected { ok: true, data: null } to deeply equal { ok: false, …(1) }\" (guarded ran the action without the money check), the expected reason. The STAGE=test person test was added after (29 tests).",
@@ -224,13 +226,14 @@
         "Browser walk (not committed; a scratchpad spec against the production build under STAGE=test, CI=1, --retries=0): \"4 passed (25.2s)\": a well-formed but unknown __Host-sid on /transactions shows \"Your session ended\", whose button clears the cookie and lands on /sign-in?next=%2Ftransactions with no policy violation; sign-up, confirm 123456, sign-in, setup 000000 lands on /overview (consent from the pre-auth row) and a second browser's sign-in with the code goes to /overview too; a person who signs in from another browser (no accepted versions carried) lands on /consent (lead 'Read this, then accept to start using Cuenta.', 'Privacy notice 2026-11-01 · Terms 2026-11-01'), /transactions also goes to /consent, accepting opens /overview and /consent then redirects to /overview; declining lands on /sign-in with no __Host-sid and /overview redirects to sign-in.",
         "Profile verify: npm test (root) exit 0 on the second run: node --test 37/37, web lint clean, web vitest 34 files 432/432, infra 41/41. The first run failed one test, T-WEB-13 Prettier in src/boundaries.test.ts, on its 5000 ms timeout (5108 ms); alone it passes in about 5 s both with and without this change (git stash), so it is a timing flake under load, not a lint error (see surprises).",
         "Profile verify: npm run build --workspace @smart-finances/infra exit 0; npm run lint --workspace @smart-finances/web exit 0 (eslint 0 problems, prettier clean); cd apps/web && npx tsc --noEmit exit 0; npm run build --workspace @smart-finances/web exit 0 (new route ƒ /consent 3.15 kB).",
-        "Conformance (2026-11-04, round 2): blocked awaiting the fresh-context task review. Judgment: high and Done when needs 'the reviewer has no blocker', but no reviewer ran (review is empty) and this conformance executor has no subagent tool to run one. Verify evidence above is unchanged; set done once the review records pass, or fix its findings."
+        "Conformance (2026-11-04, round 2): blocked awaiting the fresh-context task review. Judgment: high and Done when needs 'the reviewer has no blocker', but no reviewer ran (review is empty) and this conformance executor has no subagent tool to run one. Verify evidence above is unchanged; set done once the review records pass, or fix its findings.",
+        "The workflow's fresh-context task reviewer ran with no blocker or major (see review); status restored to done on 2026-11-05."
       ],
-      "review": ""
+      "review": "findings (workflow task reviewer, fresh context, different model; 0 blocker, 0 major; minors: The per-person limit for money actions (D-120, 120 a minute) is not applied in guarded() kind \"money\", and the progress file records this as | The account store's writes are not conditional where the Do says \"with conditional updates\". putConsent is an unconditional upsert, and reco | A failed first-consent write is swallowed with no log. The person lands on /consent, which is safe. Operators get no signal that the account | Changes outside the task's Files and the allowed extras: the e2e specs shell, states and headers were edited, and adapters/container.ts gain | The account store reads an unrecognised or malformed stored status as 'active' (fail-open), while a malformed consent reads as none (fail-cl | The fail-first evidence is weak for the first run. It is a missing-module import error, not a failing assertion. The second run does show 4 )"
     },
     {
       "id": "SF-151",
-      "status": "blocked",
+      "status": "todo",
       "commit": "6cd6f54",
       "evidence": [
         "Tests first: apps/web/src/application/auth/reset.test.ts (15 tests: T-WAUTH-14 x10, T-WAUTH-8 reset logging half x2 (owner decision on the SF-146 deviation), T-WAUTH-15 x3). First run before any code: \"Error: Cannot find module './reset' imported from .../src/application/auth/reset.test.ts\" (Test Files 1 failed, no tests). With stub reset.ts/signOut.ts (every call answering { ok: false, messageKey: 'stub' }, empty constants): \"Tests 14 failed (14)\" (the 14 written then); reasons \"Error: forgot refused: stub\", \"AssertionError: expected false to be true\" (forgot replies), \"expected { ok: false, messageKey: 'stub' } to deeply equal { ok: false, messageKey: '' }\" (confirm without a row) and, for T-WAUTH-15, \"AssertionError: expected { ok: false, messageKey: 'stub' } to deeply equal { Object (ok, data) }\". The 15th test (T-WAUTH-15: an idle session's refresh token is revoked at sign-out) was added after a first implementation that read the row through readSession, which deletes an idle row without revoking; signOut now reads the stored row itself.",
@@ -266,6 +269,13 @@
       "review": ""
     },
     {
+      "id": "SF-154",
+      "status": "todo",
+      "commit": "",
+      "evidence": [],
+      "review": ""
+    },
+    {
       "id": "SF-153",
       "status": "todo",
       "commit": "",
@@ -295,48 +305,48 @@
       "task": "SF-151",
       "from": "pr-smart-finances-auth.md SF-151 Files (application/auth/{reset,signOut}.ts, app/(auth)/reset/, app/(auth)/sign-in/page.tsx, reset.test.ts) against its Do \"Sign out is a server action: delete the row, revoke the refresh token, clear __Host-sid\" and D-115 \"sign-out is a post\": the only Sign out control is the row in apps/web/src/ui/Shell.tsx (PR 1; its comment says it becomes a server action in SF-151), rendered by apps/web/src/app/(app)/layout.tsx, and neither file nor a home for the action (no (app) actions file) is in the Files. SF-153 walks sign out in the browser and has only e2e Files.",
       "proposal": "Add to SF-151's Files: apps/web/src/app/(app)/actions.ts (new: signOutAction = guarded(z.object({}), { kind: 'money', allowDeleting: true }, ...) calling createSignOut(container)(await readSessionCookie(), { requestId }), then clearSessionCookie() and redirect('/sign-in')), apps/web/src/ui/Shell.tsx (the Sign out row becomes a <form action={signOut}> with a submit button; Shell takes the action as a prop so ui/ does not import app/) and apps/web/src/app/(app)/layout.tsx (passes signOutAction). Alternatives for the owner: (b) guarded kind 'auth' instead of 'money', which needs a PowField in the shell form and a proof-of-work fetch on every money page; (c) a plain Origin-checked action outside guarded(), against D-125 'every form through guarded()'.",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "owner, in chat, 2026-11-05: SF-151 may add apps/web/src/app/(app)/actions.ts and wire Sign out in apps/web/src/ui/Shell.tsx and apps/web/src/app/(app)/layout.tsx",
+      "newDecision": "pending: the planning session records it (locked-v8)"
     },
     {
       "date": "2026-11-04",
       "task": "PR 3 (adapters/container.ts; no task owns it)",
       "from": "architecture.md Interfaces between the PRs 'PR 3: ports Settings, SecretStore, Logger, SessionStore, PreAuthStore, Counter, PowStore, BreachChecker, IdentityProvider, AccountStore with real adapters' and Components ('container.ts picks real adapters'); release.md qa checks (the HUMAN walk of sign-up, setup, sign-in, reset and sign out on qa; the compute role reading the secret and tables). No task's Do or Files wires them: createContainer() still throws 'No real adapters yet for STAGE=...' outside STAGE=test (surprises of SF-141, SF-142, SF-143, SF-144, SF-146, SF-147, SF-150, SF-152 defer it to 'a later task'). PORT_NAMES also holds PR 4's dataApi and parameterStore, which have no real adapter yet.",
       "proposal": "Owner decides who wires the real adapters and which gate tests the real path. (a) Recommended: a new PR 3 task (e.g. SF-154, After SF-151, Judgment: high, Files apps/web/src/adapters/container.ts and adapters/container.test.ts) that builds the real container for STAGE in qa|staging|prod: EnvSettings, SecretsManagerStore, JsonLogger, DynamoSessionStore/PreAuthStore, DynamoCounter, DynamoPowStore, DynamoAccountStore, PwnedPasswordsChecker and CognitoIdentityProvider, with dataApi and parameterStore as stubs that fail closed (throw, so guarded() answers auth.unavailable) until PR 4; T-WEB-14 extended with a fake-client check that every PR 3 port is a real adapter and the PR 4 ports refuse. (b) Scope the refusal to PR 4: PR 4's brief gets container.ts in a task's Files and wires all ports there; then release.md step 5 (the qa walk) and the G-merge HUMAN gate stay blocked until PR 4 merges. Until the owner decides, the qa walk (release step 5) is blocked by this gap; release.md is not edited here.",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "owner, in chat, 2026-11-05: option (a), a new PR 3 task SF-154 wires every real adapter into the container for qa, staging and prod; PR 4's DataApi and ParameterStore fail closed until PR 4",
+      "newDecision": "pending: the planning session records it (locked-v8)"
     },
     {
       "date": "2026-11-04",
       "task": "SF-142",
       "from": "architecture.md Interfaces between the PRs 'application/session.ts getSession() → { sub, email, accessToken, … } | null, createSession, refreshIfNeeded, signOutEverywhere(sub)'.",
       "proposal": "Change the Interfaces line to: application/session.ts createSessions({ sessionStore, preAuthStore, identityProvider, clock }) → { readSession(id) → { status: 'active', session } | { status: 'none' | 'idle' | 'expired' }, getSession(id) → Session | null, createSession({ sub, tokens, preAuthId?, previousSessionId? }) → { id, session }, refreshIfNeeded(session), endSession(id), signOutEverywhere(sub) → { ok, removed }, startPreAuth/readPreAuth/updatePreAuth/endPreAuth }, with app/cookies.ts readSessionCookie/setSessionCookie/clearSessionCookie supplying the id. Reason: application/ may not import next/headers (D-138 lint zones), so a no-argument getSession() cannot live there. Alternative: (b) add an app/ wrapper getSession() over the cookie and the shared container (as app/guarded.ts does for requireMoneyAccess) and keep the Interfaces line, pointing it at app/ instead of application/.",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "owner, in chat, 2026-11-05: accept the interface shapes as built",
+      "newDecision": "pending: the planning session records it (locked-v8)"
     },
     {
       "date": "2026-11-04",
       "task": "SF-143",
       "from": "architecture.md Interfaces between the PRs 'domain/limits.ts and application hit(scope, value) → { ok, retryAfterSeconds }' (value untyped).",
       "proposal": "Record the value shape per scope in the Interfaces line: hit('ip-auth', ip | undefined), hit('auth-fail', { email, ip }), hit('code-email', email), hit('person', sub) → { ok, retryAfterSeconds } (0 when ok); the event is counted even when refused, a counter or secret failure throws, and hit() logs nothing (the caller logs rate_limited with its request id). Also record that the Counter port has only incr, so failure limits count each attempt (surprise 23).",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "owner, in chat, 2026-11-05: accept the interface shapes as built",
+      "newDecision": "pending: the planning session records it (locked-v8)"
     },
     {
       "date": "2026-11-04",
       "task": "SF-149",
       "from": "architecture.md Interfaces between the PRs 'application/auth/signIn.ts signIn(email, password, { reauth? })'.",
       "proposal": "Change the line to: application/auth/signIn.ts createSignIn(deps) → { signIn(email, password, ctx), verifySetup(code, ctx), verifyCode(code, ctx), setupView(preAuthId), codeStep(preAuthId) } with ctx { requestId, ip, lang, preAuthId?, sessionId?, reauth?: { sub } }. Reason: application/ may not read cookies or headers (D-138), so the request context comes from the caller; PR 4's delete-account re-sign-in passes reauth: { sub } with the same context. Alternative: (b) an app/ wrapper signIn(email, password, { reauth? }) that fills the context from headers and cookies, keeping the Interfaces signature.",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "owner, in chat, 2026-11-05: accept the interface shapes as built",
+      "newDecision": "pending: the planning session records it (locked-v8)"
     },
     {
       "date": "2026-11-04",
       "task": "SF-150",
       "from": "architecture.md Interfaces between the PRs 'application/guard.ts requireMoneyAccess({ allowDeleting? })'.",
       "proposal": "Change the line to: app/guarded.ts requireMoneyAccess({ allowDeleting? }) (reads __Host-sid and the shared container; for the money layout and PR 4's route handlers) over application/guard.ts createGuard(deps, versions?) → { requireMoneyAccess(sessionId, { allowDeleting? }), consentView, acceptConsent, declineConsent } and recordFirstConsent(deps, sub, { versions?, lang }); the result is { ok: true, session, account } | { ok: false, reason: 'signed-out', why } | { ok: false, reason: 'consent' | 'deleting' } (surprise 62). Reason: application/ may not read cookies (D-138). The no-argument signature PR 4 imports exists, at app/guarded.ts rather than application/guard.ts.",
-      "decidedBy": "",
-      "newDecision": ""
+      "decidedBy": "owner, in chat, 2026-11-05: accept the interface shapes as built",
+      "newDecision": "pending: the planning session records it (locked-v8)"
     }
   ],
   "surprises": [
