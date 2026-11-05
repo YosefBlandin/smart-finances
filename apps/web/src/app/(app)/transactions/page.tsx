@@ -19,13 +19,14 @@ type Search = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function TransactionsPage({ searchParams }: { searchParams: Search }) {
   const t = await getTranslations();
+  // The h1 is the page's first element, with no wrapper: Next.js focuses a new page's first element after a navigation.
   const intro = (
-    <div className={styles.intro}>
+    <>
       <h1 tabIndex={-1} className={styles.heading}>
         {t('nav.transactions')}
       </h1>
       <p className={styles.sub}>{t('transactions.sub')}</p>
-    </div>
+    </>
   );
   // The money layout already checked the session; this read only hands the page the person's token.
   const access = await requireMoneyAccess();

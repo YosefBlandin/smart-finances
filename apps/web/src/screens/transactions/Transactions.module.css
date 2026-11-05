@@ -16,16 +16,10 @@
 }
 
 .sub {
-  margin: 0;
+  margin: var(--s2) 0 0;
+  padding-bottom: var(--s5);
   max-width: 64ch;
   color: var(--muted);
-}
-
-.intro {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s2);
-  padding-bottom: var(--s5);
 }
 
 .filters {
