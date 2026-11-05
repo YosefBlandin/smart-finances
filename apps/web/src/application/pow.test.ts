@@ -243,7 +243,7 @@ describe('T-WAUTH-6 GET /api/auth/pow', () => {
     const a = await answer(c);
     expect(await pow.verify(a)).toEqual({ ok: true });
     expect(await pow.verify(a)).toEqual({ ok: false, reason: 'reused' });
-  });
+  }, 30_000); // A real proof-of-work solve; under a full parallel run it can pass 5 s (conformance fix).
 
   it('T-WAUTH-6 says plainly when the challenge cannot be issued, without a stack', async () => {
     vi.stubEnv('STAGE', 'qa');
