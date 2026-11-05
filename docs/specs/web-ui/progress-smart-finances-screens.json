@@ -1,20 +1,23 @@
 {
   "spec": "web-ui",
   "repo": "smart-finances-screens",
-  "brief": "",
-  "tool": "",
-  "model": "",
+  "brief": "pr-smart-finances-screens.md@locked-v8",
+  "tool": "Claude Code desktop (owner machine); tasks by executor subagents in the web-screens worktree",
+  "model": "claude-opus-5-5 (executors), claude-sonnet reviewers",
   "baseline": {
-    "tests": "",
-    "lint": "",
-    "typecheck": ""
+    "tests": "root npm test exit 0: node --test api+contracts 37/37; web lint clean; web vitest 35 files, 462/462; infra 41/41 (at f18a9a4)",
+    "lint": "npm run lint --workspace @smart-finances/web exit 0 (eslint clean; Prettier clean)",
+    "typecheck": "npm run build --workspace @smart-finances/infra (tsc --noEmit) exit 0; apps/web npx tsc --noEmit exit 0",
+    "e2e": "35 passed at the PR 3 final HEAD (01ab830), auth, headers, public-pages, shell, states"
   },
   "tasks": [
     {
       "id": "SF-160",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "none (no code change; baseline at f18a9a4)",
+      "evidence": [
+        "npm ci exit 0; npm test exit 0 (37 + 462 + 41 pass); infra build exit 0; web tsc exit 0; web lint exit 0; drift --strict: 12 references: 2 NEW, 10 OK, exit 0."
+      ],
       "review": ""
     },
     {
