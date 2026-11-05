@@ -2,7 +2,7 @@
   "spec": "web-ui",
   "repo": "smart-finances-auth",
   "brief": "pr-smart-finances-auth.md@locked-v7",
-  "tool": "Claude Code (cloud session, workflow subagent)",
+  "tool": "Claude Code desktop (owner machine), from SF-153 on; earlier tasks: Claude Code cloud session",
   "model": "claude-opus-5-5",
   "baseline": {
     "tests": "root npm test exit 0: node --test api+contracts 37/37 pass; web lint clean; web vitest 23 files, 214/214 pass; infra 41/41 pass",
@@ -293,12 +293,15 @@
     },
     {
       "id": "SF-153",
-      "status": "in_progress",
+      "status": "done",
       "commit": "",
       "evidence": [
-        "Work in progress, committed unfinished when the owner moved the work to their machine (2026-11-05): apps/web/e2e/auth.spec.ts and apps/web/e2e/helpers/signIn.ts are drafts; they have not been run green, and no fail-first output is recorded yet."
+        "Drafts from the cloud run (3285262) finished on the owner's machine, 2026-11-05: Claude Code desktop, claude-opus-5-5.",
+        "Fail-first: the flows under test were already built (SF-148 to SF-152), so the specs passed on their first run. Mutation check instead: with the one allowed React Aria style hash removed from the policy watcher, the two walks fail: \"2 failed\", each \"/overview: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'nonce-...''\" (twice per walk). The file was restored after the run.",
+        "Verify: npm run e2e --workspace @smart-finances/web -- e2e/auth.spec.ts exit 0: \"5 passed (50.5s)\" (walk en, walk es, sign-in from the sign-up browser, 21st auth post refused en, es), production build then next start with STAGE=test (D-151).",
+        "npm run lint --workspace @smart-finances/web exit 0 (eslint 0 problems; Prettier clean); apps/web npx tsc --noEmit exit 0."
       ],
-      "review": ""
+      "review": "n/a (Judgment: normal)"
     }
   ],
   "deviations": [
@@ -456,6 +459,7 @@
     "SF-154: 'log once' goes through the Logger port as event 'adapter_unavailable' with outcome 'data_api' or 'parameter_store' and request_id 'container' (the port needs a request id and the stubs have none), once per stub, so once per process. 'adapter_unavailable' is not in architecture.md Contracts 'Security events' (the JsonLogger does not check names); the planning session may add it or prefer another name.",
     "SF-154 (D-157): T-WEB-14 'outside STAGE=test it refuses until the real adapters arrive' in apps/web/src/adapters/container.test.ts became 'outside STAGE=test it refuses an environment without the web server settings' (expects 'Web server settings missing or invalid: ...USER_POOL_ID'). The surprises of SF-141, SF-144 and SF-152 that say the container refuses outside STAGE=test until real adapters are wired no longer hold: qa now builds the real container when its settings are complete.",
     "SF-154: no fresh-context reviewer ran in this executor (no subagent tool here); review is left empty for the workflow's reviewer.",
-    "2026-11-05: the owner stopped the cloud run to continue on their own machine. SF-153 (browser tests) is in progress with draft files committed; the conformance review for the whole PR has not run yet."
+    "2026-11-05: the owner stopped the cloud run to continue on their own machine. SF-153 (browser tests) is in progress with draft files committed; the conformance review for the whole PR has not run yet.",
+    "SF-153: after a server-action redirect into the (app) pages, React Aria's pressable <style> is blocked by style-src. Cause: the root layout (apps/web/src/app/layout.tsx, PR 1) renders <meta name=\"csp-nonce\" nonce> from each request's nonce; the redirect re-renders the layout over RSC with a new request's nonce, while the document keeps the policy (and nonce) of its first load, so React Aria stamps the style with a nonce the page does not allow. A direct load shows none (SF-149 surprise). The walks allow only that style's hash (sha256-38RhXrc7EdReTKsOm23ZPOCUgniTUUcjky8QOOrQx6o=) and fail on any other violation. Fix proposal (outside SF-153's Files, owner decides): keep the first nonce on the client, e.g. a small client component that renders the meta from useState(initial nonce), so later RSC renders do not change it."
   ]
 }
