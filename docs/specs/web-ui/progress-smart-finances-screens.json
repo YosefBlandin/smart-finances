@@ -56,9 +56,13 @@
     },
     {
       "id": "SF-164",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "b7157fa",
+      "evidence": [
+        "Tests first (T-WSCR-4, T-WSCR-5, apps/web/e2e/overview.spec.ts): npm run e2e --workspace @smart-finances/web -- e2e/overview.spec.ts exit 1: \"3 failed\"; each \"expect(locator).toHaveText(expected) failed ... Expected pattern: /^You kept\\s*32%$/ (or /^You came up short/) ... element(s) not found\" after the h1 'Overview' matched (expected: the placeholder page had no sections). A first run failed earlier at 'Your session ended' because the seeded e2e session ids were not 43 characters; fixed in the seeding before the recorded run.",
+        "Built: app/(app)/overview/page.tsx reads through createDataReads (totals for three years up to now, rates, review, imports, places = the month's expenses sorted by amount, limit 200), redirectIfLimited on any limited read, setQueryData under dataKeys and HydrationBoundary; a failed read is left out so its section asks again in the browser. screens/overview/: model.ts (totalsRange, shownMonth, placesFilters, keptFigures, categories, overTime, places, waiting), Section.tsx (sectionState, Section, SectionFallback), text.ts, Overview.tsx (island: MonthPicker, month in the address by history.replaceState), Kept/Waiting/Where/Time/Places each View.tsx + Container.tsx + module CSS. Money figures carry data-money; the bad-month figure data-tone=bad in --field-red. New message keys (en, es): overview.spentIncl, sectionFailed, placesCount, placesNone; categories.partner, gifts, debt_payments, cash.",
+        "Verify: npm run e2e --workspace @smart-finances/web -- e2e/overview.spec.ts exit 0: \"3 passed (18.4s)\". Screenshots checked (2026-09, 2026-03, 2026-10 at 1280px, 2026-09 at 400px). npm test --workspace @smart-finances/web: 38 files, 552 passed. npm run lint --workspace @smart-finances/web exit 0. apps/web npx tsc --noEmit exit 0."
+      ],
       "review": ""
     },
     {
@@ -128,6 +132,12 @@
     "SF-162: choices the brief leaves open: a month that earned nothing has keptPct 0 (bad when it spent anything, overArs the whole spend); typical month takes the latest up to 6 earlier months that have both totals and a rate; keptPct and typicalPct stay exact and screens round (D-30); a month with no rate leaves its dollars out of the pesos, like the API's dollar view; currencies other than ARS and USD are not counted.",
     "SF-163: the read use cases live in one file, application/data/reads.ts, so SF-166 (review.ts, setRate.ts), SF-167 (requestImport.ts) and SF-168 (erase.ts) can still create their files as new. SF-167's getImport release or correction at the final status will need reads.ts (or the imports/[id] route), which its Files line does not list.",
     "SF-163: the brief's SF-161 line 'a limited result redirects server renders to /too-many' is provided as redirectIfLimited() in app/api/data/respond.ts for the money pages' prefetch (SF-164 on); /too-many itself arrives with SF-172, so until then that redirect lands on the not-found page.",
-    "SF-163: free text q reaches the JSON route as a query value of the browser's fetch (never the page address, D-82); it can appear in the hosting's request logs."
+    "SF-163: free text q reaches the JSON route as a query value of the browser's fetch (never the page address, D-82); it can appear in the hosting's request logs.",
+    "SF-164: one overview first view makes 5 data reads (totals, rates, review, imports, places), the whole STAGE=test person limit. Mitigation: adapters/container.ts seeds E2E_PEOPLE (one STAGE=test person per browser test, own sub, session and token over the same fixtures; e2ePerson(name).sessionId = 'e2e-<name>-not-secret-' padded with zeros to 43 characters, the session id length cookies.ts accepts). The overview tests use overview-good, overview-bad, overview-failed and overview-retry. The limit is unchanged.",
+    "SF-164: e2e/shell.spec.ts (4 tests) and e2e/headers.spec.ts (1 test) now fail: they open /overview several times a minute as TEST_PERSON, so reads past 5 redirect to /too-many (not found until SF-172). Evidence: npm run e2e -- e2e/shell.spec.ts e2e/headers.spec.ts: \"5 failed, 12 passed\", Received \"/too-many\" and \"We can’t find that page\". Not changed here (outside the task's Files). Proposal: those tests each use their own E2E_PEOPLE person, and SF-166's shell review count shares the overview's review read, else every overview first view goes over the STAGE=test limit.",
+    "SF-164: month changes on the overview use window.history.replaceState (Next.js keeps useSearchParams in step) instead of a server navigation, and the totals read covers three years up to now, so a month change asks only for that month's places (one read) and the server does not read again.",
+    "SF-164: choices the brief leaves open: without ?month= the overview shows the latest month with data (2026-10 in the fixtures, which has no rate); the amounts view switch (Pesos and dollars / All in dollars) is not on the overview; category colours follow spending over the three years read, not all time (D-25); places are the month's biggest 200 expenses summed by place, pesos only; the h1 'Overview' is screen-reader only (overview.md 'Page frame').",
+    "SF-164: D-157 test update: src/i18n/i18n.test.ts (T-WEB-5) pinned 7 plural messages; overview.placesCount makes 8.",
+    "SF-164: a 401 from a prefetch read is treated like a failed read (the section asks again and shows its failed note), not as signed out: persons signed up in the browser tests have memory tokens the STAGE=test data API refuses (SF-161 surprise), and showing 'session ended' would break e2e/auth.spec.ts."
   ]
 }
