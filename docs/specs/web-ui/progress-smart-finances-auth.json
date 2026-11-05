@@ -277,9 +277,18 @@
     },
     {
       "id": "SF-154",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "150efec",
+      "evidence": [
+        "Tests first: apps/web/src/adapters/container.test.ts gains 'T-WAUTH-19: the real container' (7 tests) and the T-WEB-14 outside-test test was rewritten (D-157). First run before any code: \"Tests 8 failed | 13 passed (21)\"; every T-WAUTH-19 test and the updated T-WEB-14 test failed with \"Error: No real adapters yet for STAGE=qa; PR 3 and PR 4 add them.\" (createContainer still refused outside STAGE=test), e.g. \"expected [Function] to throw error matching /Web server settings missing or invali…/ but got 'No real adapters yet for STAGE=qa; PR…'\".",
+        "Verify: npm test --workspace @smart-finances/web -- src/adapters/container.test.ts exit 0: \"Test Files 1 passed (1) Tests 21 passed (21)\". No AWS call: the tests spy on send of CognitoIdentityProviderClient, DynamoDBClient, DynamoDBDocumentClient and SecretsManagerClient and stub global fetch, each throwing if called, and assert none was called; SDK clients are only constructed (region read through client.config.region(), a local provider).",
+        "Profile verify: npm test (root) exit 0: node --test api+contracts 37/37 pass; web lint clean; web vitest \"Test Files 35 passed (35) Tests 458 passed (458)\"; infra 41/41 pass.",
+        "Profile verify: npm run build --workspace @smart-finances/infra exit 0.",
+        "Profile verify: npm run lint --workspace @smart-finances/web exit 0 (eslint 0 problems; \"All matched files use Prettier code style!\").",
+        "Profile verify: cd apps/web && npx tsc --noEmit exit 0.",
+        "Profile verify: npm run build --workspace @smart-finances/web exit 0.",
+        "Not run: browser tests (not in this task's verify; the STAGE=test path of getContainer is unchanged)."
+      ],
       "review": ""
     },
     {
@@ -439,6 +448,11 @@
     "SF-151 (round 2): a sign-out post whose session has already ended is refused by guarded() kind 'money' with auth.sessionEnded (after the Origin check passed), so signOutAction then clears __Host-sid and opens /sign-in?reason=idle, like the ended screen. consentNeeded opens /consent; any other refusal (a missing, null or foreign Origin; auth.unavailable) ends and clears nothing and the page stays as it is, with no message (the row is a plain server form with no client state). Because the money guard runs first, an idle row is deleted by readSession without revoking its refresh token (as on any money page load); signOut's own revoke-on-idle path is reached only when the row is still live.",
     "SF-151 (round 2): the Sign out form is rendered by the server Shell and handed to the client ShellBar's menu panel as part of the account node; it posts without JavaScript too (smoke). The test for the action lives in reset.test.ts (the task's one test file), mocking next/headers' headers() and cookies() and using the STAGE=test shared container; its file-level eslint-disable now also names the app/ import.",
     "SF-151 (round 2): the first root npm test run timed out in src/application/pow.test.ts (T-WAUTH-6, GET /api/auth/pow, 5015 ms against vitest's 5 s default; 2.4 s alone), a load flake like T-WEB-13's earlier one; the rerun was green. Not changed here (outside SF-151's Files and not a behaviour this task changes).",
-    "SF-151 (round 2): no fresh-context reviewer ran in this executor (no subagent tool); review is left empty for the workflow's reviewer."
+    "SF-151 (round 2): no fresh-context reviewer ran in this executor (no subagent tool); review is left empty for the workflow's reviewer.",
+    "SF-154: createContainer() outside STAGE=test now returns the one real container of the process (getContainer), so /api/auth/pow, which still calls createContainer() per request (outside SF-154's Files), reuses the SDK clients and the 5-minute secret cache instead of building a container per request; under STAGE=test createContainer() still builds fresh memory adapters per call (T-WEB-14). realContainer(settings, clock = new SystemClock()) is exported and builds: EnvSettings (process.env), SecretsManagerStore, JsonLogger, DynamoSessionStore/DynamoPreAuthStore/DynamoCounter/DynamoPowStore on SESSIONS_TABLE and DynamoAccountStore on ACCOUNTS_TABLE sharing one DynamoDB document client, PwnedPasswordsChecker (global fetch), CognitoIdentityProvider (USER_POOL_ID, WEB_CLIENT_ID, WEB_CLIENT_SECRET_ARN) and SystemClock; every SDK client gets settings REGION (D-159). No adapter constructor needed a change. SystemClock stays in adapters/memory/clock.ts (only its comment changed), because a new adapters/clock.ts was outside the Files.",
+    "SF-154: the task asks both PR 4 stubs to return { ok: false, kind: 'failed' }, but only the DataApi port has that result type; ParameterStore.get returns Promise<string | undefined>, where undefined means 'not set' (for imports-paused that reads as not paused, which fails open). UnwiredParameterStore.get therefore rejects ('The parameter store is not wired until PR 4'), so a caller fails closed (guarded() answers auth.unavailable). UnwiredDataApi answers { ok: false, kind: 'failed' } on all 11 methods.",
+    "SF-154: 'log once' goes through the Logger port as event 'adapter_unavailable' with outcome 'data_api' or 'parameter_store' and request_id 'container' (the port needs a request id and the stubs have none), once per stub, so once per process. 'adapter_unavailable' is not in architecture.md Contracts 'Security events' (the JsonLogger does not check names); the planning session may add it or prefer another name.",
+    "SF-154 (D-157): T-WEB-14 'outside STAGE=test it refuses until the real adapters arrive' in apps/web/src/adapters/container.test.ts became 'outside STAGE=test it refuses an environment without the web server settings' (expects 'Web server settings missing or invalid: ...USER_POOL_ID'). The surprises of SF-141, SF-144 and SF-152 that say the container refuses outside STAGE=test until real adapters are wired no longer hold: qa now builds the real container when its settings are complete.",
+    "SF-154: no fresh-context reviewer ran in this executor (no subagent tool here); review is left empty for the workflow's reviewer."
   ]
 }
