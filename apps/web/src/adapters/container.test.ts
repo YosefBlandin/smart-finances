@@ -208,8 +208,12 @@ describe('T-WEB-14: memory adapters keep the port rules', () => {
     expect(await c.accountStore.reserveImport('s', { day: '2026-10-31', bytes: 1, importId: 'n1' })).toEqual({ ok: true });
     await c.accountStore.resetStoredBytes('s');
     expect((await c.accountStore.getAccount('s'))?.storedBytes).toBe(0);
-    await c.accountStore.markDeleting('s', 5);
+    // No import starts during a deletion, and none may be running when it starts (AC-18).
+    expect(await c.accountStore.markDeleting('s', 5)).toEqual({ ok: false, reason: 'running' });
+    await c.accountStore.releaseImport('s', 'n1', 1);
+    expect(await c.accountStore.markDeleting('s', 5)).toEqual({ ok: true });
     expect(await c.accountStore.getAccount('s')).toMatchObject({ status: 'deleting', deletingSince: 5 });
+    expect(await c.accountStore.reserveImport('s', { day: '2026-10-31', bytes: 1, importId: 'n2' })).toEqual({ ok: false, reason: 'deleting' });
     await c.accountStore.deleteAccountRow('s');
     expect(await c.accountStore.getAccount('s')).toBeUndefined();
   });

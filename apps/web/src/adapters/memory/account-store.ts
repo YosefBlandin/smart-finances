@@ -19,17 +19,30 @@ export class MemoryAccountStore implements AccountStore {
     this.rows.set(sub, { ...this.row(sub), consent: { ...consent } });
   }
   async markDeleting(sub: string, now: number) {
-    this.rows.set(sub, { ...this.row(sub), status: 'deleting', deletingSince: now });
+    const row = this.row(sub);
+    if (row.runningImportId) return { ok: false as const, reason: 'running' as const };
+    this.rows.set(sub, { ...row, status: 'deleting', deletingSince: row.deletingSince ?? now });
+    return { ok: true as const };
   }
   async reserveImport(sub: string, { day, bytes, importId }: { day: string; bytes: number; importId: string }) {
     const row = this.row(sub);
     const today = row.importsToday?.day === day ? row.importsToday.n : 0;
+    if (row.status === 'deleting') return { ok: false as const, reason: 'deleting' as const };
     if (row.runningImportId) return { ok: false as const, reason: 'running' as const };
     if (today >= IMPORT_LIMITS.perDay) return { ok: false as const, reason: 'daily' as const };
     if (row.storedBytes + bytes > IMPORT_LIMITS.storedBytes) return { ok: false as const, reason: 'bytes' as const };
     this.rows.set(sub, { ...row, importsToday: { day, n: today + 1 }, runningImportId: importId, storedBytes: row.storedBytes + bytes });
     this.reserved.set(`${sub}#${importId}`, bytes);
     return { ok: true as const };
+  }
+  async confirmImport(sub: string, placeholderId: string, importId: string) {
+    const row = this.rows.get(sub);
+    const from = `${sub}#${placeholderId}`;
+    if (!row || row.runningImportId !== placeholderId || !this.reserved.has(from)) return false;
+    this.reserved.set(`${sub}#${importId}`, this.reserved.get(from) ?? 0);
+    this.reserved.delete(from);
+    this.rows.set(sub, { ...row, runningImportId: importId });
+    return true;
   }
   async releaseImport(sub: string, importId: string, finalBytes: number) {
     const row = this.rows.get(sub);

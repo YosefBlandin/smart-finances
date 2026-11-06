@@ -11,10 +11,13 @@ import type { Settings } from '@/ports/settings';
 // contracts' SOURCES (the API's own check), then the pause switch (the imports-paused stage parameter: "true" pauses;
 // a switch that cannot be read refuses, so a failure never reads as "not paused"), then the account row's caps (10
 // imports a UTC day, one running, stored bytes plus the source's maximum within 200 MiB) for a plain refusal before
-// the data API is asked. It then asks POST /imports and reserves the slot under the import id the API gave, by one
-// conditional update of the account row, which alone decides when requests race (D-114): the release at the final
-// status finds the slot by that id. A request that loses the race gets no upload form, so its record expires as
-// "never arrived". getImport reads an import and, at its final status or stalled, releases the slot: a file that never
+// the data API is asked. It then reserves the slot under a placeholder id (pending:<ms>:<uuid>) by one conditional
+// update of the account row, which alone decides when requests race (D-114), so only the winner asks POST /imports. On
+// success confirmImport swaps the placeholder for the API's import id, conditional on the placeholder, and the release
+// at the final status finds the slot by that id; a refused or failed POST /imports releases the placeholder and its
+// bytes, conditional on it too. A placeholder on the row counts as running (an account being deleted cannot be marked
+// meanwhile, AC-18); one older than PENDING_STALE_MS was left by a request that stopped before its answer, which handed
+// out no upload form, so the next request or deletion releases it with no bytes. getImport reads an import and, at its final status or stalled, releases the slot: a file that never
 // arrived gives its bytes back; any other status keeps the source's maximum counted, since the web server never learns
 // the stored size. A slot whose import ended while nobody watched is settled by the next request.
 
@@ -33,7 +36,17 @@ type Requested = Awaited<ReturnType<DataApi['requestImport']>> extends DataApiRe
 
 export type ImportRequest = { source: string; fileName: string; size: number };
 export type ImportRefusal =
-  'source' | 'empty' | 'name' | 'too_large' | 'paused' | 'unavailable' | ReserveRefusal | 'conflict' | 'limited' | 'unauthorized' | 'failed';
+  | 'source'
+  | 'empty'
+  | 'name'
+  | 'too_large'
+  | 'paused'
+  | 'unavailable'
+  | Exclude<ReserveRefusal, 'deleting'>
+  | 'conflict'
+  | 'limited'
+  | 'unauthorized'
+  | 'failed';
 export type RequestResult =
   | { ok: true; data: { importId: string; upload: Requested['upload']; expiresAt: string } }
   | { ok: false; reason: ImportRefusal; retryAfter?: number };
@@ -50,6 +63,21 @@ export const FINAL_STATUSES: readonly string[] = ['done', 'unchanged', 'supersed
  * spec "States and exits"); the person repairs it or uploads again.
  */
 export const SLOT_FREE_STATUSES: readonly string[] = [...FINAL_STATUSES, 'stalled'];
+
+/** The prefix of a placeholder slot id: pending:<epoch ms>:<uuid>, held while POST /imports is asked (D-114). */
+export const PENDING_IMPORT = 'pending:';
+/**
+ * A placeholder older than this was left by a request that stopped before POST /imports answered (the data API's own
+ * timeout is 5 s): no upload form went out, so the slot is released with no bytes.
+ */
+export const PENDING_STALE_MS = 2 * 60_000;
+
+/** When a placeholder slot was taken, or undefined for a real import id. */
+export function pendingSince(id: string): number | undefined {
+  if (!id.startsWith(PENDING_IMPORT)) return undefined;
+  const at = Number(id.slice(PENDING_IMPORT.length).split(':')[0]);
+  return Number.isFinite(at) ? at : 0;
+}
 
 /** How long an import requested from the STAGE=test data API runs (adapters/memory/data-api.ts). */
 export const IMPORT_RUN_MS = 2_000;
@@ -85,6 +113,27 @@ export function createImports(deps: ImportsDeps) {
     await accountStore.releaseImport(sub, record.import_id, record.status === 'expired' ? 0 : maxBytesOf(record.source));
   }
 
+  /**
+   * The person's account after settling a running slot whose import has ended (or never existed, or whose placeholder
+   * was left past its time); a slot still running stays.
+   */
+  async function settleRunning(who: Who) {
+    const account = await accountStore.getAccount(who.sub);
+    const id = account?.runningImportId;
+    if (!id) return account;
+    const since = pendingSince(id);
+    if (since !== undefined) {
+      if (clock.now() - since < PENDING_STALE_MS) return account;
+      await accountStore.releaseImport(who.sub, id, 0);
+    } else {
+      const running = await dataApi.getImport(who.accessToken, { id });
+      if (running.ok) await settle(who.sub, running.data);
+      else if (running.kind === 'not_found') await accountStore.releaseImport(who.sub, id, 0);
+      else return account;
+    }
+    return accountStore.getAccount(who.sub);
+  }
+
   async function paused(): Promise<boolean | 'unreadable'> {
     try {
       return (await parameterStore.get(PAUSE_PARAMETER(settings.get().STAGE))) === 'true';
@@ -94,6 +143,8 @@ export function createImports(deps: ImportsDeps) {
   }
 
   return {
+    settleRunning,
+
     async requestImport(who: Who, request: ImportRequest): Promise<RequestResult> {
       const bad = checkFile(request);
       if (bad) return refuse(bad);
@@ -101,22 +152,38 @@ export function createImports(deps: ImportsDeps) {
       if (pause === 'unreadable') return refuse('unavailable');
       if (pause) return refuse('paused');
 
-      let account = await accountStore.getAccount(who.sub);
-      if (account?.runningImportId) {
-        // The running import may have ended while nobody watched it: settle it first.
-        const running = await dataApi.getImport(who.accessToken, { id: account.runningImportId });
-        if (running.ok) await settle(who.sub, running.data);
-        else if (running.kind === 'not_found') await accountStore.releaseImport(who.sub, account.runningImportId, 0);
-        account = await accountStore.getAccount(who.sub);
-      }
+      // The running import may have ended while nobody watched it: settle it first.
+      const account = await settleRunning(who);
       const bytes = maxBytesOf(request.source);
       const day = utcDay(clock.now());
       if (account?.runningImportId) return refuse('running');
       if (account?.importsToday?.day === day && account.importsToday.n >= IMPORT_CAPS.perDay) return refuse('daily');
       if ((account?.storedBytes ?? 0) + bytes > IMPORT_CAPS.storedBytes) return refuse('bytes');
 
-      const asked = await dataApi.requestImport(who.accessToken, { source: request.source, file_name: request.fileName, size: request.size });
+      const placeholder = `${PENDING_IMPORT}${clock.now()}:${crypto.randomUUID()}`;
+      const reserved = await accountStore.reserveImport(who.sub, { day, bytes, importId: placeholder });
+      if (!reserved.ok) {
+        logger.event('import_refused', reserved.reason, { sub: who.sub, requestId: placeholder });
+        // An account being deleted reads like a session that ended: no import starts during a deletion (AC-18).
+        return refuse(reserved.reason === 'deleting' ? 'unauthorized' : reserved.reason);
+      }
+      const giveBack = async () => {
+        try {
+          await accountStore.releaseImport(who.sub, placeholder, 0);
+        } catch {
+          // Left on the row, the placeholder is released once PENDING_STALE_MS have passed.
+          logger.event('import_release', 'failed', { sub: who.sub, requestId: placeholder });
+        }
+      };
+      let asked: Awaited<ReturnType<DataApi['requestImport']>>;
+      try {
+        asked = await dataApi.requestImport(who.accessToken, { source: request.source, file_name: request.fileName, size: request.size });
+      } catch (err) {
+        await giveBack();
+        throw err;
+      }
       if (!asked.ok) {
+        await giveBack();
         if (asked.kind === 'limited') return refuse('limited', asked.retryAfter);
         if (asked.kind === 'unauthorized') return refuse('unauthorized');
         if (asked.kind === 'conflict') return refuse('conflict');
@@ -124,10 +191,10 @@ export function createImports(deps: ImportsDeps) {
         if (asked.code === 'bad_request') return refuse('name');
         return refuse('failed', asked.retryAfter);
       }
-      const reserved = await accountStore.reserveImport(who.sub, { day, bytes, importId: asked.data.import_id });
-      if (!reserved.ok) {
-        logger.event('import_refused', reserved.reason, { sub: who.sub, requestId: asked.data.import_id });
-        return refuse(reserved.reason);
+      if (!(await accountStore.confirmImport(who.sub, placeholder, asked.data.import_id))) {
+        // The placeholder no longer holds the slot: this import gets no upload form, so its record expires.
+        logger.event('import_refused', 'conflict', { sub: who.sub, requestId: asked.data.import_id });
+        return refuse('conflict');
       }
       return { ok: true, data: { importId: asked.data.import_id, upload: asked.data.upload, expiresAt: asked.data.expires_at } };
     },

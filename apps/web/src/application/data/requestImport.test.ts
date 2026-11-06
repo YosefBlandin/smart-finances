@@ -6,7 +6,7 @@ import { MemoryClock } from '@/adapters/memory/clock';
 import type { MemoryDataApi } from '@/adapters/memory/data-api';
 import type { MemoryParameterStore } from '@/adapters/memory/parameter-store';
 import type { ParameterStore } from '@/ports/parameter-store';
-import { createImports, IMPORT_RUN_MS, PAUSE_PARAMETER } from './requestImport';
+import { createImports, IMPORT_RUN_MS, PAUSE_PARAMETER, PENDING_IMPORT, PENDING_STALE_MS } from './requestImport';
 
 // T-WSCR-8 (AC-17, D-114, D-96): an import request checks the name and size with the contracts' SOURCES, then the
 // pause switch, then reserves one slot on the account row (10 a UTC day, one running, 200 MiB stored counting the
@@ -54,6 +54,71 @@ describe('T-WSCR-8: import caps (D-114)', () => {
     expect(account?.runningImportId).toBe(ok[0]!.ok ? ok[0]!.data.importId : '');
     // The reservation counts the source's maximum (5 MiB for a CSV), not the size the browser reported.
     expect(account?.storedBytes).toBe(5 * MiB);
+    // The slot is reserved before the data API is asked, so only the winner asks it.
+    expect(s.calls).toHaveLength(1);
+  });
+
+  it('T-WSCR-8: the slot is reserved under a placeholder before POST /imports, then swapped to the import id', async () => {
+    const s = setup();
+    const api = s.c.dataApi as MemoryDataApi;
+    const ask = api.requestImport.bind(api);
+    let during: string | undefined;
+    api.requestImport = async (token, input) => {
+      during = (await s.c.accountStore.getAccount(SUB))?.runningImportId;
+      return ask(token, input);
+    };
+    const started = await s.imports.requestImport(WHO, CSV);
+    if (!started.ok) throw new Error('refused');
+    expect(during?.startsWith(PENDING_IMPORT)).toBe(true);
+    expect((await s.c.accountStore.getAccount(SUB))?.runningImportId).toBe(started.data.importId);
+    // The release at the final status finds the slot by the import id, with the reserved bytes.
+    await finish(s, started.data.importId);
+    expect(await s.c.accountStore.getAccount(SUB)).toMatchObject({ runningImportId: undefined, storedBytes: 5 * MiB });
+  });
+
+  it('T-WSCR-8: a refused or failed POST /imports releases the placeholder and its bytes', async () => {
+    const s = setup();
+    const api = s.c.dataApi as MemoryDataApi;
+    const ask = api.requestImport.bind(api);
+    api.requestImport = async () => ({ ok: false, kind: 'failed', code: 'timeout' });
+    expect(await s.imports.requestImport(WHO, CSV)).toMatchObject({ ok: false, reason: 'failed' });
+    expect(await s.c.accountStore.getAccount(SUB)).toMatchObject({ runningImportId: undefined, storedBytes: 0 });
+    api.requestImport = async () => Promise.reject(new Error('the data API is unreachable'));
+    await expect(s.imports.requestImport(WHO, CSV)).rejects.toThrow('unreachable');
+    expect(await s.c.accountStore.getAccount(SUB)).toMatchObject({ runningImportId: undefined, storedBytes: 0 });
+    api.requestImport = ask;
+    expect((await s.imports.requestImport(WHO, CSV)).ok).toBe(true);
+  });
+
+  it('T-WSCR-8: a placeholder on the row counts as running; one left past its time is released', async () => {
+    const s = setup();
+    const placeholder = `${PENDING_IMPORT}${START}:left-by-a-request-that-stopped`;
+    await s.c.accountStore.reserveImport(SUB, { day: '2026-11-05', bytes: 5 * MiB, importId: placeholder });
+    expect(await s.imports.requestImport(WHO, CSV)).toMatchObject({ ok: false, reason: 'running' });
+    expect(s.calls).toEqual([]);
+    s.clock.advance(PENDING_STALE_MS);
+    expect((await s.imports.requestImport(WHO, CSV)).ok).toBe(true);
+    // The stopped request never handed out an upload form, so its bytes came back.
+    expect((await s.c.accountStore.getAccount(SUB))?.storedBytes).toBe(5 * MiB);
+  });
+
+  it('T-WSCR-8: confirmImport swaps only its own placeholder (memory adapter)', async () => {
+    const s = setup();
+    await s.c.accountStore.reserveImport(SUB, { day: '2026-11-05', bytes: MiB, importId: 'pending:1:a' });
+    expect(await s.c.accountStore.confirmImport(SUB, 'pending:1:b', 'imp-b')).toBe(false);
+    expect((await s.c.accountStore.getAccount(SUB))?.runningImportId).toBe('pending:1:a');
+    expect(await s.c.accountStore.confirmImport(SUB, 'pending:1:a', 'imp-a')).toBe(true);
+    await s.c.accountStore.releaseImport(SUB, 'imp-a', 2 * MiB);
+    expect(await s.c.accountStore.getAccount(SUB)).toMatchObject({ runningImportId: undefined, storedBytes: 2 * MiB });
+  });
+
+  it('T-WSCR-8: an account being deleted reserves no import (AC-18)', async () => {
+    const s = setup();
+    expect(await s.c.accountStore.markDeleting(SUB, START)).toEqual({ ok: true });
+    expect(await s.c.accountStore.reserveImport(SUB, { day: '2026-11-05', bytes: 1, importId: 'imp-x' })).toEqual({ ok: false, reason: 'deleting' });
+    expect(await s.imports.requestImport(WHO, CSV)).toMatchObject({ ok: false, reason: 'unauthorized' });
+    expect(s.calls).toEqual([]);
+    expect((await s.c.accountStore.getAccount(SUB))?.runningImportId).toBeUndefined();
   });
 
   it('T-WSCR-8: the slot is released at the final status, and the next import may start', async () => {
