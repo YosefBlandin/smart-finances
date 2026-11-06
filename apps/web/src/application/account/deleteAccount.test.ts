@@ -137,6 +137,37 @@ describe('T-WSCR-11: delete account (D-104)', () => {
     expect(await s.deletion.start(WHO, RIGHT, CTX)).toEqual({ ok: true });
   });
 
+  it('T-WSCR-11: markDeleting is one conditional write, refused while an import runs (memory adapter)', async () => {
+    const s = setup();
+    await s.c.accountStore.reserveImport(SUB, { day: '2026-11-06', bytes: 1, importId: 'imp-running' });
+    expect(await s.c.accountStore.markDeleting(SUB, START)).toEqual({ ok: false, reason: 'running' });
+    expect((await s.c.accountStore.getAccount(SUB))?.status).toBe('active');
+    await s.c.accountStore.releaseImport(SUB, 'imp-running', 1);
+    expect(await s.c.accountStore.markDeleting(SUB, START)).toEqual({ ok: true });
+  });
+
+  it('T-WSCR-11: an import that starts between the check and the mark refuses the start with the import message', async () => {
+    const s = setup();
+    const store = s.c.accountStore;
+    const mark = store.markDeleting.bind(store);
+    store.markDeleting = async (sub, now) => {
+      // Another tab's import reserves its slot just after start found none running.
+      await store.reserveImport(sub, { day: '2026-11-06', bytes: 1, importId: 'pending:1:other-tab' });
+      return mark(sub, now);
+    };
+    expect(await s.deletion.start(WHO, RIGHT, CTX)).toEqual({ ok: false, messageKey: 'auth.delete.running' });
+    expect((await store.getAccount(SUB))?.status).toBe('active');
+    const events = (s.c.logger as MemoryLogger).events.filter((e) => e.name === 'account_delete');
+    expect(events).toEqual([]);
+  });
+
+  it('T-WSCR-11: a placeholder slot (an import being requested) counts as running', async () => {
+    const s = setup();
+    await s.c.accountStore.reserveImport(SUB, { day: '2026-11-06', bytes: 1, importId: `pending:${START}:other-tab` });
+    expect(await s.deletion.start(WHO, RIGHT, CTX)).toEqual({ ok: false, messageKey: 'auth.delete.running' });
+    expect((await s.c.accountStore.getAccount(SUB))?.status).toBe('active');
+  });
+
   it('T-WSCR-11: finish is refused for an account that has not been through start', async () => {
     const s = setup();
     expect(await s.deletion.finish(WHO, CTX)).toEqual({ ok: false, reason: 'not-deleting' });
@@ -166,31 +197,34 @@ describe('T-WSCR-11: delete account (D-104)', () => {
     expect(events.map((e) => e.outcome)).toEqual(['started', 'done']);
   });
 
-  it.each(DELETION_STEPS)('T-WSCR-11: a deletion that fails at %s is finished by the same person calling finish again', async (step) => {
-    const s = setup();
-    expect(await s.deletion.start(WHO, RIGHT, CTX)).toEqual({ ok: true });
-    const restore = breakStep(s, step);
-    const failed = await s.deletion.finish(WHO, CTX);
-    expect(failed).toMatchObject({ ok: false, reason: 'step', step });
-    // The steps before it are done and the ones after it are not. Signing out removes the session rows even when the
-    // pool's global sign-out fails, so from that step on this person has no session left.
-    const at = DELETION_STEPS.indexOf(step);
-    const after = await left(s);
-    expect(after.imports).toBe(at > 0 ? 0 : 12);
-    expect(after.sessions).toBe(at >= 1 ? 0 : 2);
-    expect(after.user).toBe(at <= 2);
-    expect(after.account).toBe(true);
-    expect((await s.c.accountStore.getAccount(SUB))?.status).toBe('deleting');
-    if (at > 0) expect(failed).toMatchObject({ erased: ERASED });
+  it.each(DELETION_STEPS)(
+    'T-WSCR-11: every step is repeatable: a deletion that stops at %s finishes when finish runs again, as the hourly job does',
+    async (step) => {
+      const s = setup();
+      expect(await s.deletion.start(WHO, RIGHT, CTX)).toEqual({ ok: true });
+      const restore = breakStep(s, step);
+      const failed = await s.deletion.finish(WHO, CTX);
+      expect(failed).toMatchObject({ ok: false, reason: 'step', step });
+      // The steps before it are done and the ones after it are not. Signing out removes the session rows even when the
+      // pool's global sign-out fails, so from that step on this person has no session left.
+      const at = DELETION_STEPS.indexOf(step);
+      const after = await left(s);
+      expect(after.imports).toBe(at > 0 ? 0 : 12);
+      expect(after.sessions).toBe(at >= 1 ? 0 : 2);
+      expect(after.user).toBe(at <= 2);
+      expect(after.account).toBe(true);
+      expect((await s.c.accountStore.getAccount(SUB))?.status).toBe('deleting');
+      if (at > 0) expect(failed).toMatchObject({ erased: ERASED });
 
-    restore();
-    const finished = await s.deletion.finish(WHO, CTX);
-    expect(finished.ok).toBe(true);
-    if (step === 'erase' && finished.ok) expect(finished.erased).toEqual(ERASED);
-    expect(await left(s)).toEqual({ imports: 0, sessions: 0, user: false, account: false });
-    const outcomes = (s.c.logger as MemoryLogger).events.filter((e) => e.name === 'account_delete').map((e) => e.outcome);
-    expect(outcomes).toEqual(['started', `failed_${step}`, 'done']);
-  });
+      restore();
+      const finished = await s.deletion.finish(WHO, CTX);
+      expect(finished.ok).toBe(true);
+      if (step === 'erase' && finished.ok) expect(finished.erased).toEqual(ERASED);
+      expect(await left(s)).toEqual({ imports: 0, sessions: 0, user: false, account: false });
+      const outcomes = (s.c.logger as MemoryLogger).events.filter((e) => e.name === 'account_delete').map((e) => e.outcome);
+      expect(outcomes).toEqual(['started', `failed_${step}`, 'done']);
+    },
+  );
 
   it('T-WSCR-11: each step is tried again within one finish before it gives up', async () => {
     const s = setup();

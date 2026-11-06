@@ -3,13 +3,14 @@ import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 // Delete the account (SF-169; AC-18, D-104, D-146). The page asks for a full re-sign-in (email, password and the
 // authenticator code) and the typed word DELETE; then the account is marked deleting, the data erased, every session
 // ended, the sign-in removed and the account row deleted, and the person lands signed out on /goodbye, which shows the
-// counts from a 5-minute signed cookie. A failed erase keeps the person on the page with Finish deleting.
+// counts from a 5-minute signed cookie. A failed erase keeps the person on the page with Finish deleting, and a reload
+// of any money screen shows Finish deleting in place of the screen (AC-18).
 //
 // Each test uses its own STAGE=test person (E2E_PEOPLE in src/adapters/container.ts), whose sign-in the memory identity
-// provider holds with E2E_DELETE_PASSWORD (the authenticator code is 000000 for everyone). delete-account-retry's first
-// erases fail as timeouts would. A person whose account is deleted is never used by another test.
+// provider holds with E2E_DELETE_PASSWORD (the authenticator code is 000000 for everyone). The first erases of
+// delete-account-retry and delete-account-reload fail as timeouts would. A person whose account is deleted is never used by another test.
 
-type Person = 'delete-account' | 'delete-account-refused' | 'delete-account-retry';
+type Person = 'delete-account' | 'delete-account-refused' | 'delete-account-retry' | 'delete-account-reload';
 
 /** The synthetic password container.ts seeds for these people (E2E_DELETE_PASSWORD); no secret. */
 const PASSWORD = 'e2e delete phrase, not a secret';
@@ -106,6 +107,26 @@ test('T-WSCR-12: an erase that fails keeps the person on the page, and Finish de
   const unfinished = main(page).getByRole('alert');
   await expect(unfinished).toContainText('Your account isn’t deleted yet');
   await unfinished.getByRole('button', { name: 'Finish deleting' }).click();
+  await expect(page).toHaveURL(/\/goodbye$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your account is deleted');
+  await expect(page.getByRole('main').getByRole('definition').nth(0)).toHaveText('584');
+  expect(violations).toEqual([]);
+});
+
+test('T-WSCR-12: after a reload, an account left deleting shows Finish deleting, which completes it', async ({ page, context }) => {
+  await signInAs(context, 'delete-account-reload');
+  const violations = watchPolicy(page);
+  const submit = await fillDelete(page, 'delete-account-reload');
+  await submit.click();
+  await expect(main(page).getByRole('alert')).toContainText('Your account isn’t deleted yet');
+  // The page is reloaded, or another money screen is opened: the account is still being deleted, so every money
+  // screen shows Finish deleting in its place, not the "session ended" screen.
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your account isn’t deleted yet');
+  await page.goto('/overview');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your account isn’t deleted yet');
+  await expect(page.getByRole('navigation')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Finish deleting' }).click();
   await expect(page).toHaveURL(/\/goodbye$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your account is deleted');
   await expect(page.getByRole('main').getByRole('definition').nth(0)).toHaveText('584');

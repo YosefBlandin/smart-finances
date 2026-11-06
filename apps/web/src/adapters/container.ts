@@ -219,6 +219,7 @@ export const E2E_PEOPLE = [
   'delete-account',
   'delete-account-refused',
   'delete-account-retry',
+  'delete-account-reload',
 ] as const;
 
 type E2EName = (typeof E2E_PEOPLE)[number];
@@ -234,6 +235,8 @@ const E2E_DATA: Partial<Record<E2EName, E2EData>> = {
   'data-erase-retry': 'erase-fails-once',
   // Its first finish's erase attempts both fail, so Finish deleting can be shown and used (SF-169).
   'delete-account-retry': 'erase-fails-twice',
+  // The same, so the deletion is left unfinished and a reload shows Finish deleting (SF-169).
+  'delete-account-reload': 'erase-fails-twice',
 };
 
 /**
@@ -242,7 +245,7 @@ const E2E_DATA: Partial<Record<E2EName, E2EData>> = {
  * code. Not a secret: it only exists in a STAGE=test server's memory.
  */
 export const E2E_DELETE_PASSWORD = 'e2e delete phrase, not a secret';
-const E2E_DELETE_PEOPLE: readonly E2EName[] = ['delete-account', 'delete-account-refused', 'delete-account-retry'];
+const E2E_DELETE_PEOPLE: readonly E2EName[] = ['delete-account', 'delete-account-refused', 'delete-account-retry', 'delete-account-reload'];
 
 export function e2ePerson(name: E2EName) {
   return { sessionId: `e2e-${name}-not-secret-`.padEnd(43, '0'), sub: `e2e-person-${name}`, email: `${name}@example.com` } as const;

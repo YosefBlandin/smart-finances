@@ -8,7 +8,8 @@ import type { Lang } from '@/ports/identity-provider';
 // Delete the account (SF-169; AC-18, D-104, D-168). Two calls, each behind its own server action:
 //  start: a full re-sign-in of the signed-in person, createSignIn(deps).signIn(email, password, { reauth: { sub } })
 //    then verifyCode(code) in reauth mode (the code must belong to this sub; no session is created), then no running
-//    import (a slot whose import already ended is settled first, as the import use case does), then markDeleting.
+//    import (a slot whose import already ended is settled first, as the import use case does), then markDeleting,
+//    which is itself conditional on no running import, a placeholder included (AC-18).
 //  finish: only for an account marked deleting; runs domain/deletion.ts's steps in order, each tried again within the
 //    call before it gives up (erase until 202), and answers the counts or the step that stopped it. Every step is safe
 //    to repeat, so calling finish again finishes a deletion that stopped at any step.
@@ -38,12 +39,9 @@ export function createDeleteAccount(deps: DeleteAccountDeps) {
   const imports = createImports(deps);
   const erase = createErase(deps);
 
-  /** Whether an import still runs for this person, after settling a slot whose import has already ended. */
+  /** Whether an import still runs for this person (a placeholder counts), after settling a slot that has ended. */
   async function importRunning(who: Who): Promise<boolean> {
-    const account = await accountStore.getAccount(who.sub);
-    if (!account?.runningImportId) return false;
-    await imports.getImport(who, account.runningImportId);
-    return (await accountStore.getAccount(who.sub))?.runningImportId !== undefined;
+    return (await imports.settleRunning(who))?.runningImportId !== undefined;
   }
 
   async function start(who: Who, { email, password, code }: Reauth, ctx: DeleteContext): Promise<StartResult> {
@@ -62,7 +60,8 @@ export function createDeleteAccount(deps: DeleteAccountDeps) {
     if (!('reauthed' in codeStep.data)) return { ok: false, messageKey: DELETE_MESSAGES.unavailable };
 
     if (await importRunning(who)) return { ok: false, messageKey: DELETE_MESSAGES.running };
-    await accountStore.markDeleting(who.sub, clock.now());
+    // The mark itself is conditional on no running import, so one that started since the check refuses it (AC-18).
+    if (!(await accountStore.markDeleting(who.sub, clock.now())).ok) return { ok: false, messageKey: DELETE_MESSAGES.running };
     logger.event('account_delete', 'started', { requestId: ctx.requestId, sub: who.sub });
     return { ok: true };
   }
