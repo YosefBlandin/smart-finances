@@ -109,8 +109,9 @@ export class MemoryDataApi implements DataApi {
   private nextImport = 1;
   constructor(
     private readonly clock: Clock,
-    private readonly opts: { limits?: LimitsDeps; logger?: Logger } = {},
+    private readonly opts: { limits?: LimitsDeps; logger?: Logger; eraseFailures?: number } = {},
   ) {}
+  private erasesFailed = 0;
 
   allowToken(token: string) {
     this.tokens.add(token);
@@ -267,13 +268,27 @@ export class MemoryDataApi implements DataApi {
     return done([cols.join(','), ...lines].join('\n'));
   }
 
+  /**
+   * Erase all (SF-168): like DELETE /data, refused with conflict while an import requested here still runs; else every
+   * transaction, rate and import goes, counted as records, with one file per import. Given eraseFailures, the first
+   * that many erases fail as a timeout would, before anything is erased (the "may be unfinished" state, AC-7).
+   */
   async erase(token: string, input: Parameters<DataApi['erase']>[1]) {
     const p = await this.parse(token, 'DELETE /data', input);
     if (p.error) return p.error;
-    const items = this.transactions.size;
+    if (this.erasesFailed < (this.opts.eraseFailures ?? 0)) {
+      this.erasesFailed += 1;
+      return { ok: false as const, kind: 'failed' as const, code: 'timeout' };
+    }
+    const now = this.clock.now();
+    if ([...this.requested.values()].some((at) => now - at < MEMORY_IMPORT_RUN_MS)) return failed('conflict');
+    const files = this.imports.size;
+    const items = this.transactions.size + this.rateMap.size + files;
     this.transactions.clear();
+    this.rateMap.clear();
     this.imports.clear();
-    return done({ deleted: { items, files: 0 } });
+    this.requested.clear();
+    return done({ deleted: { items, files } });
   }
 }
 

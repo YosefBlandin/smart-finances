@@ -252,7 +252,15 @@
     "delBtn": "Delete everything",
     "deleting": "Deleting {a, plural, one {# transaction} other {# transactions}} and {b, plural, one {# file} other {# files}}…",
     "deleted": "Everything is deleted.",
-    "deletedBody": "Imports reopen at 14:35, after background work finishes, so nothing deleted can come back."
+    "deletedBody": "Imports reopen at 14:35, after background work finishes, so nothing deleted can come back.",
+    "eraseUnfinishedTitle": "The erase may not have finished",
+    "eraseUnfinished": "The server didn’t answer in time. Imports stay closed until the erase finishes, so finish it now.",
+    "finishErase": "Finish erasing",
+    "eraseRunning": "An import is still running. Wait until it ends, then delete again. Nothing was erased.",
+    "eraseFailed": "We couldn’t start the erase. Nothing was erased; try again in a minute.",
+    "erasedNote": "Imports open again about an hour after the erase, once background work finishes, so nothing deleted can come back.",
+    "countRecords": "Records",
+    "countFiles": "Files"
   },
   "states": {
     "errT": "Couldn’t load this screen.",

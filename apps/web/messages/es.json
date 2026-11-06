@@ -252,7 +252,15 @@
     "delBtn": "Borrar todo",
     "deleting": "Borrando {a, plural, one {# movimiento} other {# movimientos}} y {b, plural, one {# archivo} other {# archivos}}…",
     "deleted": "Se borró todo.",
-    "deletedBody": "Las importaciones vuelven a las 14:35, cuando termina el trabajo de fondo, para que nada borrado reaparezca."
+    "deletedBody": "Las importaciones vuelven a las 14:35, cuando termina el trabajo de fondo, para que nada borrado reaparezca.",
+    "eraseUnfinishedTitle": "Puede que el borrado no haya terminado",
+    "eraseUnfinished": "El servidor no respondió a tiempo. Las importaciones siguen cerradas hasta que el borrado termine, así que termínalo ahora.",
+    "finishErase": "Terminar de borrar",
+    "eraseRunning": "Todavía hay una importación en curso. Espera a que termine y vuelve a borrar. No se borró nada.",
+    "eraseFailed": "No pudimos empezar el borrado. No se borró nada; vuelve a intentar en un minuto.",
+    "erasedNote": "Las importaciones vuelven a abrirse alrededor de una hora después del borrado, cuando termina el trabajo de fondo, así nada borrado puede volver.",
+    "countRecords": "Registros",
+    "countFiles": "Archivos"
   },
   "states": {
     "errT": "No se pudo cargar esta pantalla.",

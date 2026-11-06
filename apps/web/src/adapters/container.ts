@@ -211,16 +211,22 @@ export const E2E_PEOPLE = [
   'imports-upload',
   'imports-refused',
   'imports-es',
+  // e2e/erase.spec.ts (SF-168).
+  'data-erase',
+  'data-erase-retry',
 ] as const;
 
 type E2EName = (typeof E2E_PEOPLE)[number];
 
-/** STAGE=test people whose data is not the fixtures: none at all (the empty states) or a data API that fails (AC-8). */
-const E2E_DATA: Partial<Record<E2EName, 'empty' | 'failing'>> = {
+/** STAGE=test people whose data is not the fixtures as is: none at all (the empty states), a data API that fails (AC-8), or one whose first erase fails (SF-168). */
+type E2EData = 'empty' | 'failing' | 'erase-fails-once';
+const E2E_DATA: Partial<Record<E2EName, E2EData>> = {
   'review-empty': 'empty',
   'review-failed': 'failing',
   'rates-empty': 'empty',
   'rates-failed': 'failing',
+  // Its first erase fails as a timeout would, so Finish erasing can be shown and used (SF-168).
+  'data-erase-retry': 'erase-fails-once',
 };
 
 export function e2ePerson(name: E2EName) {
@@ -243,7 +249,7 @@ function seedPerson(
   apis: PersonDataApis,
   seed: ReturnType<typeof fixtureSeed>,
   { sessionId, sub, email }: { sessionId: string; sub: string; email: string },
-  data?: 'empty' | 'failing',
+  data?: E2EData,
 ) {
   const now = c.clock.now();
   const part = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -252,7 +258,7 @@ function seedPerson(
   if (data === 'failing') {
     apis.add(accessToken, new FailingDataApi());
   } else {
-    const dataApi = new MemoryDataApi(c.clock, { limits: c, logger: c.logger });
+    const dataApi = new MemoryDataApi(c.clock, { limits: c, logger: c.logger, eraseFailures: data === 'erase-fails-once' ? 1 : 0 });
     if (data !== 'empty') dataApi.seed(seed);
     dataApi.allowToken(accessToken);
     apis.add(accessToken, dataApi);

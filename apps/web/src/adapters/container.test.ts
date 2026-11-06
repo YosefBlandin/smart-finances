@@ -297,7 +297,9 @@ describe('T-WEB-14: memory adapters keep the port rules', () => {
       data: { month: '2026-05', ars_per_usd: 1321.07 },
     });
     expect(await c.dataApi.rates('tok', {})).toEqual({ ok: true, data: { items: [{ month: '2026-05', ars_per_usd: 1321.07 }] } });
-    expect(await api.erase('tok', { confirm: 'DELETE' })).toEqual({ ok: true, data: { deleted: { items: 3, files: 0 } } });
+    // SF-168 (D-157): an erase counts every record it removes, the rate included (3 transactions and 1 rate).
+    expect(await api.erase('tok', { confirm: 'DELETE' })).toEqual({ ok: true, data: { deleted: { items: 4, files: 0 } } });
+    expect(await c.dataApi.rates('tok', {})).toEqual({ ok: true, data: { items: [] } });
   });
 
   it('T-WEB-14: the breach checker, secrets, parameters and logger fakes', async () => {
