@@ -23,9 +23,11 @@ export type DataApiFetch = (
 
 /** Each API read times out at 5 seconds, the reply's body included (D-101). */
 export const DATA_API_TIMEOUT_MS = 5_000;
-/** Export alone: the API builds the whole CSV in one reply (data spec RK-13: 25 s function, 6 MB), so it gets 25 s
- * instead of 5 (owner decision, PR 4 review); the browser still receives it whole. */
-export const EXPORT_TIMEOUT_MS = 25_000;
+/**
+ * Export and erase: the API builds the whole CSV in one reply (data spec RK-13: 25 s function, 6 MB), and erases
+ * everything in one call (the data spec's 25 s), so each gets 25 s instead of 5 (owner decisions, PR 4 review).
+ */
+export const LONG_REQUEST_TIMEOUT_MS = 25_000;
 /** A renewed access token is reused by calls that still hold the old one for this long, so they do not refresh again. */
 const RENEWED_FOR_MS = 60_000;
 
@@ -150,9 +152,10 @@ export class HttpDataApi implements DataApi {
     this.call(token, 'POST /imports', input, (b) => ({ method: 'POST', path: '/imports', body: b }));
 
   exportCsv: DataApi['exportCsv'] = (token) =>
-    this.call(token, 'GET /export', undefined, () => ({ method: 'GET', path: '/export', timeoutMs: EXPORT_TIMEOUT_MS }));
+    this.call(token, 'GET /export', undefined, () => ({ method: 'GET', path: '/export', timeoutMs: LONG_REQUEST_TIMEOUT_MS }));
 
-  erase: DataApi['erase'] = (token, input) => this.call(token, 'DELETE /data', input, (b) => ({ method: 'DELETE', path: '/data', body: b }));
+  erase: DataApi['erase'] = (token, input) =>
+    this.call(token, 'DELETE /data', input, (b) => ({ method: 'DELETE', path: '/data', body: b, timeoutMs: LONG_REQUEST_TIMEOUT_MS }));
 
   /** Checks, counts, sends (refreshing once on 401) and parses one call of route. */
   private async call<K extends Route>(
