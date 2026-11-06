@@ -1,0 +1,80 @@
+/* Dollar rates (SF-166): one row per month, a rate field and its state; tokens only (D-21, D-22). */
+.heading {
+  margin: 0;
+  font-size: var(--t-2xl);
+  font-weight: var(--w-head);
+}
+
+.heading:focus {
+  outline: none;
+}
+
+.sub {
+  margin: var(--s2) 0 0;
+  padding-bottom: var(--s5);
+  max-width: 64ch;
+  color: var(--muted);
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  max-width: 720px;
+}
+
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  align-items: center;
+}
+
+.input {
+  width: 10em;
+  min-height: var(--target);
+  padding: 0 var(--s3);
+  border: 1px solid var(--control);
+  border-radius: var(--r-s);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-m);
+  font-variant-numeric: tabular-nums;
+}
+
+.input[data-missing] {
+  border-color: var(--warn-band);
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--bad);
+}
+
+.error {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--t-s);
+  color: var(--bad);
+}
+
+.saved {
+  font-size: var(--t-s);
+  color: var(--muted);
+}
+
+.month {
+  white-space: nowrap;
+}
+
+.foot {
+  margin: 0;
+  font-size: var(--t-s);
+  color: var(--muted);
+}
+
+@media (pointer: coarse) {
+  .input {
+    min-height: 44px;
+  }
+}

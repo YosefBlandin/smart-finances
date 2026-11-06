@@ -26,7 +26,7 @@ import { MemoryAccountStore } from './memory/account-store';
 import { MemoryBreachChecker } from './memory/breach-checker';
 import { MemoryClock, SystemClock } from './memory/clock';
 import { MemoryCounter } from './memory/counter';
-import { fixtureSeed, MemoryDataApi } from './memory/data-api';
+import { FailingDataApi, fixtureSeed, MemoryDataApi, PersonDataApis } from './memory/data-api';
 import { MemoryIdentityProvider } from './memory/identity-provider';
 import { MemoryLogger } from './memory/logger';
 import { MemoryParameterStore } from './memory/parameter-store';
@@ -206,35 +206,75 @@ export const E2E_PEOPLE = [
   'shell-account',
   'shell-scroll',
   'shell-focus',
-  'shell-screens',
   'shell-screens-overview',
+  'shell-screens-transactions',
+  'shell-screens-review',
+  'shell-screens-imports',
+  'shell-screens-rates',
+  'shell-screens-data',
   'shell-topbar',
   'shell-menu',
   'shell-lang',
   'shell-lang-refused',
   'shell-lang-tablet',
   'headers-scripts',
+  // e2e/review-rates.spec.ts (SF-166).
+  'review-approve',
+  'review-category',
+  'review-rollback',
+  'review-source',
+  'review-empty',
+  'review-failed',
+  'rates-save',
+  'rates-rollback',
+  'rates-empty',
+  'rates-failed',
 ] as const;
 
-export function e2ePerson(name: (typeof E2E_PEOPLE)[number]) {
+type E2EName = (typeof E2E_PEOPLE)[number];
+
+/** STAGE=test people whose data is not the fixtures: none at all (the empty states) or a data API that fails (AC-8). */
+const E2E_DATA: Partial<Record<E2EName, 'empty' | 'failing'>> = {
+  'review-empty': 'empty',
+  'review-failed': 'failing',
+  'rates-empty': 'empty',
+  'rates-failed': 'failing',
+};
+
+export function e2ePerson(name: E2EName) {
   return { sessionId: `e2e-${name}-not-secret-`.padEnd(43, '0'), sub: `e2e-person-${name}`, email: `${name}@example.com` } as const;
 }
 
 function seedTestPerson(c: Container) {
-  // The money screens read the fixtures (sample plus hostile rows) through a memory data API that counts the person's
-  // requests like the real one (5 a minute under STAGE=test), so the 429 page can be reached (SF-161, SF-172).
-  const dataApi = new MemoryDataApi(c.clock, { limits: c, logger: c.logger });
-  dataApi.seed(fixtureSeed());
-  c.dataApi = dataApi;
-  for (const person of [TEST_PERSON, ...E2E_PEOPLE.map(e2ePerson)]) seedPerson(c, dataApi, person);
+  // The money screens read the fixtures (sample plus hostile rows) through memory data APIs that count the person's
+  // requests like the real one (5 a minute under STAGE=test), so the 429 page can be reached (SF-161, SF-172). Each
+  // person has a copy of their own, so one browser test's review choice, rate or import never shows in another's (SF-166).
+  const apis = new PersonDataApis(new MemoryDataApi(c.clock));
+  c.dataApi = apis;
+  const seed = fixtureSeed();
+  seedPerson(c, apis, seed, TEST_PERSON);
+  for (const name of E2E_PEOPLE) seedPerson(c, apis, seed, e2ePerson(name), E2E_DATA[name]);
 }
 
-function seedPerson(c: Container, dataApi: MemoryDataApi, { sessionId, sub, email }: { sessionId: string; sub: string; email: string }) {
+function seedPerson(
+  c: Container,
+  apis: PersonDataApis,
+  seed: ReturnType<typeof fixtureSeed>,
+  { sessionId, sub, email }: { sessionId: string; sub: string; email: string },
+  data?: 'empty' | 'failing',
+) {
   const now = c.clock.now();
   const part = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
   const token = (claims: object) => `${part({ alg: 'none' })}.${part(claims)}.test`;
   const accessToken = token({ sub, exp: Math.floor((now + SESSION_ABSOLUTE_MS) / 1000), token_use: 'access' });
-  dataApi.allowToken(accessToken);
+  if (data === 'failing') {
+    apis.add(accessToken, new FailingDataApi());
+  } else {
+    const dataApi = new MemoryDataApi(c.clock, { limits: c, logger: c.logger });
+    if (data !== 'empty') dataApi.seed(seed);
+    dataApi.allowToken(accessToken);
+    apis.add(accessToken, dataApi);
+  }
   // The memory stores apply these at once (their methods do not await), so the person exists before the first request.
   void c.sessionStore.create({
     idHash: createHash('sha256').update(sessionId).digest('hex'),

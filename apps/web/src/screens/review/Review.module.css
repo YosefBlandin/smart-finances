@@ -1,0 +1,117 @@
+/* To review (SF-166): the heading, then the rows in one table on white; tokens only (D-21, D-22). */
+.heading {
+  margin: 0;
+  font-size: var(--t-2xl);
+  font-weight: var(--w-head);
+}
+
+.heading:focus {
+  outline: none;
+}
+
+.sub {
+  margin: var(--s2) 0 0;
+  padding-bottom: var(--s5);
+  max-width: 64ch;
+  color: var(--muted);
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.what {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  min-width: 0;
+}
+
+.meta {
+  font-size: var(--t-s);
+  color: var(--muted);
+}
+
+.reasons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+
+.reason {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  align-items: baseline;
+}
+
+/* The importer's flag, as it named it: an amber pill in Chivo Mono (attention, D-15). */
+.flag {
+  font-family: var(--font-data);
+  font-size: var(--t-xs);
+  padding: 0 var(--s2);
+  border-radius: 999px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  white-space: nowrap;
+}
+
+.why {
+  font-size: var(--t-s);
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  align-items: flex-end;
+}
+
+.fix {
+  font-size: var(--t-s);
+  color: var(--muted);
+}
+
+.amount {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.go {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+  padding: 0 var(--s3);
+  border: 1px solid var(--control);
+  border-radius: var(--r-s);
+  color: var(--ink);
+  font-size: var(--t-s);
+  font-weight: var(--w-em);
+  text-decoration: none;
+}
+
+.go:hover {
+  background: var(--sunken);
+}
+
+@media (pointer: coarse) {
+  .go {
+    min-height: 44px;
+  }
+}
+
+/* Imported text exactly as it arrived (D-16): Chivo Mono, muted, wrapped anywhere. */
+.raw {
+  font-family: var(--font-data);
+  font-size: var(--t-xs);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  max-width: 46ch;
+}

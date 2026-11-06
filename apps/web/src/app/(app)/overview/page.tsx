@@ -8,11 +8,12 @@ import { Overview } from '@/screens/overview/Overview';
 import styles from '@/screens/overview/Overview.module.css';
 import { redirectIfLimited } from '../../api/data/respond';
 import { requireMoneyAccess } from '../../guarded';
+import { readReview } from '../review/read';
 
 // The overview (SF-164; D-18, D-101, D-127): the server reads every section's data through the read use cases (each
 // read times out at 5 seconds and counts against the person's limit, D-82), hydrates the island with it, and renders
 // nothing until then (no streaming). Five reads: totals for three years, the rates, the rows to review, the imports and
-// the month's biggest expenses (places). A read past the limit goes to the limit page (AC-17); any other failed read is
+// the month's biggest expenses (places); the review read is the one the shell's count already made (../review/read.ts). A read past the limit goes to the limit page (AC-17); any other failed read is
 // left out, so that section asks again in the browser and shows its own failed note (D-101). The heading comes first
 // and takes focus after a navigation (AC-10).
 export const dynamic = 'force-dynamic';
@@ -48,7 +49,7 @@ export default async function OverviewPage({ searchParams }: { searchParams: Sea
   const [totals, rates, review, imports] = await Promise.all([
     reads.getTotals(who, range),
     reads.getRates(who),
-    reads.getReview(who),
+    readReview(who.accessToken),
     reads.listImports(who, {}),
   ]);
   const month = shownMonth(asked, totals.ok ? totals.data : undefined, now);

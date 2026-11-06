@@ -141,7 +141,8 @@
       "possible_duplicate": "Mismo monto, lugar y día que otro movimiento",
       "bcv_rate": "Convertido a la tasa oficial venezolana",
       "summed": "Un total del mes, no compras sueltas"
-    }
+    },
+    "saveFailed": "Ese cambio no se guardó. No cambió nada; inténtalo de nuevo."
   },
   "imports": {
     "sub": "Sube un archivo de cada fuente. Un archivo nuevo del mismo mes reemplaza al anterior, y puedes deshacerlo.",
@@ -203,7 +204,11 @@
     "addRatePh": "Agregar cotización",
     "saved2": "guardada",
     "missing": "Falta",
-    "rtFoot": "Las cotizaciones llevan dos decimales. Cambiar una actualiza al instante las cifras en dólares de ese mes."
+    "rtFoot": "Las cotizaciones llevan dos decimales. Cambiar una actualiza al instante las cifras en dólares de ese mes.",
+    "save": "Guardar",
+    "saveFailed": "Esa cotización no se guardó. No cambió nada; inténtalo de nuevo.",
+    "invalid": "Usa un número mayor que 0 con dos decimales como máximo, como 1.424,37.",
+    "statusCol": "Estado"
   },
   "data": {
     "sub": "Qué guarda Cuenta sobre ti, dónde vive y cómo sacarlo o borrarlo.",

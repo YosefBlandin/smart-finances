@@ -13,8 +13,12 @@ type Person =
   | 'shell-account'
   | 'shell-scroll'
   | 'shell-focus'
-  | 'shell-screens'
   | 'shell-screens-overview'
+  | 'shell-screens-transactions'
+  | 'shell-screens-review'
+  | 'shell-screens-imports'
+  | 'shell-screens-rates'
+  | 'shell-screens-data'
   | 'shell-topbar'
   | 'shell-menu'
   | 'shell-lang'
@@ -48,7 +52,8 @@ function watchPolicy(page: Page): string[] {
 }
 
 const rail = (page: Page) => page.getByRole('navigation', { name: 'Screens' });
-const MONEY = ['Overview', 'Transactions', 'To review', 'Imports', 'Dollar rates'];
+// The To review link also carries the count of rows to review once there are any (D-44; 72 in the fixtures).
+const MONEY_LINKS = ['Overview', 'Transactions', /^To review/, 'Imports', 'Dollar rates', 'Your data'];
 
 test.describe('desktop rail', () => {
   test.use({ viewport: { width: 1280, height: 720 } });
@@ -63,7 +68,7 @@ test.describe('desktop rail', () => {
     const nav = rail(page);
     await expect(nav).toBeVisible();
     const links = nav.getByRole('link');
-    await expect(links).toHaveText([...MONEY, 'Your data']);
+    await expect(links).toHaveText(MONEY_LINKS);
     await expect(nav.getByText('Money', { exact: true })).toBeVisible();
     await expect(nav.getByText('Account', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Ask' })).toHaveCount(0);
@@ -189,9 +194,9 @@ test.describe('desktop rail', () => {
       data: 'Your data',
     };
     for (const [path, title] of Object.entries(titles)) {
-      // The overview's first view makes all 5 of a STAGE=test person's data reads a minute, so it has a person of its own.
-      if (path === 'overview') await signInAs(context, 'shell-screens-overview');
-      else await signInAs(context, 'shell-screens');
+      // Each screen has a person of its own: the overview's first view makes all 5 of a STAGE=test person's data reads a
+      // minute, and every screen now reads the rows to review for the shell's count as well as its own data (SF-166).
+      await signInAs(context, `shell-screens-${path}` as Person);
       await page.goto(`/${path}`);
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(title);
       await expect(page.getByRole('main')).toHaveCount(1);
@@ -214,8 +219,8 @@ test.describe('top bar under 960px', () => {
     const box = (await button.boundingBox())!;
     expect(box.height).toBe(44);
     await expect(button.locator('[data-icon="menu"]')).toHaveCount(1);
-    // D-44: no count when nothing waits for review (the count comes with the review data in PR 4).
-    await expect(button.locator('[data-count]')).toHaveCount(0);
+    // D-44: the count of rows to review rides on the menu button, from every screen (72 in the fixtures).
+    await expect(button.locator('[data-count]')).toHaveText('7272 to review');
     // D-24: nothing but the bar sits above the screen's heading, so it shows in the first screen.
     const h1 = (await page.getByRole('heading', { level: 1 }).boundingBox())!;
     expect(h1.y).toBeLessThan(200);
@@ -225,8 +230,10 @@ test.describe('top bar under 960px', () => {
   test('T-WEB-10: the menu opens as a panel under the bar without moving the page, and a chosen link closes it', async ({ page, context }) => {
     await signInAs(context, 'shell-menu');
     const violations = watchPolicy(page);
-    await page.goto('/overview');
-    const button = page.getByRole('button', { name: /Overview/ });
+    // Starts on Transactions: the overview's 5 reads plus the review screen's read would pass the STAGE=test person's
+    // 5 a minute (SF-166, D-157).
+    await page.goto('/transactions');
+    const button = page.getByRole('button', { name: /Transactions/ });
     const before = (await page.getByRole('heading', { level: 1 }).boundingBox())!;
     const bar = (await page.locator('[data-topbar]').boundingBox())!;
     await button.click();
@@ -239,8 +246,8 @@ test.describe('top bar under 960px', () => {
     expect(after.y).toBe(before.y);
 
     // The same links and account rows as the rail.
-    await expect(panel.getByRole('link')).toHaveText([...MONEY, 'Your data']);
-    await expect(panel.getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page');
+    await expect(panel.getByRole('link')).toHaveText(MONEY_LINKS);
+    await expect(panel.getByRole('link', { name: 'Transactions' })).toHaveAttribute('aria-current', 'page');
     await expect(panel).toContainText('shell-menu@example.com');
     await expect(panel.getByRole('button', { name: 'Español' })).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Sign out' })).toBeVisible();
@@ -268,17 +275,19 @@ test.describe('language', () => {
   test('T-WEB-11: switching language keeps the address and sets html lang', async ({ page, context }) => {
     await signInAs(context, 'shell-lang');
     const violations = watchPolicy(page);
-    await page.goto('/transactions?month=2026-05&view=usd');
+    // On To review: one data read per render (the shell's count and the list share it), so the three renders stay within
+    // the STAGE=test person's 5 reads a minute (SF-166, D-157).
+    await page.goto('/review?month=2026-05&view=usd');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
     await page.locator('[data-account]').first().getByRole('button', { name: 'Español' }).click();
-    await expect(page).toHaveURL(/\/transactions\?month=2026-05&view=usd$/);
+    await expect(page).toHaveURL(/\/review\?month=2026-05&view=usd$/);
     await expect(page.locator('html')).toHaveAttribute('lang', 'es');
-    await expect(page.getByRole('navigation', { name: 'Pantallas' }).getByRole('link', { name: 'Movimientos' })).toHaveAttribute(
+    await expect(page.getByRole('navigation', { name: 'Pantallas' }).getByRole('link', { name: /^Por revisar/ })).toHaveAttribute(
       'aria-current',
       'page',
     );
     await expect(page.getByRole('navigation', { name: 'Pantallas' }).getByRole('link', { name: 'Cotizaciones' })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Movimientos');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Por revisar');
     const lang = (await context.cookies()).find((c) => c.name === 'lang');
     expect(lang?.value).toBe('es');
     expect(lang?.sameSite).toBe('Lax');
@@ -287,9 +296,9 @@ test.describe('language', () => {
     expect((await context.cookies()).some((c) => c.name === '__Host-sid')).toBe(true);
 
     await page.locator('[data-account]').first().getByRole('button', { name: 'English' }).click();
-    await expect(page).toHaveURL(/\/transactions\?month=2026-05&view=usd$/);
+    await expect(page).toHaveURL(/\/review\?month=2026-05&view=usd$/);
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Transactions');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('To review');
     expect(violations).toEqual([]);
   });
 
@@ -312,13 +321,14 @@ test.describe('language', () => {
   test('T-WEB-11: the menu panel switches language too, on a tablet', async ({ page, context }) => {
     await signInAs(context, 'shell-lang-tablet');
     await page.setViewportSize({ width: 800, height: 900 });
-    await page.goto('/rates');
-    await page.getByRole('button', { name: /Dollar rates/ }).click();
+    // On To review, for the same reason as above (SF-166, D-157).
+    await page.goto('/review');
+    await page.getByRole('button', { name: /To review/ }).click();
     await page.getByRole('dialog', { name: 'Menu' }).getByRole('button', { name: 'Español' }).click();
-    await expect(page).toHaveURL(/\/rates$/);
+    await expect(page).toHaveURL(/\/review$/);
     await expect(page.locator('html')).toHaveAttribute('lang', 'es');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Cotización del dólar');
-    await expect(page.getByRole('button', { name: /Cotizaciones/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Por revisar');
+    await expect(page.getByRole('button', { name: /Por revisar/ })).toBeVisible();
   });
 });
 

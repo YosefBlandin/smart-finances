@@ -230,3 +230,46 @@ export class MemoryDataApi implements DataApi {
     return done({ deleted: { items, files: 0 } });
   }
 }
+
+/** A data API whose every call fails as the API being down would (STAGE=test people for the failed states, AC-8). */
+export class FailingDataApi implements DataApi {
+  private readonly fail = async (): Promise<DataApiFailure> => ({ ok: false, kind: 'failed', code: 'server' });
+  listTransactions = this.fail;
+  totals = this.fail;
+  rates = this.fail;
+  putRate = this.fail;
+  review = this.fail;
+  putReview = this.fail;
+  listImports = this.fail;
+  getImport = this.fail;
+  requestImport = this.fail;
+  exportCsv = this.fail;
+  erase = this.fail;
+}
+
+/**
+ * STAGE=test: one data API per person, picked by the access token, so a browser test that changes data (a review
+ * choice, a rate, an import) changes only its own person's copy of the fixtures and never another test's (SF-166). An
+ * unknown token goes to the fallback, which answers unauthorized as before.
+ */
+export class PersonDataApis implements DataApi {
+  private readonly byToken = new Map<string, DataApi>();
+  constructor(private readonly fallback: DataApi) {}
+  add(token: string, api: DataApi) {
+    this.byToken.set(token, api);
+  }
+  private pick(token: string): DataApi {
+    return this.byToken.get(token) ?? this.fallback;
+  }
+  listTransactions: DataApi['listTransactions'] = (token, input) => this.pick(token).listTransactions(token, input);
+  totals: DataApi['totals'] = (token, input) => this.pick(token).totals(token, input);
+  rates: DataApi['rates'] = (token, input) => this.pick(token).rates(token, input);
+  putRate: DataApi['putRate'] = (token, input) => this.pick(token).putRate(token, input);
+  review: DataApi['review'] = (token, input) => this.pick(token).review(token, input);
+  putReview: DataApi['putReview'] = (token, input) => this.pick(token).putReview(token, input);
+  listImports: DataApi['listImports'] = (token, input) => this.pick(token).listImports(token, input);
+  getImport: DataApi['getImport'] = (token, input) => this.pick(token).getImport(token, input);
+  requestImport: DataApi['requestImport'] = (token, input) => this.pick(token).requestImport(token, input);
+  exportCsv: DataApi['exportCsv'] = (token, input) => this.pick(token).exportCsv(token, input);
+  erase: DataApi['erase'] = (token, input) => this.pick(token).erase(token, input);
+}

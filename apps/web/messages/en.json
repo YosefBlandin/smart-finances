@@ -141,7 +141,8 @@
       "possible_duplicate": "Same amount, place and day as another row",
       "bcv_rate": "Converted at the official Venezuelan rate",
       "summed": "A month total, not single purchases"
-    }
+    },
+    "saveFailed": "That change didn’t save. Nothing changed; try again."
   },
   "imports": {
     "sub": "Upload a file from each source. A new file for the same month replaces the old one, and you can undo it.",
@@ -203,7 +204,11 @@
     "addRatePh": "Add a rate",
     "saved2": "saved",
     "missing": "Missing",
-    "rtFoot": "Rates keep two decimals. Changing one updates that month’s dollar figures at once."
+    "rtFoot": "Rates keep two decimals. Changing one updates that month’s dollar figures at once.",
+    "save": "Save",
+    "saveFailed": "That rate didn’t save. Nothing changed; try again.",
+    "invalid": "Use a number above 0 with at most two decimals, like 1,424.37.",
+    "statusCol": "Status"
   },
   "data": {
     "sub": "What Cuenta stores about you, where it lives, and how to take it out or remove it.",
