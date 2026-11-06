@@ -37,6 +37,7 @@ import { MemorySessionStore } from './memory/session-store';
 import { MemorySettings } from './memory/settings';
 import { PwnedPasswordsChecker } from './pwned';
 import { SecretsManagerStore } from './secrets';
+import { SsmParameterStore } from './ssm';
 
 // One adapter per port (architecture.md Contracts "Ports"). app/ reaches application/ through this file only (D-138).
 export type Container = {
@@ -89,29 +90,6 @@ export function memoryContainer(settings: Settings = new MemorySettings(), clock
   };
 }
 
-// PR 4 adds the parameter store adapter (SF-167). Until then a real stage fails closed on it: a parameter read is refused
-// (never read as "not set", which could mean "imports not paused"), and logged once per process, so the log shows why
-// without a line per request. The data API adapter is wired (SF-161, D-167).
-function logOnce(logger: Logger, outcome: string): () => void {
-  let logged = false;
-  return () => {
-    if (logged) return;
-    logged = true;
-    logger.event('adapter_unavailable', outcome, { requestId: 'container' });
-  };
-}
-
-export class UnwiredParameterStore implements ParameterStore {
-  private readonly log: () => void;
-  constructor(logger: Logger) {
-    this.log = logOnce(logger, 'parameter_store');
-  }
-  async get(): Promise<string | undefined> {
-    this.log();
-    throw new Error('The parameter store is not wired until PR 4');
-  }
-}
-
 /**
  * The real adapters of qa, staging and prod, built from the settings (D-138). Every AWS SDK client takes the region
  * from the settings (the runtime's, else us-east-1; D-159) and is only constructed here: nothing is sent until a use
@@ -138,7 +116,7 @@ export function realContainer(settings: Settings, clock: Clock = new SystemClock
     clock,
     settings,
     secretStore,
-    parameterStore: new UnwiredParameterStore(logger),
+    parameterStore: new SsmParameterStore({ region, clock }),
     logger,
     sessionStore,
     preAuthStore: new DynamoPreAuthStore({ ...sessions, clock }),
@@ -229,6 +207,10 @@ export const E2E_PEOPLE = [
   'rates-rollback',
   'rates-empty',
   'rates-failed',
+  // e2e/imports.spec.ts (SF-167).
+  'imports-upload',
+  'imports-refused',
+  'imports-es',
 ] as const;
 
 type E2EName = (typeof E2E_PEOPLE)[number];

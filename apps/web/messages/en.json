@@ -195,7 +195,25 @@
     "errors": {
       "name": "The file name needs the month and year, like budget_Jun_2026.xlsx.",
       "never": "The file never arrived. It may have been over the 20 MiB limit."
-    }
+    },
+    "refused": {
+      "source": "Choose where the file comes from first.",
+      "empty": "That file is empty. Choose the file again.",
+      "name": "That file doesn’t fit this source. Check the rule above the file button.",
+      "tooLarge": "That file is over the size limit for this source.",
+      "paused": "Imports are paused for a while. Nothing was sent; try again later.",
+      "unavailable": "Imports can’t start right now. Nothing was sent; try again in a minute.",
+      "daily": "You’ve made 10 imports today, the daily limit. Try again tomorrow.",
+      "bytes": "Your stored files are close to the 200 MiB limit. Erase your data to make room.",
+      "running": "Another import is still running. Wait for it to finish, then send this file.",
+      "conflict": "That import didn’t start. Nothing was sent; try again.",
+      "limited": "Too many requests for now. Wait a minute, then try again.",
+      "failed": "That import didn’t start. Nothing was sent; try again.",
+      "upload": "The file didn’t upload. Choose it again to retry."
+    },
+    "sending": "Sending the file…",
+    "continues": "Still working. Open it again in a few minutes to see how it ended.",
+    "statusCol": "Status"
   },
   "rates": {
     "ratesTitle": "Dollar rates",

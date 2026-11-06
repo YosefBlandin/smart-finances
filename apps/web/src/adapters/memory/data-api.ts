@@ -78,6 +78,16 @@ export function fixtureSeed(): Required<Seed> {
   return { transactions, rates, imports };
 }
 
+/** How long an import requested from this fake runs before it is done (SF-167): its upload is not seen here. */
+export const MEMORY_IMPORT_RUN_MS = 2_000;
+
+/** The period an import covers, as far as its file name tells: yyyy-mm, the notes log, or not known. */
+function periodOf(source: string, fileName: string): string {
+  if (source === 'notion') return 'log';
+  const m = /(\d{4})-(0[1-9]|1[0-2])/.exec(fileName);
+  return m ? `${m[1]}-${m[2]}` : '—';
+}
+
 const failed = (code: string): DataApiFailure => ({
   ok: false,
   kind: code === 'not_found' ? 'not_found' : code === 'conflict' ? 'conflict' : 'failed',
@@ -94,6 +104,9 @@ export class MemoryDataApi implements DataApi {
   private readonly transactions = new Map<string, Tx>();
   private readonly rateMap = new Map<string, number>();
   private readonly imports = new Map<string, ImportRecord>();
+  /** Imports requested from this fake, with when: each is importing, then done with two skipped rows (SF-167). */
+  private readonly requested = new Map<string, number>();
+  private nextImport = 1;
   constructor(
     private readonly clock: Clock,
     private readonly opts: { limits?: LimitsDeps; logger?: Logger } = {},
@@ -192,14 +205,35 @@ export class MemoryDataApi implements DataApi {
   async listImports(token: string, input: Parameters<DataApi['listImports']>[1]) {
     const p = await this.parse(token, 'GET /imports', input);
     if (p.error) return p.error;
-    return done({ items: [...this.imports.values()].map((i) => structuredClone(i)) });
+    const items = [...this.imports.values()].map((i) => this.progress(i));
+    return done({ items: items.sort((a, b) => b.created_at.localeCompare(a.created_at)) });
   }
 
   async getImport(token: string, { id }: Parameters<DataApi['getImport']>[1]) {
     const p = await this.parse(token, 'GET /imports/{id}', {});
     if (p.error) return p.error;
     const i = this.imports.get(id);
-    return i ? done(structuredClone(i)) : failed('not_found');
+    return i ? done(this.progress(i)) : failed('not_found');
+  }
+
+  /** A copy of the record; one requested here shows importing, then done once MEMORY_IMPORT_RUN_MS have passed. */
+  private progress(i: ImportRecord): ImportRecord {
+    const copy = structuredClone(i);
+    const at = this.requested.get(i.import_id);
+    if (at === undefined) return copy;
+    if (this.clock.now() - at < MEMORY_IMPORT_RUN_MS) return { ...copy, status: 'importing' };
+    return {
+      ...copy,
+      status: 'done',
+      active: true,
+      finished_at: new Date(at + MEMORY_IMPORT_RUN_MS).toISOString(),
+      counts: { added: 12, updated: 0, removed: 0, skipped: 2 },
+      // The importer's own words, in English (D-86). Synthetic.
+      skipped: [
+        { where: 'row 7', reason: 'the amount is not a number' },
+        { where: 'row 12', reason: 'the date is outside the month' },
+      ],
+    };
   }
 
   async requestImport(token: string, input: Parameters<DataApi['requestImport']>[1]) {
@@ -207,8 +241,20 @@ export class MemoryDataApi implements DataApi {
     if (refused) return refused;
     const check = checkImportRequest(input);
     if (!check.ok) return failed(check.code ?? 'bad_request');
-    const import_id = `imp-${this.imports.size + 1}`;
-    const expires_at = new Date(this.clock.now() + 15 * 60_000).toISOString();
+    const import_id = `imp-${String(this.nextImport++).padStart(4, '0')}`;
+    const now = this.clock.now();
+    const expires_at = new Date(now + 15 * 60_000).toISOString();
+    this.imports.set(import_id, {
+      import_id,
+      kind: 'file',
+      source: input.source,
+      file_name: input.file_name,
+      period: periodOf(input.source, input.file_name),
+      status: 'requested',
+      created_at: new Date(now).toISOString(),
+      active: false,
+    });
+    this.requested.set(import_id, now);
     return done({ import_id, upload: { url: 'https://uploads.test.invalid/', fields: { key: import_id } }, expires_at });
   }
 

@@ -195,7 +195,25 @@
     "errors": {
       "name": "El nombre del archivo necesita el mes y el año, como budget_Jun_2026.xlsx.",
       "never": "El archivo nunca llegó. Quizás superaba el límite de 20 MiB."
-    }
+    },
+    "refused": {
+      "source": "Primero elige de dónde viene el archivo.",
+      "empty": "Ese archivo está vacío. Vuelve a elegirlo.",
+      "name": "Ese archivo no corresponde a esta fuente. Revisa la regla sobre el botón del archivo.",
+      "tooLarge": "Ese archivo supera el límite de tamaño de esta fuente.",
+      "paused": "Las importaciones están en pausa por un rato. No se envió nada; inténtalo más tarde.",
+      "unavailable": "Las importaciones no pueden empezar ahora. No se envió nada; inténtalo en un minuto.",
+      "daily": "Ya hiciste 10 importaciones hoy, el límite diario. Inténtalo mañana.",
+      "bytes": "Tus archivos guardados están cerca del límite de 200 MiB. Borra tus datos para hacer lugar.",
+      "running": "Otra importación sigue en curso. Espera a que termine y envía este archivo.",
+      "conflict": "Esa importación no empezó. No se envió nada; inténtalo de nuevo.",
+      "limited": "Demasiados pedidos por ahora. Espera un minuto y vuelve a intentarlo.",
+      "failed": "Esa importación no empezó. No se envió nada; inténtalo de nuevo.",
+      "upload": "El archivo no se subió. Vuelve a elegirlo para reintentar."
+    },
+    "sending": "Enviando el archivo…",
+    "continues": "Sigue en curso. Vuelve a abrirla en unos minutos para ver cómo terminó.",
+    "statusCol": "Estado"
   },
   "rates": {
     "ratesTitle": "Cotización del dólar",
