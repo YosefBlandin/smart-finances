@@ -101,6 +101,56 @@ describe('T-WSCR-8: import caps (D-114)', () => {
     expect(account?.storedBytes).toBe(0);
   });
 
+  it('T-WSCR-8: a stalled import frees the slot, keeping the source maximum, and the next import may start', async () => {
+    const s = setup();
+    const api = s.c.dataApi as MemoryDataApi;
+    api.seed({
+      imports: [
+        {
+          import_id: 'imp-stalled',
+          kind: 'file',
+          source: 'mercadopago',
+          file_name: 'release-report-2026-09.csv',
+          period: '2026-09',
+          status: 'stalled',
+          created_at: '2026-11-05T11:00:00Z',
+          active: false,
+        },
+      ],
+    });
+    await s.c.accountStore.reserveImport(SUB, { day: '2026-11-05', bytes: 5 * MiB, importId: 'imp-stalled' });
+    // Nobody watched it: the next request settles it (the data spec's lock frees itself; repair or upload again).
+    const next = await s.imports.requestImport(WHO, CSV);
+    expect(next.ok).toBe(true);
+    // The stalled file stays counted at its source's maximum, like any import whose file arrived.
+    expect((await s.c.accountStore.getAccount(SUB))?.storedBytes).toBe(10 * MiB);
+  });
+
+  it('T-WSCR-8: reading a stalled import releases its slot', async () => {
+    const s = setup();
+    const api = s.c.dataApi as MemoryDataApi;
+    api.seed({
+      imports: [
+        {
+          import_id: 'imp-stalled',
+          kind: 'file',
+          source: 'excel',
+          file_name: 'budget_Sep_2026.xlsx',
+          period: '2026-09',
+          status: 'stalled',
+          created_at: '2026-11-05T11:00:00Z',
+          active: false,
+        },
+      ],
+    });
+    await s.c.accountStore.reserveImport(SUB, { day: '2026-11-05', bytes: 20 * MiB, importId: 'imp-stalled' });
+    const read = await s.imports.getImport(WHO, 'imp-stalled');
+    expect(read.ok && read.data.status).toBe('stalled');
+    const account = await s.c.accountStore.getAccount(SUB);
+    expect(account?.runningImportId).toBeUndefined();
+    expect(account?.storedBytes).toBe(20 * MiB);
+  });
+
   it('T-WSCR-8: a running slot left by a finished import is settled by the next request', async () => {
     const s = setup();
     const first = await s.imports.requestImport(WHO, CSV);

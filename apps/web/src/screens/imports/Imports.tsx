@@ -69,11 +69,10 @@ export function Imports({ request }: ImportsProps) {
       for (const [name, value] of Object.entries(started.data.upload.fields)) form.append(name, value);
       form.append('file', file);
       const sent = await fetch(started.data.upload.url, { method: 'POST', body: form }).catch(() => undefined);
-      if (!sent?.ok) {
-        setRefused('imports.refused.upload');
-        return;
-      }
+      // Either way the import opens and is read until it ends, so the server settles the person's slot (D-114); one
+      // whose file never arrived ends as expired and gives its bytes back.
       setOpen(started.data.importId);
+      if (!sent?.ok) setRefused('imports.refused.upload');
     } catch {
       setRefused('imports.refused.failed');
     } finally {

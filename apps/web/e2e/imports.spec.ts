@@ -9,7 +9,7 @@ import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 // request with a form for https://uploads.test.invalid/, which these tests answer in place of the upload host, and
 // finishes that import 2 seconds after it was requested, with two skipped rows.
 
-type Person = 'imports-upload' | 'imports-refused' | 'imports-es';
+type Person = 'imports-upload' | 'imports-upload-failed' | 'imports-refused' | 'imports-es';
 
 test.use({ viewport: { width: 1280, height: 900 } });
 
@@ -71,6 +71,22 @@ test('T-WSCR-9: a sent file shows its import until it ends, with the skipped row
   expect(uploads[0]!.body).toContain('SYNTHETIC SHOP');
   // The list shows it too, at the top.
   await expect(main(page).getByRole('table').getByRole('row').nth(1)).toContainText('release-report-2026-11.csv');
+  expect(violations).toEqual([]);
+});
+
+test('T-WSCR-9: an upload the host refuses says so, and its import still opens so its slot is settled', async ({ page, context }) => {
+  test.setTimeout(60_000);
+  await signInAs(context, 'imports-upload-failed');
+  const violations = watchPolicy(page);
+  await page.route('https://uploads.test.invalid/**', async (route) => {
+    await route.fulfill({ status: 403, headers: { 'access-control-allow-origin': 'http://localhost:3000' } });
+  });
+  await page.goto('/imports');
+  await main(page).getByLabel('Choose a file').setInputFiles(csv('release-report-2026-08.csv'));
+  await expect(main(page).getByRole('alert')).toHaveText('The file didn’t upload. Choose it again to retry.');
+  // The import is opened and read, so the server releases the person's slot once it reaches its end (D-114).
+  const detail = main(page).getByRole('complementary', { name: 'release-report-2026-08.csv' });
+  await expect(detail).toBeVisible();
   expect(violations).toEqual([]);
 });
 

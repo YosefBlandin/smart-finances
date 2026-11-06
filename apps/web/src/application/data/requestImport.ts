@@ -14,8 +14,8 @@ import type { Settings } from '@/ports/settings';
 // the data API is asked. It then asks POST /imports and reserves the slot under the import id the API gave, by one
 // conditional update of the account row, which alone decides when requests race (D-114): the release at the final
 // status finds the slot by that id. A request that loses the race gets no upload form, so its record expires as
-// "never arrived". getImport reads an import and, at its final status, releases the slot: a file that never arrived
-// gives its bytes back; any other final status keeps the source's maximum counted, since the web server never learns
+// "never arrived". getImport reads an import and, at its final status or stalled, releases the slot: a file that never
+// arrived gives its bytes back; any other status keeps the source's maximum counted, since the web server never learns
 // the stored size. A slot whose import ended while nobody watched is settled by the next request.
 
 export type ImportsDeps = {
@@ -45,6 +45,12 @@ export const IMPORT_CAPS = { perDay: 10, storedBytes: 200 * MiB } as const;
 /** Statuses after which an import no longer changes (data spec "States and exits"); stalled waits for a repair. */
 export const FINAL_STATUSES: readonly string[] = ['done', 'unchanged', 'superseded', 'failed', 'expired'];
 
+/**
+ * Statuses at which the person's slot is released (D-114): the final ones and stalled, whose lock frees itself (data
+ * spec "States and exits"); the person repairs it or uploads again.
+ */
+export const SLOT_FREE_STATUSES: readonly string[] = [...FINAL_STATUSES, 'stalled'];
+
 /** How long an import requested from the STAGE=test data API runs (adapters/memory/data-api.ts). */
 export const IMPORT_RUN_MS = 2_000;
 
@@ -73,7 +79,7 @@ export function createImports(deps: ImportsDeps) {
 
   /** Releases the person's slot for this import if it is the one running: its bytes back when no file arrived. */
   async function settle(sub: string, record: ImportRecord) {
-    if (!FINAL_STATUSES.includes(record.status)) return;
+    if (!SLOT_FREE_STATUSES.includes(record.status)) return;
     const account = await accountStore.getAccount(sub);
     if (account?.runningImportId !== record.import_id) return;
     await accountStore.releaseImport(sub, record.import_id, record.status === 'expired' ? 0 : maxBytesOf(record.source));
@@ -126,7 +132,7 @@ export function createImports(deps: ImportsDeps) {
       return { ok: true, data: { importId: asked.data.import_id, upload: asked.data.upload, expiresAt: asked.data.expires_at } };
     },
 
-    /** One import, as the API answers it; at its final status the person's slot is released (D-114). */
+    /** One import, as the API answers it; at its final status (or stalled) the person's slot is released (D-114). */
     async getImport(who: Who, id: string): Promise<DataApiResult<ImportRecord>> {
       const read = await dataApi.getImport(who.accessToken, { id });
       if (read.ok) {

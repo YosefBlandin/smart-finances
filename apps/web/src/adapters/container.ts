@@ -209,6 +209,7 @@ export const E2E_PEOPLE = [
   'rates-failed',
   // e2e/imports.spec.ts (SF-167).
   'imports-upload',
+  'imports-upload-failed',
   'imports-refused',
   'imports-es',
   // e2e/erase.spec.ts (SF-168).
