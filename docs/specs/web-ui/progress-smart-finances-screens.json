@@ -97,9 +97,16 @@
     },
     {
       "id": "SF-167",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "9e25bd7",
+      "evidence": [
+        "Tests first (T-WSCR-8, apps/web/src/application/data/requestImport.test.ts): npm test --workspace @smart-finances/web -- src/application/data/requestImport.test.ts exit 1: \"Error: Cannot find module './requestImport' imported from .../requestImport.test.ts\", \"Test Files  1 failed (1)\" (expected: the use case did not exist).",
+        "Tests first (T-WSCR-9, apps/web/e2e/imports.spec.ts; imports-upload, imports-refused, imports-es added to E2E_PEOPLE first): npm run e2e --workspace @smart-finances/web -- e2e/imports.spec.ts exit 1: \"3 failed\": \"waiting for getByRole('main').getByText('The monthly release report as CSV. One month per file, up to 5 MiB.') ... element(s) not found\", \"locator.click: Test timeout ... getByRole('button', { name: /Where is this file from/ })\", \"... getByRole('button', { name: 'release-report-2026-09.csv' })\" (expected: the imports page was a placeholder).",
+        "Built: application/data/requestImport.ts createImports(deps): requestImport(who, { source, fileName, size }) checks the name and size with SOURCES / checkImportRequest, then imports-paused (PAUSE_PARAMETER(stage) = /smart-finances/<stage>/imports-paused; \"true\" pauses; an unreadable switch refuses as unavailable), settles a running slot whose import already ended, refuses plainly on the account row's caps (one running, 10 a UTC day, stored + source maximum within 200 MiB) without calling the API, then POST /imports and AccountStore.reserveImport under the API's import id (the conditional update decides races); getImport(who, id) reads and, at a final status, releases the slot (expired gives the bytes back; other final statuses keep the source maximum). app/api/data/imports/[id]/route.ts reads through it (owner decision, see deviations). adapters/ssm.ts SsmParameterStore (GetParameter, 60 s cache of a value or its absence, shared in-flight read, a failure thrown and not cached) replaces UnwiredParameterStore in adapters/container.ts (D-167); STAGE=test keeps the memory parameter store. @aws-sdk/client-ssm 3.1152.0 in apps/web/package.json (brief: packages allowed). app/(app)/imports/actions.ts requestImport through guarded(schema, { kind: 'money' }); page.tsx prefetches the imports list. screens/imports/: Imports.tsx (source select after hydration with the rule under it, file button and drop area, the browser's own contracts check first, then the action, then fetch POST of FormData with the form's fields and the file last; plain refusals in an alert; list table File | Covers | Status | Rows), Detail.tsx (aside named by the file: status chip, covers, started, finished, in use, import id, counts, running note or the poll-cap note, stalled note, error note, skipped rows under the translated lead with the importer's words in English, D-86; each answer written into the list cache, totals/review/transactions marked stale at the final status without a refetch), model.ts, Imports.module.css. New message keys (en, es): imports.refused.*, imports.sending, imports.continues, imports.statusCol. adapters/memory/data-api.ts: requested imports get ids imp-0001..., run 2 s (importing, then done with 2 skipped rows), and the list is newest first.",
+        "Fix round 1: getByLabel('Choose a file') also matched the picker section's aria-label (strict mode, 2 elements); the section label was dropped.",
+        "Verify: npm test --workspace @smart-finances/web -- src/application/data/requestImport.test.ts exit 0: \"Test Files  1 passed (1)\", \"Tests  8 passed (8)\". npm run e2e --workspace @smart-finances/web -- e2e/imports.spec.ts exit 0: \"3 passed (16.8s)\".",
+        "Final checks before the last commit: npm run lint --workspace @smart-finances/web exit 0 (\"All matched files use Prettier code style!\"); apps/web npx tsc --noEmit exit 0; npm test --workspace @smart-finances/web exit 0: \"Test Files  39 passed (39)\", \"Tests  575 passed (575)\"; npm run e2e --workspace @smart-finances/web exit 0: \"53 passed (1.3m)\" (T-WAUTH-17 en did not flake this run)."
+      ],
       "review": ""
     },
     {
@@ -170,6 +177,14 @@
       "proposal": "The (app) layout reads the to-review count through app/(app)/review/read.ts (React cache, one read per render) and the overview's prefetch uses the same read, so the count costs no extra read on the overview or the review screen; one extra read on every other money screen's full load.",
       "decidedBy": "owner note relayed in the executor prompt (2026-11-05): 'SF-166's to-review count in the shell must share the overview's review read'; read by the executor as allowing these two files. To confirm.",
       "newDecision": "pending: the planning session records it"
+    },
+    {
+      "date": "2026-11-06",
+      "task": "SF-167",
+      "from": "pr-smart-finances-screens.md SF-167 Files (apps/web/src/app/api/data/imports/[id]/ and application/data/reads.ts are not listed, though the Do has the getImport use case behind that route release the slot)",
+      "proposal": "app/api/data/imports/[id]/route.ts reads through createImports(container).getImport, which releases or corrects the slot at the final status; reads.ts is unchanged.",
+      "decidedBy": "owner, in chat, 2026-11-05: SF-167 may edit reads.ts and the imports/[id] route",
+      "newDecision": "pending: the planning session records it"
     }
   ],
   "surprises": [
@@ -197,6 +212,11 @@
     "SF-166: the STAGE=test memory data API is now one copy of the fixtures per person (PersonDataApis picks by access token; unknown tokens still answer unauthorized), so one browser test's review choice, rate or import never shows in another's; review-empty/rates-empty have no data and review-failed/rates-failed a FailingDataApi, for the empty and failed states. The fixtures hold 72 rows to review.",
     "SF-166: every money screen's full load now makes one more data read (the shell's count), except the overview and To review, which share it. Under STAGE=test (5 a minute) later browser tests should count it: transactions first view 2, rates 3, imports 1 + its own reads.",
     "SF-166: a review choice costs up to three counted requests (the PUT, the review refetch and the refresh that updates the shell count); a rate two (the PUT and the rates refetch; totals are only marked stale, since a rate changes their dollar view, not the months the rates screen lists).",
-    "SF-166: one first run of the web unit suite failed in src/ui/ui.test.tsx (\"ENOENT ... src/ui/zz_fixture.tsx\"): src/boundaries.test.ts writes temporary zz_fixture files that ui.test.tsx's directory scan can catch mid-run; the rerun passed (567/567). Pre-existing race, not changed here."
+    "SF-166: one first run of the web unit suite failed in src/ui/ui.test.tsx (\"ENOENT ... src/ui/zz_fixture.tsx\"): src/boundaries.test.ts writes temporary zz_fixture files that ui.test.tsx's directory scan can catch mid-run; the rerun passed (567/567). Pre-existing race, not changed here.",
+    "SF-167: requestImport asks POST /imports before reserving the slot, since the release finds the slot by the API's import id; a request that loses the reservation race gets no upload form, so its API record expires as never arrived. Before asking, the caps are checked from the account row so a plain refusal makes no API call; the conditional update still decides races (T-WSCR-8: five parallel requests reserve one).",
+    "SF-167: the web server never learns a file's stored size, so a final import keeps its source's maximum counted in stored bytes (5 or 20 MiB); only an import whose file never arrived (expired) gives its bytes back. A slot left running by an import nobody watched to its end is settled by the person's next request.",
+    "SF-167: the DataApi port has no repair or undo calls, so the stalled note and the done detail show no Repair or Undo button (the message keys exist).",
+    "SF-167 (D-157): adapters/container.test.ts asserted the fail-closed UnwiredParameterStore; it now asserts SsmParameterStore (no SDK send in the real container) and its cache, missing value and failure handling with a fake client.",
+    "SF-167: the imports e2e stays within 5 reads a minute per person: the layout count and the list on load, the request, then two polls; the finished import is written into the list cache rather than refetched. package-lock.json got the one apps/web dependency line by hand (npm install rewrote unrelated entries; the root @aws-sdk/client-ssm entry already existed for infra)."
   ]
 }
