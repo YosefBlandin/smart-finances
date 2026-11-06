@@ -214,12 +214,16 @@ export const E2E_PEOPLE = [
   // e2e/erase.spec.ts (SF-168).
   'data-erase',
   'data-erase-retry',
+  // e2e/delete-account.spec.ts (SF-169): each account is deleted, so no other test uses these people.
+  'delete-account',
+  'delete-account-refused',
+  'delete-account-retry',
 ] as const;
 
 type E2EName = (typeof E2E_PEOPLE)[number];
 
 /** STAGE=test people whose data is not the fixtures as is: none at all (the empty states), a data API that fails (AC-8), or one whose first erase fails (SF-168). */
-type E2EData = 'empty' | 'failing' | 'erase-fails-once';
+type E2EData = 'empty' | 'failing' | 'erase-fails-once' | 'erase-fails-twice';
 const E2E_DATA: Partial<Record<E2EName, E2EData>> = {
   'review-empty': 'empty',
   'review-failed': 'failing',
@@ -227,11 +231,23 @@ const E2E_DATA: Partial<Record<E2EName, E2EData>> = {
   'rates-failed': 'failing',
   // Its first erase fails as a timeout would, so Finish erasing can be shown and used (SF-168).
   'data-erase-retry': 'erase-fails-once',
+  // Its first finish's erase attempts both fail, so Finish deleting can be shown and used (SF-169).
+  'delete-account-retry': 'erase-fails-twice',
 };
+
+/**
+ * STAGE=test people who sign in again to delete their account (SF-169): the memory identity provider holds their sign-in
+ * under their own sub, with this synthetic password (e2e/delete-account.spec.ts uses it) and the test authenticator
+ * code. Not a secret: it only exists in a STAGE=test server's memory.
+ */
+export const E2E_DELETE_PASSWORD = 'e2e delete phrase, not a secret';
+const E2E_DELETE_PEOPLE: readonly E2EName[] = ['delete-account', 'delete-account-refused', 'delete-account-retry'];
 
 export function e2ePerson(name: E2EName) {
   return { sessionId: `e2e-${name}-not-secret-`.padEnd(43, '0'), sub: `e2e-person-${name}`, email: `${name}@example.com` } as const;
 }
+
+const ERASE_FAILURES: Partial<Record<E2EData | 'fixtures', number>> = { 'erase-fails-once': 1, 'erase-fails-twice': 2 };
 
 function seedTestPerson(c: Container) {
   // The money screens read the fixtures (sample plus hostile rows) through memory data APIs that count the person's
@@ -242,6 +258,10 @@ function seedTestPerson(c: Container) {
   const seed = fixtureSeed();
   seedPerson(c, apis, seed, TEST_PERSON);
   for (const name of E2E_PEOPLE) seedPerson(c, apis, seed, e2ePerson(name), E2E_DATA[name]);
+  for (const name of E2E_DELETE_PEOPLE) {
+    const { sub, email } = e2ePerson(name);
+    (c.identityProvider as MemoryIdentityProvider).seedUser({ sub, email, password: E2E_DELETE_PASSWORD });
+  }
 }
 
 function seedPerson(
@@ -258,7 +278,7 @@ function seedPerson(
   if (data === 'failing') {
     apis.add(accessToken, new FailingDataApi());
   } else {
-    const dataApi = new MemoryDataApi(c.clock, { limits: c, logger: c.logger, eraseFailures: data === 'erase-fails-once' ? 1 : 0 });
+    const dataApi = new MemoryDataApi(c.clock, { limits: c, logger: c.logger, eraseFailures: ERASE_FAILURES[data ?? 'fixtures'] ?? 0 });
     if (data !== 'empty') dataApi.seed(seed);
     dataApi.allowToken(accessToken);
     apis.add(accessToken, dataApi);

@@ -504,7 +504,16 @@
       "rates": "Cotizaciones",
       "doneNote": "Esta página es el único registro. No podemos mostrarla de nuevo.",
       "doneBackups": "Las copias de seguridad lo guardan 35 días y luego desaparece del todo.",
-      "start": "Volver al inicio"
+      "start": "Volver al inicio",
+      "running": "Todavía hay una importación en curso. Espera a que termine y luego borra tu cuenta. No se borró nada.",
+      "notStarted": "Primero confirma que eres tú y luego borra tu cuenta.",
+      "unfinishedTitle": "Tu cuenta todavía no está borrada",
+      "unfinished": "El borrado de tus datos no terminó a tiempo. Sigues con la sesión iniciada y no cambió nada más. Terminar de borrar sigue desde donde quedó.",
+      "finish": "Terminar de borrar",
+      "workingPlain": "Borrando tus datos y cerrando tus sesiones…",
+      "partialClosedLead": "Se cerraron todas las sesiones y ya no puedes entrar. Un último paso no terminó; lo terminamos dentro de la próxima hora. No tienes que hacer nada.",
+      "items": "Registros",
+      "goneTitle": "Esta página ya venció"
     },
     "tooMany": {
       "title": "Demasiados intentos",

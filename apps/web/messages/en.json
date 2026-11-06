@@ -504,7 +504,16 @@
       "rates": "Dollar rates",
       "doneNote": "This page is the only record. We can’t show it again.",
       "doneBackups": "Backups keep it for 35 days, then it’s gone for good.",
-      "start": "Back to the start"
+      "start": "Back to the start",
+      "running": "An import is still running. Wait until it ends, then delete your account. Nothing was deleted.",
+      "notStarted": "Confirm it’s you first, then delete your account.",
+      "unfinishedTitle": "Your account isn’t deleted yet",
+      "unfinished": "Erasing your data didn’t finish in time. You’re still signed in and nothing else changed. Finish deleting picks up where it stopped.",
+      "finish": "Finish deleting",
+      "workingPlain": "Erasing your data, then ending your sessions…",
+      "partialClosedLead": "Every session has ended and you can’t sign in. A last step didn’t finish; we finish it within the hour. You don’t need to do anything.",
+      "items": "Records",
+      "goneTitle": "This page has expired"
     },
     "tooMany": {
       "title": "Too many tries",

@@ -42,6 +42,14 @@ export class MemoryIdentityProvider implements IdentityProvider {
     return session;
   }
 
+  /**
+   * A confirmed person with an authenticator, under a given sub: STAGE=test people who sign in again to delete their
+   * account (SF-169) and unit tests. Synthetic values only.
+   */
+  seedUser({ sub, email, password }: { sub: string; email: string; password: string }) {
+    this.users.set(login(email), { sub, email: login(email), password, status: 'CONFIRMED', authenticator: true, resetPending: false });
+  }
+
   async signUp(rawEmail: string, password: string, lang: Lang) {
     const email = login(rawEmail);
     if (this.users.has(email)) return fail('exists');
