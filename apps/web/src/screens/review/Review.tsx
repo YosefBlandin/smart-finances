@@ -8,24 +8,19 @@ import { useState } from 'react';
 import { useReview } from '@/queries/data';
 import { dataKeys, type ReviewReply } from '@/queries/keys';
 import { StateBlock } from '@/ui/patterns/StateBlock/StateBlock';
+import { applyChoice, undoChoice } from './model';
 import styles from './Review.module.css';
 import { ReviewView, type ReviewChoice } from './View';
 
 // The review island (SF-166; D-131): the server prefetched the rows. A choice shows at once (the row takes its category,
-// or leaves the list when approved), then the server action saves it; a refusal puts the list back as it was and says
-// so in plain words. Once the last choice in flight settles, the rows to review and the totals are asked again, and the
+// or leaves the list when approved), then the server action saves it; a refusal puts that row back as it was, leaving
+// any other choice in flight as shown, and says so in plain words. Once the last choice in flight settles, the rows to review and the totals are asked again, and the
 // server render is refreshed so the shell's to-review count follows (D-44).
 
 export type ChooseResult = { ok: true } | { ok: false; messageKey: string };
 export type ReviewProps = { choose: (choice: ReviewChoice) => Promise<ChooseResult> };
 
 const MUTATION = ['review-choice'] as const;
-
-/** The list with the choice applied: an approved row leaves it, a category is shown on its row. */
-export function applyChoice(reply: ReviewReply, choice: ReviewChoice): ReviewReply {
-  if (choice.approved) return { ...reply, items: reply.items.filter((row) => row.id !== choice.id) };
-  return { ...reply, items: reply.items.map((row) => (row.id === choice.id && choice.category ? { ...row, category: choice.category } : row)) };
-}
 
 export function Review({ choose }: ReviewProps) {
   const t = useTranslations();
@@ -46,8 +41,10 @@ export function Review({ choose }: ReviewProps) {
       if (before) client.setQueryData<ReviewReply>(dataKeys.review(), applyChoice(before, choice));
       return { before };
     },
-    onError: (_error, _choice, context) => {
-      if (context?.before) client.setQueryData(dataKeys.review(), context.before);
+    onError: (_error, choice, context) => {
+      // Only this choice comes back; another choice still in flight stays shown.
+      const before = context?.before;
+      if (before) client.setQueryData<ReviewReply>(dataKeys.review(), (shown) => (shown ? undoChoice(shown, before, choice.id) : before));
       setFailed(true);
     },
     onSettled: () => {
