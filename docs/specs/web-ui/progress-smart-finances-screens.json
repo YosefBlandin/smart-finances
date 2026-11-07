@@ -137,7 +137,7 @@
     {
       "id": "SF-170",
       "status": "done",
-      "commit": "",
+      "commit": "dd91ecc",
       "evidence": [
         "Tests first (T-WSCR-14): node scripts/check-no-raw-html.mjs exit 1: \"Error: Cannot find module '.../scripts/check-no-raw-html.mjs'\" (expected: the check did not exist).",
         "Tests first (T-WSCR-13, apps/web/e2e/hostile.spec.ts; five tests, one STAGE=test person each: hostile-transactions-1/2/3, hostile-review, hostile-imports): npm run e2e --workspace @smart-finances/web -- e2e/hostile.spec.ts exit 1: \"5 failed\", each \"expect(locator).toHaveText(expected) failed ... Expected: \\\"Transactions\\\" (or To review, Imports) Received: \\\"Your session ended\\\"\" (expected: the people were not seeded yet).",
