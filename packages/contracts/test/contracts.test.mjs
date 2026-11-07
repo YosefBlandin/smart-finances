@@ -132,3 +132,13 @@ test('T-WEB-2 GET /totals, GET and PUT /rates, rebuild, export and DELETE /data'
   assert.ok(ok('DELETE /data', 'reply', { deleted: { items: 553, files: 11 } }).success);
   assert.ok(ok('GET /health', 'reply', { message: 'ok', stage: 'qa' }).success);
 });
+
+test('T-WEB-17 the import sources and their check load without zod, and routes re-exports the same objects', async () => {
+  const sources = await import('../src/sources.mjs');
+  assert.equal(sources.SOURCES, SOURCES);
+  assert.equal(sources.checkImportRequest, checkImportRequest);
+  const text = readFileSync(fileURLToPath(new URL('../src/sources.mjs', import.meta.url)), 'utf8');
+  assert.doesNotMatch(text, /from ['"]zod['"]/);
+  const pkg = JSON.parse(readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8'));
+  assert.equal(pkg.exports['./sources'], './src/sources.mjs');
+});

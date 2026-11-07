@@ -30,3 +30,11 @@ test('T-CI-1 deploy.yml runs npm test before credentials and deploys data, api, 
   assert.ok(deployAlarms < release, 'the Amplify release runs after every stack is deployed');
   assert.equal(lines.filter((line) => /cdk deploy/.test(line)).length, 4, 'exactly the four stage stacks are deployed');
 });
+
+test('T-WEB-17 the Lighthouse budgets block staging and prod; on qa a failure is reported but does not stop the deploy (owner, 2026-11-07)', () => {
+  const step = lineOf(/- name: Lighthouse CI budgets/);
+  const credentials = lineOf(/uses: aws-actions\/configure-aws-credentials@/);
+  const block = lines.slice(step, credentials).join('\n');
+  assert.match(block, /continue-on-error: \$\{\{ github\.ref_name == 'qa' \}\}/);
+  assert.match(block, /run: npm run lhci --workspace @smart-finances\/web/);
+});
