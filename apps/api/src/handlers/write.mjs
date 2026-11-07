@@ -5,6 +5,7 @@ import { checkImportRequest, SOURCES } from '@smart-finances/contracts/routes';
 import { abandonReconcile, createImport, FORM_SECONDS, inEraseWindow, startRepair, startUndo } from '../store/imports.mjs';
 import { erasedKey } from '../store/keys.mjs';
 import { createRepo } from '../store/repo.mjs';
+import { putRate } from '../store/rates.mjs';
 import { monthsWithData } from '../store/totals.mjs';
 import { ulid as defaultUlid } from '../store/ulid.mjs';
 import { HttpError, checked, fail, personOf, reply } from './http.mjs';
@@ -80,11 +81,24 @@ async function rebuildTotals(deps, sub) {
   return reply(202, { months: months.length });
 }
 
+const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+// PUT /rates/{month} (D-27, D-39): a number with at most two decimals, stored as a two-decimal string.
+async function setRate(deps, sub, event) {
+  const month = event.pathParameters?.month;
+  if (typeof month !== 'string' || !MONTH.test(month)) throw new HttpError('bad_request', 'month as yyyy-mm');
+  const { ars_per_usd } = checked('PUT /rates/{month}', jsonBody(event));
+  const out = await putRate(deps.store, sub, month, ars_per_usd, { now: deps.now() });
+  if (out.conflict) throw new HttpError('conflict', 'your data is being deleted; try again later');
+  return reply(200, out);
+}
+
 const ROUTE_HANDLERS = {
   'POST /imports': requestImport,
   'POST /imports/{id}/undo': undoImport,
   'POST /periods/{source}/{period}/repair': repairPeriod,
   'POST /totals/rebuild': rebuildTotals,
+  'PUT /rates/{month}': setRate,
 };
 
 export function createWriteHandler({

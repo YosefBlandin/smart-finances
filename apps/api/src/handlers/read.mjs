@@ -2,8 +2,9 @@
 // comes only from the verified claims, and every reply has the shape of the shared contract
 // (D-39): optional fields are left out, never null.
 import { createHash } from 'node:crypto';
-import { getImport, lockLive } from '../store/imports.mjs';
-import { personPk, PREFIX } from '../store/keys.mjs';
+import { getImport, inEraseWindow, lockLive } from '../store/imports.mjs';
+import { erasedKey, personPk, PREFIX } from '../store/keys.mjs';
+import { listRates, readTotals } from '../store/rates.mjs';
 import { selectRows, shownRows } from '../store/query.mjs';
 import { createRepo } from '../store/repo.mjs';
 import { HttpError, checked, fail, personOf, reply } from './http.mjs';
@@ -105,10 +106,25 @@ async function listTransactions(deps, sub, event) {
   return reply(200, paged(rows, 'GET /transactions', query, query.limit));
 }
 
+// GET /totals: stored month totals; refused from erased_at until quiet_until (D-30).
+async function totals(deps, sub, event) {
+  const query = checked('GET /totals', event.queryStringParameters ?? {});
+  const marker = await deps.store.get(erasedKey(sub), { consistent: true });
+  if (inEraseWindow(marker, deps.now())) throw new HttpError('conflict', 'your data is being deleted; try again later');
+  return reply(200, await readTotals(deps.store, sub, query));
+}
+
+// GET /rates
+async function rates(deps, sub) {
+  return reply(200, { items: await listRates(deps.store, sub) });
+}
+
 const ROUTE_HANDLERS = {
   'GET /imports': listImports,
   'GET /imports/{id}': readImport,
   'GET /transactions': listTransactions,
+  'GET /totals': totals,
+  'GET /rates': rates,
 };
 
 export function createReadHandler({ store, now = () => Date.now(), routes = {} } = {}) {
