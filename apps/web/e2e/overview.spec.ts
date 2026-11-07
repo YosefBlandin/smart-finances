@@ -8,7 +8,7 @@ import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 // reads a minute under STAGE=test, and one overview first view makes exactly 5 (totals, rates, review, imports, places).
 // The sample data (apps/web/fixtures): 2026-09 kept 31.7% against a typical 19.5%; 2026-03 spent more than it earned.
 
-type Person = 'overview-good' | 'overview-bad' | 'overview-failed' | 'overview-retry';
+type Person = 'overview-good' | 'overview-bad' | 'overview-failed' | 'overview-retry' | 'overview-signed-out';
 
 async function signInAs(context: BrowserContext, person: Person) {
   // Chrome counts localhost as secure, so a Secure cookie set for the https form of the address is sent over http too.
@@ -153,5 +153,23 @@ test('T-WSCR-5: in 2026-03 exactly one money figure is red, with one plain sente
   const red = await bad.evaluate((e) => getComputedStyle(e).color);
   expect(red).toBe('rgb(255, 107, 95)'); // --field-red on the ink field (D-21)
   expect(colours.filter((c) => c === red)).toHaveLength(1);
+  expect(violations).toEqual([]);
+});
+
+test('T-WSCR-4: a token the data API refuses signs the person out and opens sign-in with the address kept', async ({ page, context }) => {
+  // overview-signed-out has a live session, but the STAGE=test data API refuses its token (as the real one does after
+  // its one refresh fails): the prefetch ends the session and the person lands on sign-in with this address kept.
+  await signInAs(context, 'overview-signed-out');
+  const violations = watchPolicy(page);
+  const browserReads: string[] = [];
+  page.on('request', (r) => {
+    if (r.resourceType() !== 'document' && new URL(r.url()).pathname.startsWith('/api/data/')) browserReads.push(r.url());
+  });
+  await page.goto('/overview?month=2026-09');
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Foverview%3Fmonth%3D2026-09$/);
+  // The server sent it there: the overview never rendered, so no section asked again in the browser.
+  expect(browserReads).toEqual([]);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sign in');
+  expect((await context.cookies()).map((c) => c.name)).not.toContain('__Host-sid');
   expect(violations).toEqual([]);
 });

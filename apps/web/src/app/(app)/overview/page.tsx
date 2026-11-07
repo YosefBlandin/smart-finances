@@ -6,14 +6,14 @@ import { dataKeys } from '@/queries/keys';
 import { MONTH, monthOf, placesFilters, shownMonth, totalsRange } from '@/screens/overview/model';
 import { Overview } from '@/screens/overview/Overview';
 import styles from '@/screens/overview/Overview.module.css';
-import { redirectIfLimited } from '../../api/data/respond';
+import { redirectIfStopped } from '../../api/data/respond';
 import { requireMoneyAccess } from '../../guarded';
 import { readReview } from '../review/read';
 
 // The overview (SF-164; D-18, D-101, D-127): the server reads every section's data through the read use cases (each
 // read times out at 5 seconds and counts against the person's limit, D-82), hydrates the island with it, and renders
 // nothing until then (no streaming). Five reads: totals for three years, the rates, the rows to review, the imports and
-// the month's biggest expenses (places); the review read is the one the shell's count already made (../review/read.ts). A read past the limit goes to the limit page (AC-17); any other failed read is
+// the month's biggest expenses (places); the review read is the one the shell's count already made (../review/read.ts). A read past the limit goes to the limit page (AC-17); a refused token signs out and opens sign-in with this address kept; any other failed read is
 // left out, so that section asks again in the browser and shows its own failed note (D-101). The heading comes first
 // and takes focus after a navigation (AC-10).
 export const dynamic = 'force-dynamic';
@@ -54,7 +54,8 @@ export default async function OverviewPage({ searchParams }: { searchParams: Sea
   ]);
   const month = shownMonth(asked, totals.ok ? totals.data : undefined, now);
   const places = await (early ?? placesOf(month));
-  for (const result of [totals, rates, review, imports, places]) if (!result.ok) redirectIfLimited(result);
+  const address = asked ? `/overview?month=${asked}` : '/overview';
+  for (const result of [totals, rates, review, imports, places]) if (!result.ok) await redirectIfStopped(result, address);
 
   const client = new QueryClient();
   if (totals.ok) client.setQueryData(dataKeys.totals(range), totals.data);
