@@ -7,7 +7,7 @@ import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 // Each test signs in as its own STAGE=test person (E2E_PEOPLE in src/adapters/container.ts), so its reads stay within
 // the 5 a minute the test stage allows. The sample data (apps/web/fixtures) has 51 rows in 2026-08, 49 of them expenses.
 
-type Person = 'transactions-paging' | 'transactions-sort';
+type Person = 'transactions-paging' | 'transactions-sort' | 'transactions-signed-out';
 
 async function signInAs(context: BrowserContext, person: Person) {
   // Chrome counts localhost as secure, so a Secure cookie set for the https form of the address is sent over http too.
@@ -141,5 +141,22 @@ test('T-WSCR-6: sort and month ask for that page and go in the address; free tex
   expect(search(page).has('q')).toBe(false);
 
   expect(seen.documents).toHaveLength(1);
+  expect(violations).toEqual([]);
+});
+
+test('T-WSCR-6: a browser read answered 401 opens sign-in with the address kept', async ({ page, context }) => {
+  // transactions-signed-out's data API serves the shell count and the prefetch, then refuses its token (as the real one
+  // does after its one refresh fails): the next read in the browser is a 401 and the person goes to sign-in with the
+  // address as it was then.
+  await signInAs(context, 'transactions-signed-out');
+  const violations = watchPolicy(page);
+  await page.goto('/transactions?month=2026-08');
+  await expect(rows(page)).toHaveCount(50);
+  await page.waitForLoadState('networkidle');
+
+  await page.getByRole('main').getByRole('columnheader', { name: 'Amount' }).getByRole('button').click();
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Ftransactions%3Fmonth%3D2026-08%26sort%3Damount-asc$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sign in');
+  expect((await context.cookies()).map((c) => c.name)).not.toContain('__Host-sid');
   expect(violations).toEqual([]);
 });
