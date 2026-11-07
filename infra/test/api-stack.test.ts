@@ -369,11 +369,22 @@ test('T-INF-9 grants: read only reads the table; write puts uploads and invokes 
   assert.deepEqual(actionsOf(logs(read)), ['dynamodb:GetItem', 'dynamodb:Query']);
   assert.deepEqual(actionsOf(logs(write)), ['dynamodb:ConditionCheckItem', 'dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:Query', 'lambda:InvokeFunction', 's3:PutObject']);
   assert.deepEqual(actionsOf(logs(parse)), ['dynamodb:ConditionCheckItem', 'dynamodb:DeleteItem', 'dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:Query', 's3:DeleteObject', 's3:GetObject']);
-  const resourceOf = (statements: Statement[], action: string) => JSON.stringify(statements.find((s) => actionsOf([s]).includes(action))!.Resource);
-  assert.match(resourceOf(write, 's3:PutObject'), /\/uploads\/\*/);
-  assert.match(resourceOf(parse, 's3:GetObject'), /\/uploads\/\*/);
-  assert.match(resourceOf(parse, 's3:DeleteObject'), /\/uploads\/\*/);
-  assert.ok(resourceOf(write, 'lambda:InvokeFunction').includes(parser.id), 'invoke only the parser');
-  assert.match(resourceOf(read, 'dynamodb:Query'), /:table\//);
-  assert.doesNotMatch(resourceOf(read, 'dynamodb:Query'), /index/);
+  // Every non-log statement names exactly one resource.
+  const only = (statements: Statement[], action: string) => {
+    const found = statements.filter((s) => actionsOf([s]).includes(action));
+    assert.equal(found.length, 1, action);
+    const list = Array.isArray(found[0].Resource) ? found[0].Resource : [found[0].Resource];
+    assert.equal(list.length, 1, `${action} names one resource`);
+    return JSON.stringify(list[0]);
+  };
+  const tableArn = only(read, 'dynamodb:Query');
+  assert.match(tableArn, /:table\//);
+  assert.doesNotMatch(tableArn, /index/);
+  for (const [statements, action] of [[read, 'dynamodb:GetItem'], [write, 'dynamodb:PutItem'], [write, 'dynamodb:Query'], [parse, 'dynamodb:DeleteItem'], [parse, 'dynamodb:PutItem']] as const) {
+    assert.equal(only(statements, action), tableArn, `${action} on the table only`);
+  }
+  for (const [statements, action] of [[write, 's3:PutObject'], [parse, 's3:GetObject'], [parse, 's3:DeleteObject']] as const) {
+    assert.match(only(statements, action), /\/uploads\/\*"\]\]\}$/, `${action} on uploads/* only`);
+  }
+  assert.equal(only(write, 'lambda:InvokeFunction'), JSON.stringify({ 'Fn::GetAtt': [parser.id, 'Arn'] }), 'invoke only the parser');
 });
