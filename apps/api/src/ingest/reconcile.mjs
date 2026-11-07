@@ -8,6 +8,26 @@ const nextMonth = (ym) => {
   return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
 };
 
+// A row filed in one month but dated in another may also have been entered in the month
+// it is dated. Flag it when that month has the same description and amount on that exact
+// day; it stays in, because the month's own Summary counted it. The parser runs this against
+// the person's stored rows too, so a twin from an earlier upload is found. Running it twice
+// on the same rows flags them once.
+export function findPossibleDuplicates(issues, transactions) {
+  const possibleDuplicates = [];
+  for (const issue of issues.filter((i) => i.statedDate)) {
+    const twin = transactions.find(
+      (t) => t.date_precision === 'day' && t.date === issue.statedDate && t.amount === issue.amount && t.description_raw.toLowerCase() === issue.description.toLowerCase(),
+    );
+    const row = twin && transactions.find((t) => t.source_ref.startsWith(`${issue.ref} `));
+    if (row) {
+      if (!row.flags.includes('possible_duplicate')) row.flags.push('possible_duplicate');
+      possibleDuplicates.push({ row, twin });
+    }
+  }
+  return possibleDuplicates;
+}
+
 export function combine(results) {
   const byId = new Map();
   let duplicates = 0;
@@ -19,20 +39,7 @@ export function combine(results) {
     (a, b) => a.date.localeCompare(b.date) || a.source.localeCompare(b.source) || a.source_ref.localeCompare(b.source_ref),
   );
 
-  // A row filed in one month but dated in another may also have been entered in the month
-  // it is dated. Flag it when that month has the same description and amount on that exact
-  // day; it stays in, because the month's own Summary counted it.
-  const possibleDuplicates = [];
-  for (const issue of results.flatMap((r) => r.issues ?? []).filter((i) => i.statedDate)) {
-    const twin = transactions.find(
-      (t) => t.date_precision === 'day' && t.date === issue.statedDate && t.amount === issue.amount && t.description_raw.toLowerCase() === issue.description.toLowerCase(),
-    );
-    const row = twin && transactions.find((t) => t.source_ref.startsWith(`${issue.ref} `));
-    if (row) {
-      row.flags.push('possible_duplicate');
-      possibleDuplicates.push({ row, twin });
-    }
-  }
+  const possibleDuplicates = findPossibleDuplicates(results.flatMap((r) => r.issues ?? []), transactions);
   return { transactions, duplicates, possibleDuplicates };
 }
 
