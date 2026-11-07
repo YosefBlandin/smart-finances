@@ -164,7 +164,7 @@
     {
       "id": "SF-172",
       "status": "blocked",
-      "commit": "",
+      "commit": "aa41dcb (limit half only)",
       "evidence": [
         "Tests first (T-WSCR-17, apps/web/e2e/limit.spec.ts; people limit-first, limit-second, limit-es): npm run e2e --workspace @smart-finances/web -- e2e/limit.spec.ts exit 1: \"2 failed\": \"Expected: \\\"To review\\\" Received: \\\"Your session ended\\\"\" (people not seeded) and \"Expected: \\\"Demasiadas solicitudes\\\" Received: \\\"No encontramos esa página\\\"\" (/too-many did not exist).",
         "Built (limit half): app/(app)/too-many/page.tsx (inside the money layout, signed in only; reads no data; the wait from ?wait= as whole seconds 1 to 3600, else 60; label, heading, the wait in a plural sentence, why, and a link back to the overview) and too-many.module.css (tokens only, no card, D-21). New keys limit.title, label, lead (plural seconds), why, back in en.json and es.json. E2E_PEOPLE gains limit-first, limit-second, limit-es. The test waits for a fresh one-minute window, makes 5 served /review loads, then the sixth opens /too-many?wait=N with the heading and the wait; GET /api/data/review answers 429 with Retry-After; a second person's /review is served with its table.",
