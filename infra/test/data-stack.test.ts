@@ -39,7 +39,7 @@ test('T-INF-2 table: pk and sk strings, on-demand, PITR on, AWS-owned key, retai
     assert.deepEqual(props.PointInTimeRecoverySpecification, { PointInTimeRecoveryEnabled: true });
     // SSEEnabled false is DynamoDB's AWS-owned key; true would mean a KMS key.
     assert.deepEqual(props.SSESpecification, { SSEEnabled: false }, `${stage} table uses the AWS-owned key`);
-    assert.equal(props.StreamSpecification, undefined, 'no stream yet');
+    assert.deepEqual(props.StreamSpecification, { StreamViewType: 'KEYS_ONLY' }, 'keys-only stream (T-INF-10)');
     assert.equal(props.GlobalSecondaryIndexes, undefined, 'no secondary index');
     assert.equal(props.TableName, undefined, 'no physical name');
     if (retained(stage)) {
@@ -388,5 +388,19 @@ test('T-WINF-4 pre-sign-up trigger: wired to the pool, its environment holds no 
     assert.deepEqual(permissions[0].Properties.SourceArn, { 'Fn::GetAtt': [PINNED.pool.logicalId, 'Arn'] });
 
     assert.equal(findCycle(resources), undefined, `${stage}: no dependency cycle`);
+  }
+});
+
+test('T-INF-10 the table stream is keys only and its ARN is published as table-stream-arn', () => {
+  for (const stage of STAGES) {
+    const template = synth(stage);
+    const resources = template.toJSON().Resources as Record<string, { Type: string; Properties: Record<string, any> }>;
+    const table = resources[PINNED.table.logicalId];
+    assert.deepEqual(table.Properties.StreamSpecification, { StreamViewType: 'KEYS_ONLY' }, `${stage}: keys only`);
+    template.hasResourceProperties('AWS::SSM::Parameter', {
+      Name: `/smart-finances/${stage}/table-stream-arn`,
+      Type: 'String',
+      Value: { 'Fn::GetAtt': [PINNED.table.logicalId, 'StreamArn'] },
+    });
   }
 });
