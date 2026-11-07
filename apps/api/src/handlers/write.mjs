@@ -89,6 +89,8 @@ async function setRate(deps, sub, event) {
   if (typeof month !== 'string' || !MONTH.test(month)) throw new HttpError('bad_request', 'month as yyyy-mm');
   const { ars_per_usd } = checked('PUT /rates/{month}', jsonBody(event));
   const out = await putRate(deps.store, sub, month, ars_per_usd, { now: deps.now() });
+  // Far above any real rate; keeps hundredths a safe integer.
+  if (ars_per_usd >= 1e9) throw new HttpError('bad_request', 'ars_per_usd is too large');
   if (out.conflict) throw new HttpError('conflict', 'your data is being deleted; try again later');
   return reply(200, out);
 }

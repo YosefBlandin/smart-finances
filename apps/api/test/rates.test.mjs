@@ -115,6 +115,7 @@ test('T-API-7 rates: numbers with at most two decimals on the wire, two-decimal 
     ['2026-05', { ars_per_usd: 0 }],
     ['2026-05', { ars_per_usd: -1 }],
     ['2026-05', { ars_per_usd: 1.234 }],
+    ['2026-05', { ars_per_usd: 1e9 }],
     ['2026-05', { ars_per_usd: '1000' }],
     ['2026-05', {}],
     ['2026-05', 'not json'],
