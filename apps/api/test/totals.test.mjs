@@ -117,3 +117,25 @@ test('T-ROL-2 an unexpected store error is thrown, not swallowed', async () => {
   await assert.rejects(recomputeMonth(store, A, '2026-05', { now: T0 }), /network/);
   await assert.rejects(recomputeMonth(store, A, '2026-5', { now: T0 }), /month/);
 });
+
+test('T-ROL-2 both month queries are consistent reads; a transaction conflict is thrown so the batch retries', async () => {
+  const store = createMemoryStore();
+  const seen = [];
+  const realQuery = store.query.bind(store);
+  store.query = async (q) => {
+    seen.push(q);
+    return realQuery(q);
+  };
+  await recomputeMonth(store, A, '2026-05', { now: T0 });
+  assert.equal(seen.length, 2);
+  assert.ok(seen.every((q) => q.consistent === true));
+  assert.deepEqual(seen.map((q) => q.between[0].slice(0, 4)).sort(), ['OVR#', 'TXN#']);
+
+  store.transact = async () => {
+    const err = new Error('cancelled');
+    err.name = 'TransactionCanceledException';
+    err.CancellationReasons = [{ Code: 'None' }, { Code: 'TransactionConflict' }];
+    throw err;
+  };
+  await assert.rejects(recomputeMonth(store, A, '2026-05', { now: T0 + 1 }), { name: 'TransactionCanceledException' });
+});
