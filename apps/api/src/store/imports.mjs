@@ -224,8 +224,17 @@ export async function reconcile(store, sub, runningId, { now = Date.now(), load 
   const running = await getImport(store, sub, runningId);
   if (!running) return { outcome: 'missing' };
   const { source, period } = running;
-  const pointer = await getPointer(store, sub, source, period);
-  if (!pointer || pointer.lock_import !== runningId) return { outcome: 'lost_lock' };
+  const held = await getPointer(store, sub, source, period);
+  if (!held || held.lock_import !== runningId) return { outcome: 'lost_lock' };
+  // Renew the lock first, so this run has a full lock period for its writes even when it is a
+  // late retry of an undo or repair (whose lock the write handler took).
+  const pointer = { ...held, lock_until: iso(now + LOCK_MS), rev: (held.rev ?? 0) + 1 };
+  try {
+    await store.put(pointer, { if: holds(held, runningId) });
+  } catch (err) {
+    if (err instanceof ConditionFailed) return { outcome: 'lost_lock' };
+    throw err;
+  }
   const active = pointer.active_import ? await getImport(store, sub, pointer.active_import) : undefined;
   const parsed = active ? await load(active) : { transactions: [], issues: [] };
   const rows = parsed.transactions.map((t) => ({ ...t, flags: [...(t.flags ?? [])] }));
@@ -235,24 +244,32 @@ export async function reconcile(store, sub, runningId, { now = Date.now(), load 
   const before = new Map((await storedRows(store, sub, source, period)).map((i) => [i.sk, i]));
   const items = rows.map((t) => ({ ...txnKey(sub, t.date, t.id), ...t, period, import_id: active.import_id }));
   const keep = new Set(items.map((i) => i.sk));
-  const counts = { added: 0, updated: 0, removed: 0, skipped: running.counts?.skipped ?? running.skipped?.length ?? 0 };
-  for (const item of items) {
-    const old = before.get(item.sk);
-    if (!old) counts.added += 1;
-    else if (!sameRow(old, item)) counts.updated += 1;
+  const gone = [...before.values()].filter((i) => !keep.has(i.sk));
+  // Counts are planned from the stored rows before any write and kept on the record, so a
+  // retry after a crash part-way reports what the import changed, not what was left to do.
+  let counts = running.planned_counts;
+  if (!counts) {
+    counts = { added: 0, updated: 0, removed: gone.length, skipped: running.counts?.skipped ?? running.skipped?.length ?? 0 };
+    for (const item of items) {
+      const old = before.get(item.sk);
+      if (!old) counts.added += 1;
+      else if (!sameRow(old, item)) counts.updated += 1;
+    }
+    await store.put({ ...running, planned_counts: counts }, { if: [{ attr: 'status', op: '=', value: running.status }] });
   }
   await inPool(items, (item) => store.put(item));
-  const gone = [...before.values()].filter((i) => !keep.has(i.sk));
-  counts.removed = gone.length;
+  const still = await getPointer(store, sub, source, period);
+  if (!still || still.lock_import !== runningId) return { outcome: 'lost_lock' };
   await inPool(gone, (item) => store.remove(item));
 
   // Final marks, then the lock goes. A crash before the release leaves the lock to expire.
   const finished = iso(now);
   const unchanged = active && running.kind === 'file' && running.import_id !== active.import_id && running.content_hash === active.content_hash;
-  if (active && active.import_id !== runningId && active.status !== 'done') {
+  if (active && active.import_id !== runningId && !FINAL.has(active.status)) {
     await store.put({ ...active, status: 'done', finished_at: active.finished_at ?? finished });
   }
-  await store.put({ ...running, status: unchanged ? 'unchanged' : 'done', finished_at: finished, counts });
+  const { planned_counts: _planned, ...last } = (await getImport(store, sub, runningId)) ?? running;
+  await store.put({ ...last, status: unchanged ? 'unchanged' : 'done', finished_at: finished, counts });
   const { items: imports } = await store.query({ pk: personPk(sub), prefix: PREFIX.IMP, consistent: true });
   for (const other of imports) {
     if (other.source !== source || other.period !== period || other.import_id >= runningId || other.import_id === active?.import_id) continue;

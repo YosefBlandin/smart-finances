@@ -383,3 +383,63 @@ test('T-REC-1 a transaction cancelled for a conflict is read again, not thrown',
   };
   assert.equal((await takeLock(store, A, r.import_id, { period: '2026-05', now: T0 })).outcome, 'locked');
 });
+
+// ---- SF-26 review fixes ----
+test('T-REC-4 a retry after a crash part-way still reports what the import changed', async () => {
+  const h = harness();
+  await h.run(await h.upload({ rows: [txn('a', '2026-05-02')] }));
+  const fix = await h.upload({ rows: [txn('a', '2026-05-02'), txn('b', '2026-05-03'), txn('c', '2026-05-04')], now: T0 + MIN });
+  const realPut = h.store.put.bind(h.store);
+  let puts = 0;
+  h.store.put = async (item, opts) => {
+    if (item.sk.startsWith(PREFIX.TXN) && ++puts === 3) throw new Error('crash');
+    return realPut(item, opts);
+  };
+  await assert.rejects(h.run(fix, T0 + 2 * MIN), /crash/);
+  h.store.put = realPut;
+  const retry = await h.run(fix, T0 + 3 * MIN);
+  assert.deepEqual(retry.counts, { added: 2, updated: 0, removed: 0, skipped: 0 });
+  const rec = await getImport(h.store, A, fix.import_id);
+  assert.deepEqual(rec.counts, { added: 2, updated: 0, removed: 0, skipped: 0 });
+  assert.equal(rec.planned_counts, undefined);
+});
+
+test('T-REC-4 a late reconcile whose lock was taken over writes no rows', async () => {
+  const h = harness();
+  const first = await h.upload({ rows: [txn('a', '2026-05-02')] });
+  await takeLock(h.store, A, first.import_id, { period: '2026-05', now: T0 });
+  await commitImport(h.store, A, first.import_id, { content_hash: first.hash, now: T0 });
+  const second = await h.upload({ rows: [txn('b', '2026-05-03')], now: T0 + LOCK_MS + 1 });
+  // first's reconcile starts, but another run takes the lock just after its check.
+  const realGet = h.store.get.bind(h.store);
+  let stolen = false;
+  h.store.get = async (key, opts) => {
+    const out = await realGet(key, opts);
+    if (!stolen && key.sk.startsWith('PER#') && out?.lock_import === first.import_id) {
+      stolen = true;
+      await realPut({ ...out, lock_import: second.import_id, rev: out.rev + 1 });
+      return out;
+    }
+    return out;
+  };
+  const realPut = h.store.put.bind(h.store);
+  const out = await reconcile(h.store, A, first.import_id, { now: T0 + 1, load: h.load });
+  assert.equal(out.outcome, 'lost_lock');
+  assert.deepEqual(await h.stored('mercadopago', '2026-05'), []);
+});
+
+test('T-REC-4 a row whose twin is stored from another file is flagged possible_duplicate, the same on a re-run', async () => {
+  const h = harness();
+  // February's workbook has the payment on its day; March's lists it again, dated in February.
+  const feb = await h.upload({ source: 'excel', period: '2026-02', rows: [txn('f1', '2026-02-10', { source: 'excel', description_raw: 'Market' })] });
+  await h.run(feb);
+  const march = await h.upload({ source: 'excel', period: '2026-03', rows: [txn('m1', '2026-03-01', { source: 'excel', date_precision: 'month', source_ref: 'b_Mar.xlsx#A5 (x)', description_raw: 'Market' })] });
+  h.files.get(march.import_id).issues = [{ ref: 'b_Mar.xlsx#A5', statedDate: '2026-02-10', amount: -1000, description: 'MARKET', info: true, issue: 'date in another month' }];
+  await h.run(march, T0 + 2 * MIN);
+  const flagged = () => [...h.store.items.values()].filter((i) => i.sk.startsWith(PREFIX.TXN)).map((i) => [i.id, i.flags.join('|')]).sort();
+  assert.deepEqual(flagged(), [['f1', ''], ['m1', 'possible_duplicate']]);
+  const repairLike = await h.upload({ source: 'excel', period: '2026-03', rows: h.files.get(march.import_id).transactions, hash: march.hash, now: T0 + 2 * MIN });
+  h.files.set(repairLike.import_id, h.files.get(march.import_id));
+  await h.run(repairLike, T0 + 3 * MIN);
+  assert.deepEqual(flagged(), [['f1', ''], ['m1', 'possible_duplicate']]);
+});
