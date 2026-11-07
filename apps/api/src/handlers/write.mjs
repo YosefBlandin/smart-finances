@@ -6,6 +6,7 @@ import { abandonReconcile, createImport, FORM_SECONDS, inEraseWindow, startRepai
 import { erasedKey } from '../store/keys.mjs';
 import { createRepo } from '../store/repo.mjs';
 import { putRate } from '../store/rates.mjs';
+import { putReview } from '../store/review.mjs';
 import { monthsWithData } from '../store/totals.mjs';
 import { ulid as defaultUlid } from '../store/ulid.mjs';
 import { HttpError, checked, fail, personOf, reply } from './http.mjs';
@@ -88,10 +89,26 @@ async function setRate(deps, sub, event) {
   const month = event.pathParameters?.month;
   if (typeof month !== 'string' || !MONTH.test(month)) throw new HttpError('bad_request', 'month as yyyy-mm');
   const { ars_per_usd } = checked('PUT /rates/{month}', jsonBody(event));
-  const out = await putRate(deps.store, sub, month, ars_per_usd, { now: deps.now() });
   // Far above any real rate; keeps hundredths a safe integer.
   if (ars_per_usd >= 1e9) throw new HttpError('bad_request', 'ars_per_usd is too large');
+  const out = await putRate(deps.store, sub, month, ars_per_usd, { now: deps.now() });
   if (out.conflict) throw new HttpError('conflict', 'your data is being deleted; try again later');
+  return reply(200, out);
+}
+
+const REVIEW_ERRORS = {
+  not_found: 'no such transaction',
+  source_file_only: 'only payments report rows take a review choice; fix this row in its source file and upload it again',
+  conflict: 'your data is being deleted; try again later',
+};
+
+// PUT /transactions/{id}/review (D-8): payments report rows only.
+async function chooseReview(deps, sub, event) {
+  const id = event.pathParameters?.id;
+  if (typeof id !== 'string' || !ID.test(id)) throw new HttpError('not_found', REVIEW_ERRORS.not_found);
+  const body = checked('PUT /transactions/{id}/review', jsonBody(event));
+  const out = await putReview(deps.store, sub, id, body, { now: deps.now() });
+  if (out.error) throw new HttpError(out.error, REVIEW_ERRORS[out.error]);
   return reply(200, out);
 }
 
@@ -101,6 +118,7 @@ const ROUTE_HANDLERS = {
   'POST /periods/{source}/{period}/repair': repairPeriod,
   'POST /totals/rebuild': rebuildTotals,
   'PUT /rates/{month}': setRate,
+  'PUT /transactions/{id}/review': chooseReview,
 };
 
 export function createWriteHandler({

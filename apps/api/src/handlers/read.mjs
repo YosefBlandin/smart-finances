@@ -6,6 +6,7 @@ import { getImport, inEraseWindow, lockLive } from '../store/imports.mjs';
 import { erasedKey, personPk, PREFIX } from '../store/keys.mjs';
 import { listRates, readTotals } from '../store/rates.mjs';
 import { selectRows, shownRows } from '../store/query.mjs';
+import { reviewList } from '../store/review.mjs';
 import { createRepo } from '../store/repo.mjs';
 import { HttpError, checked, fail, personOf, reply } from './http.mjs';
 
@@ -119,12 +120,18 @@ async function rates(deps, sub) {
   return reply(200, { items: await listRates(deps.store, sub) });
 }
 
+// GET /review
+async function review(deps, sub) {
+  return reply(200, { items: await reviewList(deps.store, sub) });
+}
+
 const ROUTE_HANDLERS = {
   'GET /imports': listImports,
   'GET /imports/{id}': readImport,
   'GET /transactions': listTransactions,
   'GET /totals': totals,
   'GET /rates': rates,
+  'GET /review': review,
 };
 
 export function createReadHandler({ store, now = () => Date.now(), routes = {} } = {}) {
