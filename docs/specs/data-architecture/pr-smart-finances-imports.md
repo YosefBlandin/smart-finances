@@ -2,15 +2,15 @@
 spec: data-architecture
 ticket: none
 tier: L
-status: executing
+status: locked-v4
 ---
 # Data architecture: model, store, access patterns, ingestion and auth: brief for smart-finances (PR 2 of 3, imports)
 
 <!-- The executor's main document. It must stand alone: copy values in, and link only to sections a task cites. At most 6k tokens; comments do not count. Required reading (intent.md, this file and its Read first sections) stays under 15k. Before the lock, the cold-read dry run must find zero "cannot start" items. -->
 
 - Goal: the owner can upload a file, see its import record, re-upload or correct it without double counting, and undo or repair a period.
-- Implements: AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-20, D-9, D-15, D-16, D-17, D-23, D-25, D-28, D-32
-- Spec folder: /Users/v/projects/smart-finances/.claude/worktrees/data-architecture/docs/specs/data-architecture
+- Implements: AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-20, D-9, D-15, D-16, D-17, D-23, D-25, D-28, D-32, D-39
+- Spec folder: docs/specs/data-architecture in this PR's worktree (/Users/v/projects/smart-finances/.claude/worktrees/data-imports), branched from origin/qa
 - Refs: smart-finances at the sha in intent.md refs. Before the first task: `git -C /Users/v/projects/smart-finances fetch origin qa`, then `node ~/.claude/skills/spec/scripts/drift.mjs <spec folder> --strict` (exit 0; NEW lines are expected)
 - Worktree: /Users/v/projects/smart-finances/.claude/worktrees/data-imports
 - Branch: feature/data-imports · Base: origin/qa, after PR 1 (feature/data-foundation) is merged into qa
@@ -41,18 +41,21 @@ status: executing
 - D-25: The workbook reader caps entry count and total inflated size and inflates only the parts it reads.
 - D-28: An import commits by moving its period pointer before writing rows, then reconciles: the period's stored rows are made equal to the active file's rows. Retries, re-uploads and a repair request re-run the reconcile.
 - D-32: Reconcile of a one-month period reads only that month's transaction range, filtered by source; a log period reads every transaction, filtered by source and period. The parser fails a one-month file that has a row dated outside its month. A secondary index, keyset paging and async delete-all and export stay out until their scale triggers in architecture.md Risks are reached.
+- D-39: Accepts D-37 for PR 2 and PR 3: where these briefs and packages/contracts differ, the contracts package wins. Requests and replies are checked with its route schemas; rates travel as numbers with at most two decimals and are stored as two-decimal strings; an import's error is sent as its message text while the stored record keeps code and message; period is an empty string until the parser sets it; optional fields are left out, never null; file names and size caps come from its import check; categories come from its list.
+- D-41: D-35 and D-36 stay out of PR 2 and PR 3: the web UI already set the stage throttle and per-person limits, and reserved concurrency waits for a raise of the account's Lambda quota, which is 10 today. PR 2 and PR 3 keep the API stack's web UI changes: both client audiences, no browser rule, the access log and the throttle.
+- D-42: Narrows D-4 for qa only: the agent merges PR 2, then PR 3, into qa once CI is green and the conformance review has no blocker; CI then deploys qa. Staging and prod stay human.
 - D-30: After delete-all, imports, undo, repair and totals are refused for a quiet window of 65 minutes, so no late background work can bring erased data back.
 - Values:
   - Sources and periods: mercadopago and excel use the importer's check.month (yyyy-mm); notion and csv use the period log.
-  - file_name rules: mercadopago and csv end in .csv; notion ends in .md; excel matches parseBudgetWorkbook's own pattern /([A-Z]{3})_(\d{4})\.xlsx$/i with the three letters a month (JAN to DEC, any case). Anything else is bad_request.
-  - Size caps: excel 20 MiB, the others 5 MiB; over the cap is too_large. Form: one exact key, content-length-range 1 to the cap, expires in 15 minutes.
+  - file_name rules and size caps (D-39): checkImportRequest from @smart-finances/contracts/sources decides, and its code is the error code (bad_request or too_large). Today: mercadopago and csv end in .csv, notion in .md, excel matches <name>_<Mon>_<yyyy>.xlsx; excel 20 MiB, the others 5 MiB. Form: one exact key, content-length-range 1 to the cap, expires in 15 minutes.
   - Lock: lock_until = now + 10 minutes. A file with more than 2,000 unreadable rows fails as a whole.
   - Workbook caps (D-25): at most 500 zip entries and at most 100 MiB inflated in total; the existing 20 MiB file and 50 MiB per-part caps stay.
   - Functions: api-read and api-write 256 MB, 10 s; parser 1024 MB, 5 minutes, async retries 2, no on-failure destination.
   - importId is a ULID from apps/api/src/store/ulid.mjs (new, monotonic, no dependency).
   - Timestamps are ISO 8601 UTC strings (created_at, expires_at, finished_at, lock_until); comparisons use them as strings.
   - Lock re-entry: the record that holds lock_import may re-enter (a retry or a duplicate event of the same import, which redoes the same idempotent step). "Another run" means another import record.
-  - GET /imports pages hold 50 items. An expired import shows status expired with error { code: file_not_arrived, message }, computed on read.
+  - GET /imports pages hold 50 items. An expired import shows status expired with the stored error { code: file_not_arrived, message }, computed on read.
+  - Replies (D-39): every 2xx body parses with ROUTES[route].reply from @smart-finances/contracts/routes, and each handler test checks that. error is sent as error.message (a string); period is '' until the parser sets it; optional fields are omitted, never null. Requests are checked with ROUTES[route].request where one exists; a failed check is bad_request.
   - Generic CSV rows (D-23): kind expense when the amount is negative, else income; category Uncategorized; flags empty; merchant and country empty; description_raw is the description as given; source_ref <file>#row <n> (data row number, header excluded); id = hashId('csv', date, description, amount, currency, account), so exact duplicate rows share an id; the importer keeps the first and records each later one as an info issue (not a skipped row).
   - AC-20 baseline: copy data/real/clean to data/real/clean-baseline (git-ignored, stays under data/real per the local data rule). npm run ingest:local writes through the data/real symlink into the main checkout's data/real; that is expected and allowed (D-3).
   - Env for functions: TABLE_NAME, BUCKET_NAME, PARSER_FUNCTION (api-write; the parser's function name). api-write gets invoke rights on the parser only in this PR; PR 3 adds the rollup.
@@ -158,7 +161,7 @@ status: executing
 - Files: apps/api/src/handlers/write.mjs (new), apps/api/test/write-imports.test.mjs (new)
 - Tests first: T-API-1, T-API-2
 - Do:
-  - Validate source, file_name and size per the Values; create the record; key uploads/<sub>/<importId> from keys.mjs.
+  - Check the body with ROUTES['POST /imports'].request and checkImportRequest per the Values; create the record; key uploads/<sub>/<importId> from keys.mjs.
   - Build the form with presignPost from the store (exact key condition, content-length-range, 900 s expiry); return 201 { import_id, upload: { url, fields }, expires_at }.
 - Verify: `node --test apps/api/test/write-imports.test.mjs` → T-API-1 and T-API-2 pass
 - Done when: verify is green, evidence is recorded, and the reviewer has no blocker
@@ -192,6 +195,7 @@ status: executing
 - Do:
   - List IMP# items newest first, paged with an opaque cursor; active is true when the period pointer names the import.
   - Show stalled for importing past lock_until, and expired, with the reason that the file never arrived, for requested past expires_at.
+  - Shape every reply per the Values "Replies" rule (D-39).
 - Verify: `node --test apps/api/test/read-imports.test.mjs` → T-API-3 passes
 - Done when: verify is green and evidence is recorded
 
@@ -202,6 +206,7 @@ status: executing
 - Do:
   - api-read (GET /imports, GET /imports/{id}), api-write (POST /imports, undo, repair) and parser with makeFunction; every route binds ApiStack's JWT authorizer; sizes and grants exactly as Components "API stack" says for them; TABLE_NAME, BUCKET_NAME and PARSER_FUNCTION as env.
   - An EventBridge rule for Object Created in the bucket with key prefix uploads/ targets the parser.
+  - Keep the stack's web UI changes (D-41): both audiences, no CORS, the access log, the 50/100 throttle and the api-url parameter.
 - Verify: `cd infra && node --require ts-node/register --test test/api-stack.test.ts` → T-INF-7, T-INF-8 and T-INF-9 pass
 - Done when: verify is green, evidence is recorded, and the reviewer has no blocker
 
