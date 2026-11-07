@@ -136,9 +136,16 @@
     },
     {
       "id": "SF-170",
-      "status": "todo",
+      "status": "done",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "Tests first (T-WSCR-14): node scripts/check-no-raw-html.mjs exit 1: \"Error: Cannot find module '.../scripts/check-no-raw-html.mjs'\" (expected: the check did not exist).",
+        "Tests first (T-WSCR-13, apps/web/e2e/hostile.spec.ts; five tests, one STAGE=test person each: hostile-transactions-1/2/3, hostile-review, hostile-imports): npm run e2e --workspace @smart-finances/web -- e2e/hostile.spec.ts exit 1: \"5 failed\", each \"expect(locator).toHaveText(expected) failed ... Expected: \\\"Transactions\\\" (or To review, Imports) Received: \\\"Your session ended\\\"\" (expected: the people were not seeded yet).",
+        "Built: scripts/check-no-raw-html.mjs (fails on dangerouslySetInnerHTML, innerHTML, outerHTML, insertAdjacentHTML, document.write, createContextualFragment, DOMParser, or an import or require of a markdown renderer such as react-markdown, marked, markdown-it, remark, micromark, showdown, markdown-to-jsx, html-react-parser, @mdx-js; folder argument, default apps/web/src); root package.json npm test runs it after the node tests. The five people are added to E2E_PEOPLE in adapters/container.ts. The browser test opens each month that holds hostile rows (category=Uncategorized) on Transactions, To review and the hostile import's detail on Imports, checks each hostile text shows as text, and that no img[src=x], [onerror], [onclick], a[href*=example.invalid], iframe, object or embed exists, no inline script without a nonce, no dialog, no request to another host or for /x, no content-policy violation or page error, and that the 2,000-character rows do not widen the page.",
+        "Mutation check of the script: a probe file apps/web/src/zz_rawhtml_probe.tsx with dangerouslySetInnerHTML: exit 1, \"check-no-raw-html: 1 raw HTML insertion(s) or markdown renderer(s) in apps/web/src (AC-9): apps/web/src/zz_rawhtml_probe.tsx:1: dangerouslySetInnerHTML\"; probe removed. A scratch folder with innerHTML, react-markdown and import('marked') also gives exit 1 with 4 findings.",
+        "Fix round 1: the August test expected 4 matches of the 2,000-character text; sample.json's long row has no merchant (it shows 'No name'), so 3 is right (\"Expected: 4 Received: 3\"); the test now expects 3.",
+        "Verify: npm run e2e --workspace @smart-finances/web -- e2e/hostile.spec.ts exit 0: \"5 passed (15.6s)\"; node scripts/check-no-raw-html.mjs exit 0: \"check-no-raw-html: no raw HTML insertion or markdown renderer in apps/web/src\". Root npm test exit 0: node tests \"pass 37\", the check, lint (\"All matched files use Prettier code style!\"), web \"Tests  604 passed (604)\", infra \"pass 41\"."
+      ],
       "review": ""
     },
     {
@@ -305,6 +312,7 @@
     "SF-169: the Verify line lists only the unit test; T-WSCR-12 (e2e/delete-account.spec.ts, in the task's Files) was run too and passes.",
     "SF-167 fix round: the person imports-upload-failed is added to E2E_PEOPLE for the failed-upload browser test. The SF-167 fix commit message leaves out 'reserve before POST /imports', since that finding is a stop point (see deviations).",
     "Fix round 2: guard.test.ts (a PR 3 file) holds the only DynamoDB accounts-adapter tests, so its fake learned the new conditions and three cases were added there, under the owner's 'where the repo already tests the DynamoDB adapter' allowance. container.test.ts T-WEB-14 now releases its running import before markDeleting. The memory markDeleting keeps the first deleting_since, as the DynamoDB adapter does. The SF-167 commit c7497e4 also carries B's account-store conditions, since they share those files; the SF-169 commit a28d60f has the use case and the screen. One erase in a deletion can now take 25 s and finish tries it twice, so a finish call may run about 50 s.",
-    "SF-169 one erase try per finish (D-157): deleteAccount.test.ts's retry case now asserts one erase per finish and a second finish that completes it; adapters/container.ts's two STAGE=test delete people fail their first erase only (erase-fails-twice removed). A finish call now runs at most about 25 s for the erase plus the later steps, within the host's 30 s."
+    "SF-169 one erase try per finish (D-157): deleteAccount.test.ts's retry case now asserts one erase per finish and a second finish that completes it; adapters/container.ts's two STAGE=test delete people fail their first erase only (erase-fails-twice removed). A finish call now runs at most about 25 s for the erase plus the later steps, within the host's 30 s.",
+    "SF-170: scripts/ at the repo root is outside the web workspace's Prettier and ESLint globs; check-no-raw-html.mjs was formatted with apps/web/.prettierrc by hand. The Do names transactions, review and imports; the overview is not covered by hostile.spec.ts (its places list shows the month's biggest expenses, and the hostile rows are ARS 100 each)."
   ]
 }

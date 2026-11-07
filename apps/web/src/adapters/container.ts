@@ -220,6 +220,12 @@ export const E2E_PEOPLE = [
   'delete-account-refused',
   'delete-account-retry',
   'delete-account-reload',
+  // e2e/hostile.spec.ts (SF-170).
+  'hostile-transactions-1',
+  'hostile-transactions-2',
+  'hostile-transactions-3',
+  'hostile-review',
+  'hostile-imports',
 ] as const;
 
 type E2EName = (typeof E2E_PEOPLE)[number];
