@@ -90,6 +90,7 @@ status: executing
 |---|---|---|---|---|---|
 | pr-smart-finances.md | 2026-10-31 | 15/15 | T-WEB-1 to T-WEB-17 | vitest.config.ts JSX, ui/ShellNav.tsx, playwright.config.ts production build, .gitignore (now D-149 to D-152) | pass: 0 blocker, 0 major, 16 minor after fixes; merged as PR #8 |
 | pr-smart-finances-auth.md | 2026-11-05 | 16/16 (SF-154, SF-155 owner-added) | T-WAUTH-1 to T-WAUTH-19 | (app)/actions.ts, Shell.tsx, (app) layout, adapters/memory/clock.ts, __Host-notice cookie, adapter_unavailable (now D-164 to D-171) | pass after fixes: 0 blocker, 1 major (reset said every session ended when the global sign-out failed; fixed, D-170), 6 minor (4 fixed; 1 paperwork; 1 deferred: the wrong-code count on the pre-auth row is not atomic, bounded by the pool lockout and the address limit, needs an atomic PreAuthStore increment); merged as PR #13 |
+| pr-smart-finances-screens.md | 2026-11-06 | 13/13 | T-WSCR-1 to T-WSCR-20 | (app)/layout.tsx and overview/page.tsx (shared review read), ports/account-store.ts and adapters/dynamodb/accounts.ts (confirmImport, declared size, day count), adapters/data-api.ts (25 s for export and erase), ui/primitives Field, GET /api/data/signed-out, __Host-goodbye cookie, import_refused and import_release events (owner decisions 2026-11-05 and 2026-11-06, for the next re-lock) | pass after fixes: task reviews and two conformance rounds (parts A and B, then a re-review); 0 blocker; 5 major, all fixed (stalled import kept the slot; POST /imports before the reservation; Finish deleting lost on reload; signed-out person not sent to sign-in; bytes counted at the source maximum); minors fixed or recorded (overview places read the 200 largest expenses, owner-accepted; two refused choices on one row briefly show an unsaved value until the refetch) |
 
 ## Outcome
 <!-- At G-close. One line per AC: pass, fail or partial, and where it was verified, for example: - AC-1: pass, T-E2E-1 on production. Then the merge sha per repo. -->
@@ -101,6 +102,12 @@ status: executing
 | React Aria's pressable style blocked after a server-action redirect: the csp-nonce meta took each request's nonce | spec-gap | SF-149 surprise, SF-153 walk | SF-155 (D-169) | none |
 | A reset whose global sign-out failed still told the person every session ended | executor | PR 3 conformance review | SF-151 fix (D-170) | none |
 | /aws/amplify/<app id> missing although D-112 assumed the console made it | spec-wrong | qa read-only check, 2026-11-05 | created by CLI on qa (D-173) | none |
+| A stalled import never freed the person's import slot | executor | SF-167 task review | SF-167 fix 6e44157 | none |
+| POST /imports ran before the cap reservation, so parallel requests left orphan imports | spec-gap (the reservation needs the API's import id) | SF-167 task review | c7497e4, owner allowed the account-store files | none |
+| Finish deleting was lost on reload: the (app) layout showed session ended for a deleting account | spec-gap | SF-169 task review | a28d60f | none |
+| A refused data token showed could not load instead of sign-in | executor | PR 4 conformance review | 64a385e, 1c2ad4b, 1a88952 | none |
+| Imports counted the source maximum, and a failed request kept the day's count | spec-gap (D-114 silent on the stored size) | PR 4 conformance review | 9694319 | none |
+| A refused RUM identity pool reached the page as an unhandled rejection | executor | PR 4 conformance re-review | 2cc200f | none |
 
 ## Metrics
 | Metric | Value |
