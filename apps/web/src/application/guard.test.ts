@@ -404,6 +404,10 @@ class FakeAccounts implements DocClient {
       case '#r = :id AND #b = :stored':
         if (!old || item[at('#r')] !== v[':id'] || item[at('#b')] !== v[':stored']) fail();
         break;
+      case '#r = :id AND #b = :stored AND #t.#d = :day AND #t.#n > :zero':
+        if (!old || item[at('#r')] !== v[':id'] || item[at('#b')] !== v[':stored']) fail();
+        if (!today || today.day !== v[':day'] || !(today.n > (v[':zero'] as number))) fail();
+        break;
       default:
         throw new Error(`unexpected condition ${cond}`);
     }
@@ -440,6 +444,12 @@ class FakeAccounts implements DocClient {
         break;
       case 'SET #b = :next REMOVE #r, #rb':
         item[at('#b')] = v[':next'];
+        delete item[at('#r')];
+        delete item[at('#rb')];
+        break;
+      case 'SET #b = :next, #t.#n = #t.#n - :one REMOVE #r, #rb':
+        item[at('#b')] = v[':next'];
+        today!.n -= v[':one'] as number;
         delete item[at('#r')];
         delete item[at('#rb')];
         break;
@@ -599,6 +609,40 @@ describe('T-WAUTH-13: the accounts table adapter (DynamoDB, conditional updates)
     await store.releaseImport(SUB, 'imp-a', 2 * MiB);
     expect((await store.getAccount(SUB))?.runningImportId).toBeUndefined();
     expect((await store.getAccount(SUB))?.storedBytes).toBe(2 * MiB);
+  });
+
+  it('T-WSCR-8: the reserved size stays on the row with the reservation; releasing with it keeps it counted', async () => {
+    const { client, store } = dynamo();
+    await store.putConsent(SUB, consent());
+    await store.reserveImport(SUB, { day: '2026-11-04', bytes: 1_200, importId: 'imp-1' });
+    expect(client.items.get(`ACCT#${SUB}`)?.running_import_bytes).toBe(1_200);
+    expect(await store.getAccount(SUB)).toMatchObject({ runningImportId: 'imp-1', runningImportBytes: 1_200, storedBytes: 1_200 });
+    await store.releaseImport(SUB, 'imp-1', 1_200);
+    const account = await store.getAccount(SUB);
+    expect(account).toMatchObject({ storedBytes: 1_200, importsToday: { day: '2026-11-04', n: 1 } });
+    expect(account?.runningImportBytes).toBeUndefined();
+  });
+
+  it("T-WSCR-8: a placeholder release gives back the day's count in the same conditional update, once, and only for its day", async () => {
+    const { client, store } = dynamo();
+    await store.putConsent(SUB, consent());
+    await store.reserveImport(SUB, { day: '2026-11-04', bytes: MiB, importId: 'pending:1:a' });
+    await store.releaseImport(SUB, 'pending:1:a', 0, { giveBackDay: '2026-11-04' });
+    expect(await store.getAccount(SUB)).toMatchObject({ storedBytes: 0, importsToday: { day: '2026-11-04', n: 0 } });
+    expect((await store.getAccount(SUB))?.runningImportId).toBeUndefined();
+    const updates = client.sent.filter((c) => c.name === 'UpdateCommand');
+    expect(updates.at(-1)?.input).toMatchObject({
+      UpdateExpression: 'SET #b = :next, #t.#n = #t.#n - :one REMOVE #r, #rb',
+      ConditionExpression: '#r = :id AND #b = :stored AND #t.#d = :day AND #t.#n > :zero',
+    });
+    // Once: the slot is no longer this placeholder's, so a second release changes nothing.
+    await store.releaseImport(SUB, 'pending:1:a', 0, { giveBackDay: '2026-11-04' });
+    expect((await store.getAccount(SUB))?.importsToday).toEqual({ day: '2026-11-04', n: 0 });
+    // Another day's count is never taken back.
+    await store.reserveImport(SUB, { day: '2026-11-05', bytes: MiB, importId: 'pending:2:b' });
+    await store.releaseImport(SUB, 'pending:2:b', 0, { giveBackDay: '2026-11-04' });
+    expect(await store.getAccount(SUB)).toMatchObject({ storedBytes: 0, importsToday: { day: '2026-11-05', n: 1 } });
+    expect((await store.getAccount(SUB))?.runningImportId).toBeUndefined();
   });
 
   it('T-WAUTH-13: a service error is thrown, never read as a missing row or a refusal', async () => {

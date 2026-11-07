@@ -11,15 +11,18 @@ import type { Settings } from '@/ports/settings';
 // contracts' SOURCES (the API's own check), then the pause switch (the imports-paused stage parameter: "true" pauses;
 // a switch that cannot be read refuses, so a failure never reads as "not paused"), then the account row's caps (10
 // imports a UTC day, one running, stored bytes plus the source's maximum within 200 MiB) for a plain refusal before
-// the data API is asked. It then reserves the slot under a placeholder id (pending:<ms>:<uuid>) by one conditional
+// the data API is asked. The reservation counts the file's declared size (checked with the contracts), not the source's
+// maximum (owner decision of 2026-11-06). It then reserves the slot under a placeholder id (pending:<ms>:<uuid>) by one conditional
 // update of the account row, which alone decides when requests race (D-114), so only the winner asks POST /imports. On
 // success confirmImport swaps the placeholder for the API's import id, conditional on the placeholder, and the release
-// at the final status finds the slot by that id; a refused or failed POST /imports releases the placeholder and its
-// bytes, conditional on it too. A placeholder on the row counts as running (an account being deleted cannot be marked
-// meanwhile, AC-18); one older than PENDING_STALE_MS was left by a request that stopped before its answer, which handed
-// out no upload form, so the next request or deletion releases it with no bytes. getImport reads an import and, at its final status or stalled, releases the slot: a file that never
-// arrived gives its bytes back; any other status keeps the source's maximum counted, since the web server never learns
-// the stored size. A slot whose import ended while nobody watched is settled by the next request.
+// at the final status finds the slot by that id; a refused, failed or thrown POST /imports releases the placeholder, its
+// bytes and, while it is still the same UTC day, the day's count, conditional on the placeholder (owner decision of
+// 2026-11-06). A placeholder on the row counts as running (an account being deleted cannot be marked meanwhile, AC-18);
+// one older than PENDING_STALE_MS was left by a request that stopped before its answer, which handed out no upload form,
+// so the next request or deletion releases it the same way. getImport reads an import and, at its final status or
+// stalled, releases the slot: a file that never arrived gives its bytes back; any other status keeps the declared size
+// counted, since the web server never learns the stored size. Each release is conditional on the slot's id, so it
+// happens once. A slot whose import ended while nobody watched is settled by the next request.
 
 export type ImportsDeps = {
   dataApi: DataApi;
@@ -100,17 +103,26 @@ function checkFile({ source, fileName, size }: ImportRequest): ImportRefusal | u
   return Number.isInteger(size) && size >= 1 ? 'name' : 'empty';
 }
 
-const maxBytesOf = (source: string) => (Object.hasOwn(SOURCES, source) ? SOURCES[source as keyof typeof SOURCES].maxBytes : 0);
-
 export function createImports(deps: ImportsDeps) {
   const { dataApi, accountStore, parameterStore, clock, settings, logger } = deps;
 
-  /** Releases the person's slot for this import if it is the one running: its bytes back when no file arrived. */
+  /**
+   * Releases the person's slot for this import if it is the one running: the reserved (declared) size stays counted,
+   * or comes back when no file arrived.
+   */
   async function settle(sub: string, record: ImportRecord) {
     if (!SLOT_FREE_STATUSES.includes(record.status)) return;
     const account = await accountStore.getAccount(sub);
     if (account?.runningImportId !== record.import_id) return;
-    await accountStore.releaseImport(sub, record.import_id, record.status === 'expired' ? 0 : maxBytesOf(record.source));
+    await accountStore.releaseImport(sub, record.import_id, record.status === 'expired' ? 0 : (account.runningImportBytes ?? 0));
+  }
+
+  /**
+   * Releases a placeholder slot taken on day: its bytes back, and the day's count back while it is still that UTC day
+   * (the request handed out no upload form). Conditional on the placeholder, like every release.
+   */
+  async function releasePlaceholder(sub: string, placeholder: string, day: string) {
+    await accountStore.releaseImport(sub, placeholder, 0, utcDay(clock.now()) === day ? { giveBackDay: day } : {});
   }
 
   /**
@@ -124,7 +136,7 @@ export function createImports(deps: ImportsDeps) {
     const since = pendingSince(id);
     if (since !== undefined) {
       if (clock.now() - since < PENDING_STALE_MS) return account;
-      await accountStore.releaseImport(who.sub, id, 0);
+      await releasePlaceholder(who.sub, id, utcDay(since));
     } else {
       const running = await dataApi.getImport(who.accessToken, { id });
       if (running.ok) await settle(who.sub, running.data);
@@ -154,7 +166,7 @@ export function createImports(deps: ImportsDeps) {
 
       // The running import may have ended while nobody watched it: settle it first.
       const account = await settleRunning(who);
-      const bytes = maxBytesOf(request.source);
+      const bytes = request.size;
       const day = utcDay(clock.now());
       if (account?.runningImportId) return refuse('running');
       if (account?.importsToday?.day === day && account.importsToday.n >= IMPORT_CAPS.perDay) return refuse('daily');
@@ -169,7 +181,7 @@ export function createImports(deps: ImportsDeps) {
       }
       const giveBack = async () => {
         try {
-          await accountStore.releaseImport(who.sub, placeholder, 0);
+          await releasePlaceholder(who.sub, placeholder, day);
         } catch {
           // Left on the row, the placeholder is released once PENDING_STALE_MS have passed.
           logger.event('import_release', 'failed', { sub: who.sub, requestId: placeholder });

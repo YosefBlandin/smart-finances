@@ -10,8 +10,9 @@ import { createImports, IMPORT_RUN_MS, PAUSE_PARAMETER, PENDING_IMPORT, PENDING_
 
 // T-WSCR-8 (AC-17, D-114, D-96): an import request checks the name and size with the contracts' SOURCES, then the
 // pause switch, then reserves one slot on the account row (10 a UTC day, one running, 200 MiB stored counting the
-// source's maximum); the slot is released or corrected when the import reaches its final status. Memory adapters,
-// synthetic people and files only.
+// file's declared size, owner decision of 2026-11-06); the slot is released at the import's final status, keeping the
+// declared size counted, or giving it back when no file arrived. A request that fails before an upload form went out
+// gives back its bytes and the day's count (owner decision of 2026-11-06). Memory adapters, synthetic people and files.
 
 const MiB = 1024 * 1024;
 const DAY = 24 * 60 * 60_000;
@@ -52,8 +53,9 @@ describe('T-WSCR-8: import caps (D-114)', () => {
     const account = await s.c.accountStore.getAccount(SUB);
     expect(account?.importsToday).toEqual({ day: '2026-11-05', n: 1 });
     expect(account?.runningImportId).toBe(ok[0]!.ok ? ok[0]!.data.importId : '');
-    // The reservation counts the source's maximum (5 MiB for a CSV), not the size the browser reported.
-    expect(account?.storedBytes).toBe(5 * MiB);
+    // The reservation counts the file's declared size (checked with the contracts), not the source's maximum.
+    expect(account?.storedBytes).toBe(CSV.size);
+    expect(account?.runningImportBytes).toBe(CSV.size);
     // The slot is reserved before the data API is asked, so only the winner asks it.
     expect(s.calls).toHaveLength(1);
   });
@@ -71,23 +73,43 @@ describe('T-WSCR-8: import caps (D-114)', () => {
     if (!started.ok) throw new Error('refused');
     expect(during?.startsWith(PENDING_IMPORT)).toBe(true);
     expect((await s.c.accountStore.getAccount(SUB))?.runningImportId).toBe(started.data.importId);
-    // The release at the final status finds the slot by the import id, with the reserved bytes.
+    // The release at the final status finds the slot by the import id, keeping the declared size.
     await finish(s, started.data.importId);
-    expect(await s.c.accountStore.getAccount(SUB)).toMatchObject({ runningImportId: undefined, storedBytes: 5 * MiB });
+    expect(await s.c.accountStore.getAccount(SUB)).toMatchObject({ runningImportId: undefined, storedBytes: CSV.size });
   });
 
-  it('T-WSCR-8: a refused or failed POST /imports releases the placeholder and its bytes', async () => {
+  it("T-WSCR-8: a refused, failed or thrown POST /imports releases the placeholder, its bytes and the day's count", async () => {
     const s = setup();
     const api = s.c.dataApi as MemoryDataApi;
     const ask = api.requestImport.bind(api);
+    const released = { runningImportId: undefined, storedBytes: 0, importsToday: { day: '2026-11-05', n: 0 } };
     api.requestImport = async () => ({ ok: false, kind: 'failed', code: 'timeout' });
     expect(await s.imports.requestImport(WHO, CSV)).toMatchObject({ ok: false, reason: 'failed' });
-    expect(await s.c.accountStore.getAccount(SUB)).toMatchObject({ runningImportId: undefined, storedBytes: 0 });
+    expect(await s.c.accountStore.getAccount(SUB)).toMatchObject(released);
+    api.requestImport = async () => ({ ok: false, kind: 'conflict' });
+    expect(await s.imports.requestImport(WHO, CSV)).toMatchObject({ ok: false, reason: 'conflict' });
+    expect(await s.c.accountStore.getAccount(SUB)).toMatchObject(released);
     api.requestImport = async () => Promise.reject(new Error('the data API is unreachable'));
     await expect(s.imports.requestImport(WHO, CSV)).rejects.toThrow('unreachable');
-    expect(await s.c.accountStore.getAccount(SUB)).toMatchObject({ runningImportId: undefined, storedBytes: 0 });
+    expect(await s.c.accountStore.getAccount(SUB)).toMatchObject(released);
     api.requestImport = ask;
     expect((await s.imports.requestImport(WHO, CSV)).ok).toBe(true);
+    expect((await s.c.accountStore.getAccount(SUB))?.importsToday).toEqual({ day: '2026-11-05', n: 1 });
+  });
+
+  it('T-WSCR-8: failed requests never use up the day: ten failures, then ten imports, the same UTC day', async () => {
+    const s = setup();
+    const api = s.c.dataApi as MemoryDataApi;
+    const ask = api.requestImport.bind(api);
+    api.requestImport = async () => ({ ok: false, kind: 'failed', code: 'server' });
+    for (let i = 0; i < 10; i += 1) expect(await s.imports.requestImport(WHO, CSV)).toMatchObject({ ok: false, reason: 'failed' });
+    api.requestImport = ask;
+    for (let i = 0; i < 10; i += 1) {
+      const r = await s.imports.requestImport(WHO, CSV);
+      if (!r.ok) throw new Error(`refused at ${i}: ${r.reason}`);
+      await finish(s, r.data.importId);
+    }
+    expect(await s.imports.requestImport(WHO, CSV)).toMatchObject({ ok: false, reason: 'daily' });
   });
 
   it('T-WSCR-8: a placeholder on the row counts as running; one left past its time is released', async () => {
@@ -98,8 +120,36 @@ describe('T-WSCR-8: import caps (D-114)', () => {
     expect(s.calls).toEqual([]);
     s.clock.advance(PENDING_STALE_MS);
     expect((await s.imports.requestImport(WHO, CSV)).ok).toBe(true);
-    // The stopped request never handed out an upload form, so its bytes came back.
-    expect((await s.c.accountStore.getAccount(SUB))?.storedBytes).toBe(5 * MiB);
+    // The stopped request never handed out an upload form, so its bytes and its count of the day came back.
+    expect(await s.c.accountStore.getAccount(SUB)).toMatchObject({ storedBytes: CSV.size, importsToday: { day: '2026-11-05', n: 1 } });
+  });
+
+  it("T-WSCR-8: a stale placeholder from an earlier UTC day gives back its bytes but not that day's count", async () => {
+    const s = setup();
+    const late = Date.UTC(2026, 10, 4, 23, 59, 0);
+    const placeholder = `${PENDING_IMPORT}${late}:left-just-before-midnight`;
+    await s.c.accountStore.reserveImport(SUB, { day: '2026-11-04', bytes: 5 * MiB, importId: placeholder });
+    await s.imports.settleRunning(WHO);
+    expect(await s.c.accountStore.getAccount(SUB)).toMatchObject({
+      runningImportId: undefined,
+      storedBytes: 0,
+      importsToday: { day: '2026-11-04', n: 1 },
+    });
+  });
+
+  it("T-WSCR-8: the release happens once: a second release changes neither the bytes nor the day's count", async () => {
+    const s = setup();
+    const placeholder = `${PENDING_IMPORT}${START}:x`;
+    await s.c.accountStore.reserveImport(SUB, { day: '2026-11-05', bytes: MiB, importId: placeholder });
+    await s.c.accountStore.releaseImport(SUB, placeholder, 0, { giveBackDay: '2026-11-05' });
+    await s.c.accountStore.releaseImport(SUB, placeholder, 0, { giveBackDay: '2026-11-05' });
+    expect(await s.c.accountStore.getAccount(SUB)).toMatchObject({ storedBytes: 0, importsToday: { day: '2026-11-05', n: 0 } });
+
+    const started = await s.imports.requestImport(WHO, CSV);
+    if (!started.ok) throw new Error('refused');
+    await finish(s, started.data.importId);
+    await s.imports.getImport(WHO, started.data.importId);
+    expect(await s.c.accountStore.getAccount(SUB)).toMatchObject({ storedBytes: CSV.size, importsToday: { day: '2026-11-05', n: 1 } });
   });
 
   it('T-WSCR-8: confirmImport swaps only its own placeholder (memory adapter)', async () => {
@@ -136,8 +186,8 @@ describe('T-WSCR-8: import caps (D-114)', () => {
     expect(done.status).toBe('done');
     const account = await s.c.accountStore.getAccount(SUB);
     expect(account?.runningImportId).toBeUndefined();
-    // The web server never learns the stored size, so the source's maximum stays counted (corrected only when no file arrived).
-    expect(account?.storedBytes).toBe(5 * MiB);
+    // The declared size stays counted (given back only when no file arrived).
+    expect(account?.storedBytes).toBe(CSV.size);
     expect((await s.imports.requestImport(WHO, CSV)).ok).toBe(true);
   });
 
@@ -166,7 +216,7 @@ describe('T-WSCR-8: import caps (D-114)', () => {
     expect(account?.storedBytes).toBe(0);
   });
 
-  it('T-WSCR-8: a stalled import frees the slot, keeping the source maximum, and the next import may start', async () => {
+  it('T-WSCR-8: a stalled import frees the slot, keeping its reserved size, and the next import may start', async () => {
     const s = setup();
     const api = s.c.dataApi as MemoryDataApi;
     api.seed({
@@ -187,8 +237,8 @@ describe('T-WSCR-8: import caps (D-114)', () => {
     // Nobody watched it: the next request settles it (the data spec's lock frees itself; repair or upload again).
     const next = await s.imports.requestImport(WHO, CSV);
     expect(next.ok).toBe(true);
-    // The stalled file stays counted at its source's maximum, like any import whose file arrived.
-    expect((await s.c.accountStore.getAccount(SUB))?.storedBytes).toBe(10 * MiB);
+    // The stalled file stays counted at its reserved size, like any import whose file arrived.
+    expect((await s.c.accountStore.getAccount(SUB))?.storedBytes).toBe(5 * MiB + CSV.size);
   });
 
   it('T-WSCR-8: reading a stalled import releases its slot', async () => {
@@ -242,16 +292,18 @@ describe('T-WSCR-8: import caps (D-114)', () => {
     expect((await s.c.accountStore.getAccount(SUB))?.importsToday).toEqual({ day: '2026-11-06', n: 1 });
   });
 
-  it("T-WSCR-8: stored bytes plus the source's maximum must stay within 200 MiB", async () => {
+  it("T-WSCR-8: stored bytes plus the file's declared size must stay within 200 MiB", async () => {
     const s = setup();
     await s.c.accountStore.reserveImport(SUB, { day: '2026-11-01', bytes: 0, importId: 'old' });
     await s.c.accountStore.releaseImport(SUB, 'old', 190 * MiB);
-    // An excel file counts its 20 MiB maximum, however small it is.
-    expect(await s.imports.requestImport(WHO, { source: 'excel', fileName: 'budget_Oct_2026.xlsx', size: 10 })).toMatchObject({
+    // An excel file counts its own size: 11 MiB does not fit in the 10 MiB left; a small one does.
+    expect(await s.imports.requestImport(WHO, { source: 'excel', fileName: 'budget_Oct_2026.xlsx', size: 11 * MiB })).toMatchObject({
       ok: false,
       reason: 'bytes',
     });
-    expect((await s.imports.requestImport(WHO, CSV)).ok).toBe(true);
+    const small = await s.imports.requestImport(WHO, { source: 'excel', fileName: 'budget_Oct_2026.xlsx', size: 10 });
+    expect(small.ok).toBe(true);
+    expect((await s.c.accountStore.getAccount(SUB))?.storedBytes).toBe(190 * MiB + 10);
     expect(s.clock.now()).toBeLessThan(START + DAY);
   });
 

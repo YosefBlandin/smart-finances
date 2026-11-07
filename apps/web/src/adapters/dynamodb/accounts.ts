@@ -1,5 +1,5 @@
 import { DeleteCommand, GetCommand, UpdateCommand, type GetCommandOutput } from '@aws-sdk/lib-dynamodb';
-import type { Account, AccountStore, Consent, ReserveRefusal } from '@/ports/account-store';
+import type { Account, AccountStore, Consent, ImportRelease, ReserveRefusal } from '@/ports/account-store';
 import { documentClient, type DocClient } from './sessions';
 
 // The accounts table (architecture.md Contracts "Accounts table"; infra/lib/web-stack.ts#WebStack): pk ACCT#<sub>, on
@@ -9,7 +9,9 @@ import { documentClient, type DocClient } from './sessions';
 // decided by the condition, so two imports that race cannot both pass (D-114), and it is refused for an account being
 // deleted, whose mark is in turn refused while an import runs (AC-18). The reservation may hold a placeholder id that
 // confirmImport swaps for the data API's import id. running_import_bytes (not in the Contracts
-// list) keeps the bytes reserved for the running import, so releaseImport can replace them with the final size. Erase-all
+// list) keeps the bytes reserved for the running import (the file's declared size, owner decision of 2026-11-06), so
+// releaseImport can keep them or give them back; a release that gives back the day's count does it in the same
+// conditional update, only while the item still counts that day. Erase-all
 // resets stored_bytes and keeps the consent; delete account removes the item. Service errors are thrown.
 
 const MiB = 1024 * 1024;
@@ -61,6 +63,7 @@ function toAccount(sub: string, item: Item): Account {
   const today = item.imports_today as Item | undefined;
   if (today && str(today.day) && num(today.n)) account.importsToday = { day: today.day, n: today.n };
   if (str(item.running_import_id)) account.runningImportId = item.running_import_id;
+  if (num(item.running_import_bytes)) account.runningImportBytes = item.running_import_bytes;
   return account;
 }
 
@@ -205,19 +208,33 @@ export class DynamoAccountStore implements AccountStore {
     });
   }
 
-  /** Ends the running import with its final size in place of the reserved bytes; another import id changes nothing. */
-  async releaseImport(sub: string, importId: string, finalBytes: number) {
+  /**
+   * Ends the running import with finalBytes in place of the reserved bytes, and with release.giveBackDay also takes back
+   * that day's count while the item still counts that day, all in one conditional update; another import id changes
+   * nothing, so the release happens once.
+   */
+  async releaseImport(sub: string, importId: string, finalBytes: number, release: ImportRelease = {}) {
     for (let attempt = 0; attempt < ATTEMPTS; attempt += 1) {
       const item = await this.item(sub);
       if (!item || item.running_import_id !== importId) return;
       const stored = num(item.stored_bytes) ? item.stored_bytes : 0;
       const reserved = num(item.running_import_bytes) ? item.running_import_bytes : 0;
-      const done = await this.update(sub, {
-        update: 'SET #b = :next REMOVE #r, #rb',
-        condition: '#r = :id AND #b = :stored',
-        names: ['#b', '#r', '#rb'],
-        values: { ':next': Math.max(0, stored - reserved + finalBytes), ':id': importId, ':stored': stored },
-      });
+      const today = toAccount(sub, item).importsToday;
+      const giveBack = release.giveBackDay !== undefined && today?.day === release.giveBackDay && today.n > 0;
+      const values = { ':next': Math.max(0, stored - reserved + finalBytes), ':id': importId, ':stored': stored };
+      const done = giveBack
+        ? await this.update(sub, {
+            update: 'SET #b = :next, #t.#n = #t.#n - :one REMOVE #r, #rb',
+            condition: '#r = :id AND #b = :stored AND #t.#d = :day AND #t.#n > :zero',
+            names: ['#b', '#t', '#n', '#d', '#r', '#rb'],
+            values: { ...values, ':one': 1, ':day': release.giveBackDay, ':zero': 0 },
+          })
+        : await this.update(sub, {
+            update: 'SET #b = :next REMOVE #r, #rb',
+            condition: '#r = :id AND #b = :stored',
+            names: ['#b', '#r', '#rb'],
+            values,
+          });
       if (done) return;
     }
     throw new Error('releaseImport: the account item kept changing');
