@@ -349,3 +349,15 @@ export async function startUndo(store, sub, importId, { now = Date.now(), ulid =
 export async function startRepair(store, sub, source, period, { now = Date.now(), ulid = defaultUlid } = {}) {
   return startReconcile(store, sub, { kind: 'repair', source, period, file_name: '', now, ulid });
 }
+
+// An undo or repair whose reconcile could not be started: the record fails and its lock goes,
+// so the period is not blocked. An undo's pointer move stays; a repair then reconciles it.
+export async function abandonReconcile(store, sub, importId, { now = Date.now(), code = 'not_started', message = 'The reconcile could not be started; run a repair of this period.' } = {}) {
+  for (let attempt = 0; attempt < ATTEMPTS; attempt += 1) {
+    const record = await getImport(store, sub, importId);
+    if (!record || FINAL.has(record.status)) return record;
+    const failed = await failRecord(store, sub, record, now, code, message);
+    if (failed) return failed;
+  }
+  throw new Error('abandonReconcile: too much contention');
+}

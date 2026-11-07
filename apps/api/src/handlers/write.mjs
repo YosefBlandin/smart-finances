@@ -2,7 +2,7 @@
 // adapter: the person comes only from the verified claims, input is checked with the shared
 // contract schemas (D-39), and the core modules do the work.
 import { ROUTES, checkImportRequest, SOURCES } from '@smart-finances/contracts/routes';
-import { createImport, FORM_SECONDS, startRepair, startUndo } from '../store/imports.mjs';
+import { abandonReconcile, createImport, FORM_SECONDS, startRepair, startUndo } from '../store/imports.mjs';
 import { createRepo } from '../store/repo.mjs';
 import { ulid as defaultUlid } from '../store/ulid.mjs';
 import { HttpError, fail, personOf, reply } from './http.mjs';
@@ -41,7 +41,13 @@ const ID = /^[0-9A-Za-z]{1,64}$/;
 async function started(deps, sub, out) {
   if (out.outcome === 'not_found') throw new HttpError('not_found', 'no such import or period');
   if (out.outcome === 'conflict') throw new HttpError('conflict', out.reason);
-  await deps.store.invokeAsync(deps.parserFunction, { sub, import_id: out.record.import_id });
+  try {
+    await deps.store.invokeAsync(deps.parserFunction, { sub, import_id: out.record.import_id });
+  } catch (err) {
+    // Fail the record and free the period, then answer 500: the owner can repair the period.
+    await abandonReconcile(deps.store, sub, out.record.import_id, { now: deps.now() });
+    throw err;
+  }
   return reply(202, { import_id: out.record.import_id });
 }
 

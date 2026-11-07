@@ -245,3 +245,35 @@ test('T-REC-6 a payments report correction that crashed with overlapping keys is
   const rows = [...w.store.items.values()].filter((i) => i.sk.startsWith(PREFIX.TXN));
   assert.deepEqual(rows.map((i) => [i.source_ref.split('#')[1], i.date]).sort(), [['111', '2026-05-02'], ['222', '2026-05-04'], ['333', '2026-05-05']]);
 });
+
+// ---- SF-29 review fixes ----
+test('T-REC-5 a reconcile that cannot be started fails its record and frees the period for a repair', async () => {
+  const w = world();
+  const first = await w.importFile('csv', 'a.csv', csvFile('A'));
+  w.tick(MIN);
+  const second = await w.importFile('csv', 'a.csv', csvFile('B'));
+  const realInvoke = w.store.invokeAsync;
+  w.store.invokeAsync = async () => { throw new Error('lambda down'); };
+  const undo = await w.call('POST /imports/{id}/undo', { pathParameters: { id: second } });
+  assert.equal(undo.status, 500);
+  w.store.invokeAsync = realInvoke;
+  const p = await getPointer(w.store, A, 'csv', 'log');
+  assert.deepEqual([p.active_import, p.lock_import], [first, undefined]);
+  const records = [...w.store.items.values()].filter((i) => i.kind === 'undo');
+  assert.deepEqual(records.map((r) => [r.status, r.error.code]), [['failed', 'not_started']]);
+  const repair = await w.call('POST /periods/{source}/{period}/repair', { pathParameters: { source: 'csv', period: 'log' } });
+  assert.equal(repair.status, 202);
+  await w.drain();
+  assert.deepEqual(w.descriptions(), ['A']);
+});
+
+test('T-REC-5 undo of an import that never arrived, or of an undo record, gets conflict', async () => {
+  const w = world();
+  const pending = await w.importFile('csv', 'a.csv', csvFile('A'), { deliver: false });
+  assert.equal((await w.call('POST /imports/{id}/undo', { pathParameters: { id: pending } })).status, 409);
+  w.tick(MIN);
+  const id = await w.importFile('csv', 'b.csv', csvFile('B'));
+  const undo = await w.call('POST /imports/{id}/undo', { pathParameters: { id } });
+  await w.drain();
+  assert.equal((await w.call('POST /imports/{id}/undo', { pathParameters: { id: undo.body.import_id } })).status, 409);
+});
