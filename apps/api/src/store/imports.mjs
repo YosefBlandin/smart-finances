@@ -288,3 +288,64 @@ export async function reconcile(store, sub, runningId, { now = Date.now(), load 
   }
   return { outcome: 'done', counts };
 }
+
+// ---- undo and repair (D-17, D-28; the notes below the HTTP routes table) ----
+// Both create a record that takes the period's lock in one transaction with the erase check;
+// the parser then reconciles in reconcile mode. Outcomes: started, not_found or conflict.
+async function startReconcile(store, sub, { kind, source, period, file_name, undoOf, now, ulid }) {
+  for (let attempt = 0; attempt < ATTEMPTS; attempt += 1) {
+    const pointer = await getPointer(store, sub, source, period);
+    if (!pointer) return { outcome: 'not_found' };
+    if (undoOf && pointer.active_import !== undoOf) return { outcome: 'conflict', reason: 'only the active import of a period can be undone' };
+    if (lockLive(pointer, now)) return { outcome: 'conflict', reason: 'an import of this period is running' };
+    if (inEraseWindow(await store.get(erasedKey(sub), { consistent: true }), now)) return { outcome: 'conflict', reason: 'all data is being deleted' };
+    const history = pointer.history ?? [];
+    let next = pointer.active_import;
+    let nextHistory = history;
+    if (undoOf) {
+      const at = history.indexOf(undoOf);
+      next = at > 0 ? history[at - 1] : undefined;
+      nextHistory = history.filter((id) => id !== undoOf);
+    }
+    const import_id = ulid(now);
+    const record = {
+      ...impKey(sub, import_id),
+      import_id,
+      kind,
+      source,
+      file_name,
+      period,
+      status: 'reconciling',
+      created_at: iso(now),
+      period_target: next ?? 'none',
+      ...(undoOf ? { undo_of: undoOf } : {}),
+    };
+    const { active_import: _active, lock_import: _lock, lock_until: _until, ...rest } = pointer;
+    const locked = {
+      ...rest,
+      ...(next ? { active_import: next } : {}),
+      history: nextHistory,
+      lock_import: import_id,
+      lock_until: iso(now + LOCK_MS),
+      rev: (pointer.rev ?? 0) + 1,
+    };
+    try {
+      await store.transact([{ put: record, if: [{ attr: 'sk', exists: false }] }, { put: locked, if: revIs(pointer) }, eraseCheck(sub, now)]);
+      return { outcome: 'started', record };
+    } catch (err) {
+      if (!retryable(err)) throw err;
+    }
+  }
+  throw new Error('startReconcile: too much contention');
+}
+
+export async function startUndo(store, sub, importId, { now = Date.now(), ulid = defaultUlid } = {}) {
+  const target = await getImport(store, sub, importId);
+  if (!target) return { outcome: 'not_found' };
+  if (!target.period) return { outcome: 'conflict', reason: 'only the active import of a period can be undone' };
+  return startReconcile(store, sub, { kind: 'undo', source: target.source, period: target.period, file_name: target.file_name, undoOf: importId, now, ulid });
+}
+
+export async function startRepair(store, sub, source, period, { now = Date.now(), ulid = defaultUlid } = {}) {
+  return startReconcile(store, sub, { kind: 'repair', source, period, file_name: '', now, ulid });
+}

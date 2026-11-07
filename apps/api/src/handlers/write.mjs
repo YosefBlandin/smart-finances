@@ -2,7 +2,7 @@
 // adapter: the person comes only from the verified claims, input is checked with the shared
 // contract schemas (D-39), and the core modules do the work.
 import { ROUTES, checkImportRequest, SOURCES } from '@smart-finances/contracts/routes';
-import { createImport, FORM_SECONDS } from '../store/imports.mjs';
+import { createImport, FORM_SECONDS, startRepair, startUndo } from '../store/imports.mjs';
 import { createRepo } from '../store/repo.mjs';
 import { ulid as defaultUlid } from '../store/ulid.mjs';
 import { HttpError, fail, personOf, reply } from './http.mjs';
@@ -34,8 +34,37 @@ async function requestImport(deps, sub, event) {
   return reply(201, { import_id: record.import_id, upload: { url: upload.url, fields: upload.fields }, expires_at: record.expires_at });
 }
 
+const PERIOD = /^(\d{4}-(0[1-9]|1[0-2])|log)$/;
+const ID = /^[0-9A-Za-z]{1,64}$/;
+
+// Undo and repair answer 202 once the record holds the lock; the parser reconciles async.
+async function started(deps, sub, out) {
+  if (out.outcome === 'not_found') throw new HttpError('not_found', 'no such import or period');
+  if (out.outcome === 'conflict') throw new HttpError('conflict', out.reason);
+  await deps.store.invokeAsync(deps.parserFunction, { sub, import_id: out.record.import_id });
+  return reply(202, { import_id: out.record.import_id });
+}
+
+// POST /imports/{id}/undo (D-17): only a period's active import.
+async function undoImport(deps, sub, event) {
+  const id = event.pathParameters?.id;
+  if (typeof id !== 'string' || !ID.test(id)) throw new HttpError('not_found', 'no such import');
+  return started(deps, sub, await startUndo(deps.store, sub, id, { now: deps.now(), ulid: deps.ulid }));
+}
+
+// POST /periods/{source}/{period}/repair: the owner's fix for a stalled import, undo or repair.
+async function repairPeriod(deps, sub, event) {
+  const { source, period } = event.pathParameters ?? {};
+  if (!Object.hasOwn(SOURCES, source ?? '') || !PERIOD.test(period ?? '')) throw new HttpError('bad_request', 'unknown source or period');
+  const monthly = source === 'mercadopago' || source === 'excel';
+  if (monthly === (period === 'log')) throw new HttpError('bad_request', 'this source does not use that period');
+  return started(deps, sub, await startRepair(deps.store, sub, source, period, { now: deps.now(), ulid: deps.ulid }));
+}
+
 const ROUTE_HANDLERS = {
   'POST /imports': requestImport,
+  'POST /imports/{id}/undo': undoImport,
+  'POST /periods/{source}/{period}/repair': repairPeriod,
 };
 
 export function createWriteHandler({ store, now = () => Date.now(), ulid = defaultUlid, parserFunction = process.env.PARSER_FUNCTION } = {}) {
