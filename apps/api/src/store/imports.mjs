@@ -107,3 +107,150 @@ export async function takeLock(store, sub, importId, { period, now = Date.now(),
   }
   throw new Error('takeLock: too much contention');
 }
+
+// ---- commit and reconcile (D-28, D-32) ----
+import { findPossibleDuplicates } from '../ingest/reconcile.mjs';
+import { FIELDS } from '../ingest/schema.mjs';
+import { monthRange, PREFIX, personPk, txnKey } from './keys.mjs';
+
+const PUT_PARALLEL = 8;
+
+async function inPool(items, fn) {
+  let next = 0;
+  const workers = Array.from({ length: Math.min(PUT_PARALLEL, items.length) }, async () => {
+    while (next < items.length) {
+      const item = items[next];
+      next += 1;
+      await fn(item);
+    }
+  });
+  await Promise.all(workers);
+}
+
+// The pointer without its lock, one revision on.
+const released = (pointer) => {
+  const { lock_import: _lock, lock_until: _until, ...rest } = pointer;
+  return { ...rest, rev: (pointer.rev ?? 0) + 1 };
+};
+const holds = (pointer, id) => [...revIs(pointer), { attr: 'lock_import', op: '=', value: id }];
+
+// Commit moves the period pointer to this import before any row is written ("States and
+// exits", importing). Outcomes: committed (also when this import is already active, a retry),
+// unchanged (same content as the active import: nothing moves, the reconcile still runs),
+// superseded (a newer import is already active: the lock is released), lost_lock (another run
+// holds the lock now), ignored (the record is final).
+export async function commitImport(store, sub, importId, { content_hash, now = Date.now() }) {
+  for (let attempt = 0; attempt < ATTEMPTS; attempt += 1) {
+    const record = await getImport(store, sub, importId);
+    if (!record || FINAL.has(record.status)) return { outcome: 'ignored', record };
+    if (record.status !== 'importing') throw new Error(`commit of an import that is ${record.status}`);
+    const pointer = await getPointer(store, sub, record.source, record.period);
+    if (!pointer || pointer.lock_import !== importId) return { outcome: 'lost_lock', record };
+    if (pointer.active_import === importId) return { outcome: 'committed', record, pointer };
+    const active = pointer.active_import ? await getImport(store, sub, pointer.active_import) : undefined;
+    const statusIs = [{ attr: 'status', op: '=', value: 'importing' }];
+    try {
+      if (active && active.content_hash === content_hash) {
+        const same = { ...record, content_hash };
+        await store.transact([{ put: same, if: statusIs }, { check: pointer, if: holds(pointer, importId) }]);
+        return { outcome: 'unchanged', record: same, pointer };
+      }
+      if (active && active.import_id > importId) {
+        const superseded = { ...record, content_hash, status: 'superseded', finished_at: iso(now) };
+        await store.transact([{ put: superseded, if: statusIs }, { put: released(pointer), if: holds(pointer, importId) }]);
+        return { outcome: 'superseded', record: superseded };
+      }
+      const committed = { ...record, content_hash, replaces: active ? active.import_id : 'none' };
+      const moved = {
+        ...pointer,
+        active_import: importId,
+        history: [...(pointer.history ?? []).filter((id) => id !== importId), importId],
+        rev: (pointer.rev ?? 0) + 1,
+      };
+      await store.transact([{ put: committed, if: statusIs }, { put: moved, if: holds(pointer, importId) }]);
+      return { outcome: 'committed', record: committed, pointer: moved };
+    } catch (err) {
+      if (!(err instanceof ConditionFailed)) throw err;
+    }
+  }
+  throw new Error('commitImport: too much contention');
+}
+
+// The stored transactions of one source and period (D-32): a month period reads only its own
+// month's range, a log period reads every transaction; both filter on source (and log on period).
+async function storedRows(store, sub, source, period) {
+  const pk = personPk(sub);
+  const { items } = period === 'log'
+    ? await store.query({ pk, prefix: PREFIX.TXN, consistent: true })
+    : await store.query({ pk, between: monthRange(PREFIX.TXN, period, period), consistent: true });
+  return items.filter((i) => i.source === source && (period !== 'log' || i.period === 'log'));
+}
+
+// Stored rows of other files dated on the days a file's issues name, so a twin uploaded
+// earlier is still found (architecture.md "Importers").
+async function twinCandidates(store, sub, issues, source, period) {
+  const days = [...new Set(issues.filter((i) => i.statedDate).map((i) => i.statedDate))];
+  const found = [];
+  for (const day of days) {
+    const { items } = await store.query({ pk: personPk(sub), prefix: `${PREFIX.TXN}${day}#`, consistent: true });
+    found.push(...items.filter((i) => !(i.source === source && i.period === period)));
+  }
+  return found;
+}
+
+const sameRow = (a, b) => FIELDS.every((f) => JSON.stringify(a[f]) === JSON.stringify(b[f]));
+
+// Makes the period's stored rows equal to its active file's rows (Contracts "Parser input").
+// load(record) returns that import's parsed { transactions, issues }. Running it again gives
+// the same rows. Only the record that holds the period's lock may reconcile.
+export async function reconcile(store, sub, runningId, { now = Date.now(), load }) {
+  const running = await getImport(store, sub, runningId);
+  if (!running) return { outcome: 'missing' };
+  const { source, period } = running;
+  const pointer = await getPointer(store, sub, source, period);
+  if (!pointer || pointer.lock_import !== runningId) return { outcome: 'lost_lock' };
+  const active = pointer.active_import ? await getImport(store, sub, pointer.active_import) : undefined;
+  const parsed = active ? await load(active) : { transactions: [], issues: [] };
+  const rows = parsed.transactions.map((t) => ({ ...t, flags: [...(t.flags ?? [])] }));
+
+  findPossibleDuplicates(parsed.issues ?? [], [...rows, ...(await twinCandidates(store, sub, parsed.issues ?? [], source, period))]);
+
+  const before = new Map((await storedRows(store, sub, source, period)).map((i) => [i.sk, i]));
+  const items = rows.map((t) => ({ ...txnKey(sub, t.date, t.id), ...t, period, import_id: active.import_id }));
+  const keep = new Set(items.map((i) => i.sk));
+  const counts = { added: 0, updated: 0, removed: 0, skipped: running.counts?.skipped ?? running.skipped?.length ?? 0 };
+  for (const item of items) {
+    const old = before.get(item.sk);
+    if (!old) counts.added += 1;
+    else if (!sameRow(old, item)) counts.updated += 1;
+  }
+  await inPool(items, (item) => store.put(item));
+  const gone = [...before.values()].filter((i) => !keep.has(i.sk));
+  counts.removed = gone.length;
+  await inPool(gone, (item) => store.remove(item));
+
+  // Final marks, then the lock goes. A crash before the release leaves the lock to expire.
+  const finished = iso(now);
+  const unchanged = active && running.kind === 'file' && running.import_id !== active.import_id && running.content_hash === active.content_hash;
+  if (active && active.import_id !== runningId && active.status !== 'done') {
+    await store.put({ ...active, status: 'done', finished_at: active.finished_at ?? finished });
+  }
+  await store.put({ ...running, status: unchanged ? 'unchanged' : 'done', finished_at: finished, counts });
+  const { items: imports } = await store.query({ pk: personPk(sub), prefix: PREFIX.IMP, consistent: true });
+  for (const other of imports) {
+    if (other.source !== source || other.period !== period || other.import_id >= runningId || other.import_id === active?.import_id) continue;
+    if (other.status !== 'requested' && other.status !== 'importing') continue;
+    try {
+      await store.put({ ...other, status: 'superseded', finished_at: finished }, { if: [{ attr: 'status', op: '=', value: other.status }] });
+    } catch (err) {
+      if (!(err instanceof ConditionFailed)) throw err;
+    }
+  }
+  const latest = await getPointer(store, sub, source, period);
+  try {
+    if (latest?.lock_import === runningId) await store.put(released(latest), { if: holds(latest, runningId) });
+  } catch (err) {
+    if (!(err instanceof ConditionFailed)) throw err;
+  }
+  return { outcome: 'done', counts };
+}

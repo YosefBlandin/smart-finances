@@ -129,3 +129,197 @@ test('T-REC-1 two runs racing for one period: exactly one holds the lock', async
   const holder = results.find((r) => r.outcome === 'locked').record.import_id;
   assert.equal((await store.get(perKey(A, 'mercadopago', '2026-05'))).lock_import, holder);
 });
+
+// ---- SF-26: commit and reconcile ----
+import { commitImport, reconcile } from '../src/store/imports.mjs';
+import { monthRange, PREFIX, personPk } from '../src/store/keys.mjs';
+
+const txn = (id, date, over = {}) => ({
+  id,
+  date,
+  date_precision: 'day',
+  kind: 'expense',
+  amount: -1000,
+  currency: 'ARS',
+  category: 'Groceries',
+  merchant: '',
+  description_raw: `row ${id}`,
+  source: over.source ?? 'mercadopago',
+  source_ref: `f#${id}`,
+  country: 'AR',
+  flags: [],
+  import_batch: 'b',
+  ...over,
+});
+
+// A fake file store: content_hash and parsed rows per import id.
+function harness() {
+  const store = createMemoryStore();
+  const ulid = newIds();
+  const files = new Map();
+  const load = async (record) => files.get(record.import_id);
+  async function upload({ source = 'mercadopago', period = '2026-05', rows, hash, now = T0 }) {
+    const r = await createImport(store, A, { source, file_name: source === 'notion' ? 'log.md' : 'f.csv', size: 10, now, ulid });
+    files.set(r.import_id, { transactions: rows, issues: [] });
+    return { ...r, period, hash: hash ?? JSON.stringify(rows.map((t) => [t.id, t.date, t.amount])) };
+  }
+  async function run(up, now = T0 + MIN) {
+    const lock = await takeLock(store, A, up.import_id, { period: up.period, now });
+    if (lock.outcome !== 'locked') return { lock: lock.outcome };
+    const commit = await commitImport(store, A, up.import_id, { content_hash: up.hash, now });
+    if (!['committed', 'unchanged'].includes(commit.outcome)) return { lock: lock.outcome, commit: commit.outcome };
+    const rec = await reconcile(store, A, up.import_id, { now, load });
+    return { lock: lock.outcome, commit: commit.outcome, reconcile: rec.outcome, counts: rec.counts };
+  }
+  const stored = async (source, period) => [...store.items.values()]
+    .filter((i) => i.sk.startsWith(PREFIX.TXN) && i.source === source && i.period === period)
+    .map((i) => i.id)
+    .sort();
+  return { store, files, load, upload, run, stored };
+}
+
+test('T-REC-2 the same file twice stores its rows once and the second import ends unchanged', async () => {
+  const h = harness();
+  const rows = [txn('a', '2026-05-02'), txn('b', '2026-05-03')];
+  const first = await h.upload({ rows });
+  const r1 = await h.run(first);
+  assert.deepEqual([r1.commit, r1.reconcile], ['committed', 'done']);
+  assert.deepEqual(r1.counts, { added: 2, updated: 0, removed: 0, skipped: 0 });
+  const second = await h.upload({ rows: rows.map((t) => ({ ...t })) });
+  const r2 = await h.run(second, T0 + 2 * MIN);
+  assert.equal(r2.commit, 'unchanged');
+  assert.deepEqual(r2.counts, { added: 0, updated: 0, removed: 0, skipped: 0 });
+  assert.equal((await getImport(h.store, A, second.import_id)).status, 'unchanged');
+  assert.equal((await getImport(h.store, A, first.import_id)).status, 'done');
+  const p = await getPointer(h.store, A, 'mercadopago', '2026-05');
+  assert.equal(p.active_import, first.import_id);
+  assert.deepEqual(p.history, [first.import_id]);
+  assert.equal(p.lock_import, undefined);
+  assert.deepEqual(await h.stored('mercadopago', '2026-05'), ['a', 'b']);
+});
+
+test('T-REC-3 a corrected file replaces its period rows; other sources and periods keep theirs', async () => {
+  const h = harness();
+  await h.run(await h.upload({ rows: [txn('a', '2026-05-02'), txn('b', '2026-05-03'), txn('c', '2026-05-04')] }));
+  await h.run(await h.upload({ period: '2026-06', rows: [txn('j', '2026-06-01')] }));
+  await h.run(await h.upload({ source: 'notion', period: 'log', rows: [txn('n', '2026-05-02', { source: 'notion' })] }));
+  const fix = await h.upload({ rows: [txn('a', '2026-05-02'), txn('b', '2026-05-03', { amount: -2000 }), txn('d', '2026-05-09')], now: T0 + MIN });
+  const r = await h.run(fix, T0 + 3 * MIN);
+  assert.deepEqual([r.commit, r.reconcile], ['committed', 'done']);
+  assert.deepEqual(r.counts, { added: 1, updated: 1, removed: 1, skipped: 0 });
+  assert.deepEqual(await h.stored('mercadopago', '2026-05'), ['a', 'b', 'd']);
+  assert.deepEqual(await h.stored('mercadopago', '2026-06'), ['j']);
+  assert.deepEqual(await h.stored('notion', 'log'), ['n']);
+  const b = [...h.store.items.values()].find((i) => i.id === 'b');
+  assert.equal(b.amount, -2000);
+  assert.equal(b.import_id, fix.import_id);
+  const p = await getPointer(h.store, A, 'mercadopago', '2026-05');
+  assert.equal(p.active_import, fix.import_id);
+  assert.equal(p.history.length, 2);
+  assert.equal((await getImport(h.store, A, fix.import_id)).replaces, p.history[0]);
+});
+
+test('T-REC-3 a row whose date moved leaves no copy under its old key', async () => {
+  const h = harness();
+  await h.run(await h.upload({ rows: [txn('a', '2026-05-02')] }));
+  await h.run(await h.upload({ rows: [txn('a', '2026-05-20')], now: T0 + MIN }), T0 + 2 * MIN);
+  const copies = [...h.store.items.values()].filter((i) => i.id === 'a');
+  assert.deepEqual(copies.map((i) => i.date), ['2026-05-20']);
+});
+
+test('T-REC-4 a late retry of an older import after a newer one committed leaves the newer rows', async () => {
+  const h = harness();
+  const older = await h.upload({ rows: [txn('old', '2026-05-02')] });
+  const newer = await h.upload({ rows: [txn('new', '2026-05-03')] });
+  // older locks, then its run dies before commit; newer takes over after lock_until.
+  assert.equal((await takeLock(h.store, A, older.import_id, { period: '2026-05', now: T0 + MIN })).outcome, 'locked');
+  const r = await h.run(newer, T0 + MIN + LOCK_MS + 1);
+  assert.equal(r.reconcile, 'done');
+  assert.equal((await getImport(h.store, A, older.import_id)).status, 'superseded');
+  const retry = await h.run(older, T0 + MIN + LOCK_MS + 2);
+  assert.equal(retry.lock, 'ignored');
+  assert.deepEqual(await h.stored('mercadopago', '2026-05'), ['new']);
+});
+
+test('T-REC-4 an older import that commits after a newer one is superseded and writes nothing', async () => {
+  const h = harness();
+  const older = await h.upload({ rows: [txn('old', '2026-05-02')] });
+  const newer = await h.upload({ rows: [txn('new', '2026-05-03')] });
+  await h.run(newer);
+  // older was never marked (it was still requested), so it locks and then loses at commit.
+  const r = await h.run(older, T0 + 2 * MIN);
+  assert.deepEqual([r.lock, r.commit], ['locked', 'superseded']);
+  assert.equal((await getImport(h.store, A, older.import_id)).status, 'superseded');
+  assert.equal((await getPointer(h.store, A, 'mercadopago', '2026-05')).lock_import, undefined);
+  assert.deepEqual(await h.stored('mercadopago', '2026-05'), ['new']);
+});
+
+test('T-REC-4 one event delivered twice and concurrently gives the file rows once', async () => {
+  const h = harness();
+  const up = await h.upload({ rows: [txn('a', '2026-05-02'), txn('b', '2026-05-03')] });
+  const both = await Promise.all([h.run(up), h.run(up)]);
+  assert.ok(both.some((r) => r.reconcile === 'done'));
+  assert.equal((await getImport(h.store, A, up.import_id)).status, 'done');
+  assert.deepEqual(await h.stored('mercadopago', '2026-05'), ['a', 'b']);
+  assert.equal((await getPointer(h.store, A, 'mercadopago', '2026-05')).lock_import, undefined);
+});
+
+test('T-REC-4 a crash after some puts, then the retry, leaves exactly the file rows', async () => {
+  const h = harness();
+  await h.run(await h.upload({ rows: [txn('a', '2026-05-02'), txn('gone', '2026-05-05')] }));
+  const fix = await h.upload({ rows: [txn('a', '2026-05-02', { amount: -5 }), txn('b', '2026-05-03'), txn('c', '2026-05-04')], now: T0 + MIN });
+  const realPut = h.store.put.bind(h.store);
+  let puts = 0;
+  h.store.put = async (item, opts) => {
+    if (item.sk.startsWith(PREFIX.TXN) && ++puts === 2) throw new Error('crash');
+    return realPut(item, opts);
+  };
+  await assert.rejects(h.run(fix, T0 + 2 * MIN), /crash/);
+  h.store.put = realPut;
+  const retry = await h.run(fix, T0 + 3 * MIN);
+  assert.deepEqual([retry.lock, retry.commit, retry.reconcile], ['locked', 'committed', 'done']);
+  assert.deepEqual(await h.stored('mercadopago', '2026-05'), ['a', 'b', 'c']);
+  assert.equal((await getImport(h.store, A, fix.import_id)).status, 'done');
+});
+
+test('T-REC-4 a takeover after lock_until: the first run, back late, cannot move or release the lock', async () => {
+  const h = harness();
+  const first = await h.upload({ rows: [txn('a', '2026-05-02')] });
+  const second = await h.upload({ rows: [txn('b', '2026-05-03')] });
+  await takeLock(h.store, A, first.import_id, { period: '2026-05', now: T0 });
+  await takeLock(h.store, A, second.import_id, { period: '2026-05', now: T0 + LOCK_MS + 1 });
+  // first wakes up and tries to commit and reconcile while second holds the lock.
+  assert.equal((await commitImport(h.store, A, first.import_id, { content_hash: first.hash, now: T0 + LOCK_MS + 2 })).outcome, 'lost_lock');
+  assert.equal((await reconcile(h.store, A, first.import_id, { now: T0 + LOCK_MS + 2, load: h.load })).outcome, 'lost_lock');
+  assert.equal((await getPointer(h.store, A, 'mercadopago', '2026-05')).lock_import, second.import_id);
+  await commitImport(h.store, A, second.import_id, { content_hash: second.hash, now: T0 + LOCK_MS + 3 });
+  await reconcile(h.store, A, second.import_id, { now: T0 + LOCK_MS + 3, load: h.load });
+  assert.deepEqual(await h.stored('mercadopago', '2026-05'), ['b']);
+  assert.equal((await getImport(h.store, A, first.import_id)).status, 'superseded');
+});
+
+test('T-REC-7 reconcile of a month period reads only that month; a log period reads all and keeps other sources', async () => {
+  const h = harness();
+  await h.run(await h.upload({ period: '2026-04', rows: [txn('apr', '2026-04-02')] }));
+  await h.run(await h.upload({ source: 'notion', period: 'log', rows: [txn('n1', '2026-04-03', { source: 'notion' })] }));
+  await h.run(await h.upload({ source: 'csv', period: 'log', rows: [txn('c1', '2026-04-03', { source: 'csv' })] }));
+  const queries = [];
+  const realQuery = h.store.query.bind(h.store);
+  h.store.query = async (q) => {
+    queries.push(q);
+    return realQuery(q);
+  };
+  await h.run(await h.upload({ rows: [txn('may', '2026-05-02')] }), T0 + 2 * MIN);
+  const txnQueries = queries.filter((q) => (q.prefix ?? q.between?.[0] ?? '').startsWith(PREFIX.TXN));
+  assert.deepEqual(txnQueries.map((q) => q.between), [monthRange(PREFIX.TXN, '2026-05', '2026-05')]);
+  assert.ok(txnQueries.every((q) => q.pk === personPk(A)));
+  assert.deepEqual(await h.stored('mercadopago', '2026-04'), ['apr']);
+
+  queries.length = 0;
+  await h.run(await h.upload({ source: 'notion', period: 'log', rows: [txn('n2', '2026-03-01', { source: 'notion' })], now: T0 + 2 * MIN }), T0 + 3 * MIN);
+  const logQueries = queries.filter((q) => (q.prefix ?? q.between?.[0] ?? '').startsWith(PREFIX.TXN));
+  assert.deepEqual(logQueries.map((q) => q.prefix), [PREFIX.TXN]);
+  assert.deepEqual(await h.stored('notion', 'log'), ['n2']);
+  assert.deepEqual(await h.stored('csv', 'log'), ['c1']);
+  assert.deepEqual(await h.stored('mercadopago', '2026-04'), ['apr']);
+});
