@@ -2,7 +2,7 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v9
 ---
 # Web UI: design system and screens: review
 
@@ -108,6 +108,9 @@ status: executing
 | A refused data token showed could not load instead of sign-in | executor | PR 4 conformance review | 64a385e, 1c2ad4b, 1a88952 | none |
 | Imports counted the source maximum, and a failed request kept the day's count | spec-gap (D-114 silent on the stored size) | PR 4 conformance review | 9694319 | none |
 | A refused RUM identity pool reached the page as an unhandled rejection | executor | PR 4 conformance re-review | 2cc200f | none |
+| amplify.yml unit tests took the build host's AWS markers and the branch's settings names, so STAGE=test was refused | spec-gap | qa release, 2026-11-07 | amplify.yml env unset (D-186) | none |
+| Lighthouse measured the ended-session screen, not the money screens, so its budgets checked nothing real | spec-wrong (D-134 gave no session) | qa release, 2026-11-07 | qa allowance (D-187), then the seeded person (D-188, SF-173) | none |
+| The Amplify branch framework was set by hand in the console, not in code | spec-gap | qa release, 2026-11-07 | the branch resource sets it (D-189, SF-174) | none |
 
 ## Metrics
 | Metric | Value |

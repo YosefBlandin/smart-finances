@@ -2,14 +2,14 @@
 spec: web-ui
 ticket: none
 tier: L
-status: executing
+status: locked-v9
 ---
 # Web UI: design system and screens: brief for smart-finances (PR 4 of 4, screens)
 
 <!-- The executor's main document. It must stand alone: copy values in, and link only to sections a task cites. At most 6k tokens; comments do not count. Required reading (intent.md, this file and its Read first sections) stays under 15k. Before the lock, the cold-read dry run must find zero "cannot start" items. -->
 
 - Goal: a signed-in person uses fast, interactive overview, transactions, review, imports, rates and data screens, and can erase their data or delete their account.
-- Implements: AC-2, AC-4 to AC-11, AC-15, AC-17, AC-18, D-18 to D-21, D-26 to D-31, D-82, D-85, D-86, D-101, D-104, D-114, D-127, D-130, D-131, D-135
+- Implements: AC-2, AC-4 to AC-11, AC-15, AC-17, AC-18, D-18 to D-21, D-26 to D-31, D-82, D-85, D-86, D-101, D-104, D-114, D-127, D-130, D-131, D-135, D-174 to D-190
 - Spec folder: /home/user/smart-finances/docs/specs/web-ui in a cloud session; locally <repo root>/docs/specs/web-ui. Read and write the spec there, on the branch named under Branch, never a copy elsewhere.
 - Refs: smart-finances at the sha in intent.md refs. Before the first task: `git fetch origin qa feature/web-ui`, then `node ~/.claude/skills/spec/scripts/drift.mjs docs/specs/web-ui --strict` (exit 0; NEW lines are expected)
 - Worktree: a cloud session's own checkout; locally <repo root>/.claude/worktrees/web-screens (profile Notes)
@@ -25,7 +25,7 @@ status: executing
 2. intent.md: Acceptance criteria, No-gos, Glossary.
 3. architecture.md: Components "Code structure", "Component architecture", "Data access (web server)", "Screens", "Screen states"; Contracts "Ports", "Interfaces between the PRs", "Data API", "Accounts table", "Limits"; "States and exits" rows import, erasing, deleting account.
 4. docs/specs/data-architecture/architecture.md: Contracts "HTTP routes".
-5. test-matrix.md rows whose task is SF-161 to SF-172.
+5. test-matrix.md rows whose task is SF-161 to SF-174.
 
 ## HUMAN needs
 - <HUMAN: data PRs 2 and 3 merged into qa before the qa checks of imports, transactions, erase and delete account (D-64)> · Blocks: the qa checks, not the tasks
@@ -105,7 +105,7 @@ status: executing
 - Files: apps/web/src/ports/data-api.ts, apps/web/src/adapters/data-api.ts (new), apps/web/src/adapters/memory/data-api.ts, apps/web/src/adapters/data-api.test.ts (new)
 - Tests first: T-WSCR-1
 - Do:
-  - One method per route; bearer access token; 5-second timeout; replies parsed with @smart-finances/contracts; 401 refresh once then sign out, 403 and 404 not found, 409, 429 and 5xx failed with retry; counts the person’s requests with createLimits(deps).hit('person', sub). In adapters/container.ts the real adapter replaces UnwiredDataApi (D-167).
+  - One method per route; bearer access token; 5-second timeout, 25 s for export and erase (D-174); replies parsed with @smart-finances/contracts; 401 refresh once then sign out, 403 and 404 not found, 409, 429 and 5xx failed with retry; counts the person’s requests with createLimits(deps).hit('person', sub). In adapters/container.ts the real adapter replaces UnwiredDataApi (D-167).
   - Memory adapter: apps/web/fixtures/sample.json plus the adversarial rows of data/synthetic/transactions.csv copied into apps/web/fixtures/hostile.json; payments-report rows are source mercadopago. A limited result redirects server renders to /too-many and makes JSON routes answer 429.
 - Verify: `npm test --workspace @smart-finances/web -- src/adapters/data-api.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
@@ -122,7 +122,8 @@ status: executing
 - Files: apps/web/src/application/data/ (new: read use cases), apps/web/src/app/api/data/ (new: transactions, totals, rates, review, imports, imports/[id], export), apps/web/src/queries/ (new hooks), apps/web/src/app/api/data/data.test.ts (new)
 - Tests first: T-WSCR-18
 - Do:
-  - Each route calls requireMoneyAccess() from app/guarded.ts (D-168) and a read use case and returns parsed JSON; export streams the CSV.
+  - Each route calls requireMoneyAccess() from app/guarded.ts (D-168) and a read use case and returns parsed JSON; export buffers the CSV (D-174).
+  - D-182: A person whose session has ended goes to GET /api/data/signed-out?next=<address>, which clears __Host-sid only when the session is already gone and opens /sign-in?next=<address>; a live session goes back to the address, so the route signs nobody out. A server render or a /api/data/* route ends the session whose token the data API refused (401 after its one refresh): the one exception to "no GET changes state". Signed-out transactions and review go to sign-in too.
   - Hooks: useTransactions (infinite, cursor), useTotals, useRates, useReview, useImports, useImport (polls until final); query keys include month, view and filters.
 - Verify: `npm test --workspace @smart-finances/web -- src/app/api/data/data.test.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
@@ -134,6 +135,7 @@ status: executing
   - Browser tests open money screens with the seeded TEST_PERSON cookie (adapters/container.ts) or e2e/helpers/signIn.ts signIn(page) (D-168).
   - Colour field, kept bar, waiting line, band strip, headline sections, SVG charts with table alternatives; each section shows its own skeleton or failed note.
   - Money figures carry data-money and the bad one data-tone="bad"; in 2026-03 exactly one [data-money][data-tone=bad].
+  - Month changes use window.history.replaceState (D-175); the prefetch shares the layout's to-review read (D-177); where you spent the most sums the month's 200 largest expenses (D-183).
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/overview.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-165 · Transactions island
@@ -141,25 +143,28 @@ status: executing
 - Files: apps/web/src/app/(app)/transactions/, apps/web/src/screens/transactions/ (new), apps/web/e2e/transactions.spec.ts (new)
 - Tests first: T-WSCR-6
 - Do:
-  - Instant filters, sort and paging through useTransactions (kinds from KINDS, categories from CATEGORIES, page size 50, date descending); month, view, kind, category and sort in the address via router.replace; free text in the form only.
+  - Instant filters, sort and paging through useTransactions (kinds from KINDS, categories from CATEGORIES, page size 50, date descending); month, view, kind, category and sort in the address via window.history.replaceState (D-175); free text in the form only.
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/transactions.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-166 · Review and rates with optimistic updates
-- Implements: AC-8, D-44, D-131 · After: SF-163 · Judgment: high
-- Files: apps/web/src/application/data/{review,setRate}.ts (new), apps/web/src/app/(app)/review/, apps/web/src/app/(app)/rates/, apps/web/src/screens/{review,rates}/ (new), apps/web/e2e/review-rates.spec.ts (new)
+- Implements: AC-8, D-44, D-131, D-177 · After: SF-163 · Judgment: high
+- Files: apps/web/src/application/data/{review,setRate}.ts (new), apps/web/src/app/(app)/review/, apps/web/src/app/(app)/rates/, apps/web/src/screens/{review,rates}/ (new), apps/web/e2e/review-rates.spec.ts (new), apps/web/src/app/(app)/layout.tsx and apps/web/src/app/(app)/overview/page.tsx (the shared review read, D-177)
 - Tests first: T-WSCR-7, T-WSCR-19
 - Do:
   - Server actions through guarded(); useMutation with onMutate snapshot and optimistic change, onError rollback with a plain message, onSettled invalidation of review, totals and the to-review count.
   - Other sources show the fix-in-source note; rates keep two decimals.
+  - D-177: The (app) layout reads the to-review count through app/(app)/review/read.ts (React cache, one read per render), shared with the overview's prefetch and the review screen; every other money screen's full load makes one more read. Implements D-44.
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/review-rates.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
 ### SF-167 · Imports with caps, upload and status
-- Implements: AC-5, AC-17, D-114, D-86 · After: SF-163 · Judgment: high
-- Files: apps/web/src/application/data/requestImport.ts (new), apps/web/src/app/(app)/imports/, apps/web/src/screens/imports/ (new), apps/web/src/application/data/requestImport.test.ts (new), apps/web/e2e/imports.spec.ts (new)
+- Implements: AC-5, AC-17, D-114, D-86, D-178, D-179, D-184 · After: SF-163 · Judgment: high
+- Files: apps/web/src/application/data/requestImport.ts (new), apps/web/src/app/(app)/imports/, apps/web/src/screens/imports/ (new), apps/web/src/application/data/requestImport.test.ts (new), apps/web/e2e/imports.spec.ts (new), apps/web/src/application/data/reads.ts, apps/web/src/app/api/data/imports/[id]/, apps/web/src/ports/account-store.ts, apps/web/src/adapters/dynamodb/accounts.ts and the memory account adapter (owner allowances, 2026-11-05 and 2026-11-06)
 - Tests first: T-WSCR-8, T-WSCR-9
 - Do:
   - requestImport checks the name and size with SOURCES from @smart-finances/contracts, reserves a slot with AccountStore.reserveImport (D-114; the day is UTC) and checks imports-paused ("true" pauses) through ParameterStore (adapters/ssm.ts, new, replacing UnwiredParameterStore in adapters/container.ts, D-167); the getImport use case behind /api/data/imports/[id] releases or corrects it at the final status.
   - Upload with fetch and FormData to the presigned URL; skipped rows per D-86; source names and file-name rules from the data spec’s POST /imports.
+  - D-178: An import reserves its slot with a placeholder id (pending:<uuid>) before POST /imports and counts the file's declared size (ImportRequest.size, kept as runningImportBytes); confirmImport(sub, placeholderId, importId) swaps in the API's id. The declared size stays counted at the final status and is given back at expired, or when POST /imports is refused or fails. Releasing a placeholder also gives back the day's count while it is still that UTC day. A placeholder older than 2 minutes (PENDING_STALE_MS) is released with no bytes by the next import request or deletion start. getImport behind app/api/data/imports/[id] releases or corrects the slot at the final status. Narrows D-114.
+  - reserveImport refuses an account being deleted (D-179); import_refused and import_release carry sub and request id only (D-184).
 - Verify: `npm test --workspace @smart-finances/web -- src/application/data/requestImport.test.ts` and `npm run e2e --workspace @smart-finances/web -- e2e/imports.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json, and the reviewer has no blocker
 ### SF-168 · Your data: export and erase
@@ -167,15 +172,17 @@ status: executing
 - Files: apps/web/src/application/data/erase.ts (new), apps/web/src/app/(app)/data/, apps/web/src/screens/data/ (new), apps/web/e2e/erase.spec.ts (new)
 - Tests first: T-WSCR-10
 - Do:
-  - Export link to /api/data/export; "Erase my data" is a server action with the typed word DELETE, the 35-day note and counts; timeout or 5xx says it may be unfinished and offers Finish erasing (the same action); resetStoredBytes on 202. No optimistic update. The erase buttons use the danger Button variant (D-146).
+  - Export link to /api/data/export; erase and export get 25 s (D-174); "Erase my data" is a server action with the typed word DELETE, the 35-day note and counts; timeout or 5xx says it may be unfinished and offers Finish erasing (the same action); resetStoredBytes on 202. No optimistic update. The erase buttons use the danger Button variant (D-146).
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/erase.spec.ts` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-169 · Delete the account
-- Implements: AC-18, D-104, D-146 · After: SF-168 · Judgment: high
-- Files: apps/web/src/application/account/deleteAccount.ts (new), apps/web/src/domain/deletion.ts (new), apps/web/src/app/(app)/data/delete/ (new), apps/web/src/app/goodbye/ (new), apps/web/src/application/account/deleteAccount.test.ts (new), apps/web/e2e/delete-account.spec.ts (new)
+- Implements: AC-18, D-104, D-146, D-174, D-179 to D-181 · After: SF-168 · Judgment: high
+- Files: apps/web/src/application/account/deleteAccount.ts (new), apps/web/src/domain/deletion.ts (new), apps/web/src/app/(app)/data/delete/ (new), apps/web/src/app/goodbye/ (new), apps/web/src/application/account/deleteAccount.test.ts (new), apps/web/e2e/delete-account.spec.ts (new), apps/web/src/app/(app)/layout.tsx and the account-store files of SF-167 (owner allowance, 2026-11-06)
 - Tests first: T-WSCR-11, T-WSCR-12
 - Do:
-  - Action 1 with { email, password, code }: createSignIn(deps).signIn(email, password, { requestId, ip, lang, reauth: { sub } }) then verifyCode(code, ctx) (D-168), no running_import_id, then markDeleting. Action 2 (allowDeleting): erase until 202, createSessions(deps).signOutEverywhere(sub), adminDelete (not found is done), deleteAccountRow; set a 5-minute signed HttpOnly goodbye cookie with the counts and go to /goodbye, a public route that reads it.
+  - Action 1 with { email, password, code }: createSignIn(deps).signIn(email, password, { requestId, ip, lang, reauth: { sub } }) then verifyCode(code, ctx) (D-168), no running_import_id, then markDeleting. Action 2 (allowDeleting): erase once (ERASE_ATTEMPTS 1, D-174), createSessions(deps).signOutEverywhere(sub), adminDelete (not found is done), deleteAccountRow; set the __Host-goodbye cookie (D-181) and go to /goodbye, a public route that reads it.
+  - D-179: No import starts during a deletion: markDeleting is conditional on no running import, a placeholder included, and reserveImport refuses an account being deleted. The money layout shows Finish deleting to an account marked deleting, after a reload too (AC-18).
+  - D-180: Any live session of the person may finish a deletion that the full re-sign-in started (finishDeletion is guarded with allowDeleting); finish() refuses an account that is not marked deleting. Narrows D-104.
   - The delete buttons use the danger Button variant (D-146).
   - domain/deletion.ts holds the step order; a test fails each step and finishes it.
 - Verify: `npm test --workspace @smart-finances/web -- src/application/account/deleteAccount.test.ts` → pass
@@ -189,12 +196,13 @@ status: executing
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/hostile.spec.ts` and `node scripts/check-no-raw-html.mjs` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-171 · Screen-state stories, accessibility and keyboard checks
-- Implements: AC-4, AC-8, AC-10, D-22, D-129 · After: SF-164 to SF-169 · Judgment: normal
-- Files: apps/web/src/screens/**/*.stories.tsx (new), apps/web/e2e/a11y.spec.ts (new)
+- Implements: AC-4, AC-8, AC-10, D-22, D-129, D-176 · After: SF-164 to SF-169 · Judgment: normal
+- Files: apps/web/src/screens/**/*.stories.tsx (new), apps/web/e2e/a11y.spec.ts (new), apps/web/src/ui/primitives/Field/
 - Tests first: T-WSCR-15, T-WSCR-16
 - Do:
   - A story per screen state in architecture.md "Screen states", on the memory adapters, both languages and colour schemes.
   - axe on every screen; a keyboard walk of every action with visible focus; a language switch keeps the screen and address.
+  - ui/primitives/Field renders SelectField as plain markup on the server, with no style attribute (D-176; owner allowance to touch Field, 2026-11-05).
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/a11y.spec.ts` and `npm run test-storybook --workspace @smart-finances/web` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 ### SF-172 · Limit page and browser monitoring
@@ -205,6 +213,25 @@ status: executing
   - Past the person limit (5 a minute under STAGE=test) the 429 page shows with the wait; a second signed-in test person is still served.
   - aws-rum-web initialised from the rum-* stage parameters, read on the server through ParameterStore and passed to the client component (D-162): no cookies, page ids without search values, no person id; disabled under STAGE=test.
 - Verify: `npm run e2e --workspace @smart-finances/web -- e2e/limit.spec.ts` and `npm test --workspace @smart-finances/web -- src/app/rum.test.ts` → pass
+- Done when: verify is green, evidence is in progress-smart-finances-screens.json
+
+### SF-173 · Lighthouse measures the real money screens
+- Implements: D-134, D-188, D-190 · After: SF-163 to SF-172 · Judgment: high
+- Files: apps/web/lighthouserc.json, apps/web/scripts/lhci.test.mjs, apps/web/src/adapters/container.ts, apps/web/src/adapters/container.test.ts, apps/web/src/app/fonts.ts, apps/web/src/ui/patterns/{MenuPanel,MonthPicker,ConfirmDialog}/, apps/web/src/ui/primitives/Field/, apps/web/src/ui/lazy-aria.test.ts (new), .github/workflows/deploy.yml, apps/api/test/ci.test.mjs
+- Tests first: T-WEB-17
+- Do:
+  - E2E_PEOPLE gains the person lighthouse, uncounted by the person limit; lighthouserc.json sends its __Host-sid so every money page renders its real content (D-188).
+  - React Aria loads on first use: the menu, month picker, confirm modal and select are plain markup until pressed, focused or hovered; fonts are not preloaded (D-190).
+  - deploy.yml drops the qa continue-on-error on "Lighthouse CI budgets": a budget over its limit stops the deploy on every stage (D-188).
+- Verify: `npm test --workspace @smart-finances/web` and `STAGE=test npm run lhci --workspace @smart-finances/web` → pass
+- Done when: verify is green, evidence is in progress-smart-finances-screens.json
+### SF-174 · The Amplify branch framework comes from code
+- Implements: D-189 · After: SF-163 · Judgment: normal
+- Files: infra/lib/web-stack.ts, infra/test/web-stack.test.ts
+- Tests first: T-WINF-8
+- Do:
+  - The branch custom resource sets framework "Next.js - SSR" with the compute role on every stage; on delete the framework stays.
+- Verify: `npm test --workspace infra` → pass
 - Done when: verify is green, evidence is in progress-smart-finances-screens.json
 
 ## Stop and hand back when

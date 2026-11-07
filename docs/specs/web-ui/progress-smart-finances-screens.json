@@ -199,7 +199,7 @@
       "from": "pr-smart-finances-screens.md SF-163 Do 'export streams the CSV' and D-101 (5-second data timeout)",
       "proposal": "Export buffers (the API's GET /export is one buffered reply, data spec RK-13) with its own 25 s timeout.",
       "decidedBy": "owner, in chat, 2026-11-05: buffer, export gets 25 s",
-      "newDecision": "pending: the planning session records it"
+      "newDecision": "D-174 (locked-v9)"
     },
     {
       "date": "2026-11-05",
@@ -207,7 +207,7 @@
       "from": "pr-smart-finances-screens.md SF-165 Do 'in the address via router.replace'",
       "proposal": "Update the address with window.history.replaceState, since router.replace re-renders the server page and reads twice against the person limit (D-127 kept).",
       "decidedBy": "owner, in chat, 2026-11-05: accept history.replaceState",
-      "newDecision": "pending: the planning session records it"
+      "newDecision": "D-175 (locked-v9)"
     },
     {
       "date": "2026-11-05",
@@ -215,7 +215,7 @@
       "from": "pr-smart-finances-screens.md Files (ui/primitives/Field is a PR 1 file); D-57 content policy",
       "proposal": "The shared Select breaks style-src when server-rendered; SF-165 renders its selects after load. SF-171 may also touch apps/web/src/ui/primitives/Field to render selects on the server within the policy, and SF-165/SF-167 drop the workaround then.",
       "decidedBy": "owner, in chat, 2026-11-05: fix Field in SF-171",
-      "newDecision": "pending: the planning session records it"
+      "newDecision": "D-176 (locked-v9)"
     },
     {
       "date": "2026-11-06",
@@ -223,7 +223,7 @@
       "from": "pr-smart-finances-screens.md SF-166 Files (apps/web/src/app/(app)/layout.tsx and app/(app)/overview/page.tsx are not listed, though SF-166 implements D-44 and its Do invalidates the to-review count)",
       "proposal": "The (app) layout reads the to-review count through app/(app)/review/read.ts (React cache, one read per render) and the overview's prefetch uses the same read, so the count costs no extra read on the overview or the review screen; one extra read on every other money screen's full load.",
       "decidedBy": "owner",
-      "newDecision": "accepted by the owner, to fold into the next re-lock",
+      "newDecision": "D-177 (locked-v9)",
       "date_decided": "2026-11-06"
     },
     {
@@ -232,7 +232,7 @@
       "from": "pr-smart-finances-screens.md SF-167 Files (apps/web/src/app/api/data/imports/[id]/ and application/data/reads.ts are not listed, though the Do has the getImport use case behind that route release the slot)",
       "proposal": "app/api/data/imports/[id]/route.ts reads through createImports(container).getImport, which releases or corrects the slot at the final status; reads.ts is unchanged.",
       "decidedBy": "owner, in chat, 2026-11-05: SF-167 may edit reads.ts and the imports/[id] route",
-      "newDecision": "pending: the planning session records it"
+      "newDecision": "D-178 (locked-v9)"
     },
     {
       "date": "2026-11-06",
@@ -240,7 +240,7 @@
       "from": "Review finding 2 (major; D-114 and the SF-167 Do line: reserve first, then the API) and pr-smart-finances-screens.md SF-167 Files",
       "proposal": "Reserve a slot with a placeholder id (pending:<uuid>) before POST /imports, swap it for the API's import id with a new conditional AccountStore method (confirmImport(sub, placeholderId, importId)), and release on an API refusal conditional on the placeholder. Needs apps/web/src/ports/account-store.ts and apps/web/src/adapters/dynamodb/accounts.ts, which no SF-16x task lists. Not done: stop point.",
       "decidedBy": "owner",
-      "newDecision": "resolved by the owner's file allowance on 2026-11-06 (ports/account-store.ts, adapters/dynamodb/accounts.ts, the memory account adapter); done in c7497e4"
+      "newDecision": "D-178 (locked-v9)"
     },
     {
       "date": "2026-11-06",
@@ -248,7 +248,7 @@
       "from": "AC-18 and D-114: an import could start during a deletion (review)",
       "proposal": "markDeleting conditional on no running import (refusal mapped to the import-running message); reserveImport conditional on the account not being deleting. Files: ports/account-store.ts, adapters/dynamodb/accounts.ts, the memory account adapter, with their tests in guard.test.ts and container.test.ts.",
       "decidedBy": "owner",
-      "newDecision": "approved by the owner on 2026-11-06, to fold into the next re-lock"
+      "newDecision": "D-179 (locked-v9)"
     },
     {
       "date": "2026-11-06",
@@ -256,7 +256,7 @@
       "from": "AC-18 and architecture 'States and exits' (deleting account row): after a reload the money layout showed 'session ended' to a deleting account",
       "proposal": "apps/web/src/app/(app)/layout.tsx shows a Finish deleting screen (finishDeletion, allowDeleting, then /goodbye) when requireMoneyAccess reports deleting.",
       "decidedBy": "owner",
-      "newDecision": "approved by the owner on 2026-11-06, with the layout.tsx file allowance; to fold into the next re-lock"
+      "newDecision": "D-179 (locked-v9)"
     },
     {
       "date": "2026-11-06",
@@ -264,7 +264,7 @@
       "from": "The erase time limit (5 s, the default read timeout)",
       "proposal": "eraseData gets 25 s, like export and the data spec; one constant, LONG_REQUEST_TIMEOUT_MS.",
       "decidedBy": "owner",
-      "newDecision": "the owner chose 25 s on 2026-11-06; to fold into the next re-lock"
+      "newDecision": "D-174 (locked-v9)"
     },
     {
       "date": "2026-11-06",
@@ -272,7 +272,7 @@
       "from": "D-104 (who may finish a deletion)",
       "proposal": "Any live session of the person may finish a deletion that the full re-sign-in already started (finishDeletion is allowDeleting); finish() refuses an account that is not deleting.",
       "decidedBy": "owner",
-      "newDecision": "the owner narrowed D-104 on 2026-11-06; the new D-n is folded in at the next re-lock"
+      "newDecision": "D-180 (locked-v9)"
     },
     {
       "date": "2026-11-06",
@@ -280,7 +280,7 @@
       "from": "Spec gap: the goodbye cookie is in no Contracts list",
       "proposal": "__Host-goodbye: Secure, HttpOnly, SameSite=Lax, Path=/, Max-Age 300, HMAC-signed with the stage's secret, holding the counts only.",
       "decidedBy": "owner",
-      "newDecision": "the owner recorded it as a spec gap on 2026-11-06, to add at the next re-lock"
+      "newDecision": "D-181 (locked-v9)"
     },
     {
       "date": "2026-11-06",
@@ -288,7 +288,7 @@
       "from": "Fix round 2 A (the owner's rule: a placeholder still on the row counts as running)",
       "proposal": "Added by the executor: a placeholder older than PENDING_STALE_MS (2 minutes; the data API's timeout is 5 s) is released with no bytes by the next import request or deletion start. Its request stopped before POST /imports answered, so no upload form went out. Without this, a placeholder left by a crash would block imports, and the deletion's conditional mark, for good.",
       "decidedBy": "owner",
-      "newDecision": "the owner accepted the 2-minute release of a stale placeholder on 2026-11-06; to fold into the next re-lock"
+      "newDecision": "D-178 (locked-v9)"
     },
     {
       "date": "2026-11-06",
@@ -296,7 +296,7 @@
       "from": "SF-169 Do 'erase until 202' (ERASE_ATTEMPTS 2) with the 25 s erase budget of the SF-168 decision",
       "proposal": "One erase try per finish (ERASE_ATTEMPTS = 1): erase has 25 s and Amplify compute cuts a request at about 30 s, so a second try in the same call cannot finish. A slow erase answers the erase step as unfinished; Finish deleting resumes it and the hourly job is the backstop (D-104).",
       "decidedBy": "owner",
-      "newDecision": "the owner decided on 2026-11-06; to fold into the next re-lock"
+      "newDecision": "D-174 (locked-v9)"
     },
     {
       "date": "2026-11-06",
@@ -304,7 +304,7 @@
       "from": "D-114 (stored bytes plus the source's maximum) and the SF-167 Do",
       "proposal": "Reserve the file's declared size (ImportRequest.size, checked with the contracts), kept on the account row with the reservation; keep it counted at the final status; give it back at expired or a refused or failed POST /imports. Files: ports/account-store.ts, adapters/dynamodb/accounts.ts, the memory account adapter.",
       "decidedBy": "owner",
-      "newDecision": "the owner decided on 2026-11-06 (count the declared size); done in 9694319; to fold into the next re-lock"
+      "newDecision": "D-178 (locked-v9)"
     },
     {
       "date": "2026-11-06",
@@ -312,7 +312,7 @@
       "from": "D-114 (the day's count)",
       "proposal": "Releasing a placeholder (POST /imports refused, failed or thrown, or the 2-minute stale-placeholder release) also takes back imports_today.n in the same conditional update, only while it is still that UTC day.",
       "decidedBy": "owner",
-      "newDecision": "the owner decided on 2026-11-06; done in 9694319; to fold into the next re-lock"
+      "newDecision": "D-178 (locked-v9)"
     },
     {
       "date": "2026-11-06",
@@ -320,7 +320,7 @@
       "from": "D-18 (where you spent the most)",
       "proposal": "The overview's 'where you spent the most' reads the month's 200 largest expenses and stays as is.",
       "decidedBy": "owner",
-      "newDecision": "owner-accepted limit of 2026-11-06, recorded only; to fold into the next re-lock"
+      "newDecision": "D-183 (locked-v9)"
     },
     {
       "date": "2026-11-06",
@@ -328,7 +328,7 @@
       "from": "architecture.md Contracts 'Security events' (the event list)",
       "proposal": "Event names import_refused and import_release to add to architecture Security events.",
       "decidedBy": "owner",
-      "newDecision": "recorded for the re-lock on 2026-11-06"
+      "newDecision": "D-184 (locked-v9)"
     }
   ],
   "surprises": [
