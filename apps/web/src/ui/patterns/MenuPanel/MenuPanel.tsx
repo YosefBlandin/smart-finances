@@ -41,6 +41,8 @@ export function MenuPanel({ label, count, countLabel, anchorRef, children }: Men
         onPointerEnter={() => void load()}
         onFocus={() => void load()}
         onClick={() => {
+          // Safari and Firefox do not focus a button on click; React Aria gives focus back to it on close.
+          trigger.current?.focus();
           setUsed(true);
           setOpen(true);
         }}

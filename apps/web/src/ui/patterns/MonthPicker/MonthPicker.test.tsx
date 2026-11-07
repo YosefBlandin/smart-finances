@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -60,11 +60,14 @@ describe('T-WEB-9: MonthPicker (React Aria, D-141)', () => {
   it('T-WEB-9 Escape closes the grid without a choice', async () => {
     const onChange = vi.fn();
     wrap(<MonthPicker months={months} value="2026-03" onChange={onChange} />);
-    await act(async () => fireEvent.click(screen.getByRole('button', { name: /March 2026/ })));
+    const trigger = screen.getByRole('button', { name: /March 2026/ });
+    await act(async () => fireEvent.click(trigger));
     await screen.findByRole('dialog');
     await act(async () => fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(onChange).not.toHaveBeenCalled();
+    // A click does not focus the button here, as in Safari and Firefox; focus still comes back to it (D-190).
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
   it('T-WEB-9 month names follow the language', () => {

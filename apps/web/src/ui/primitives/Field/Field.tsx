@@ -135,8 +135,8 @@ function ServerSelectField<T extends string>({
         aria-labelledby={`${labelId} ${valueId}`}
         aria-describedby={describedBy}
         disabled={disabled}
-        onPointerEnter={() => void load()}
-        onFocus={() => void load()}
+        onPointerEnter={disabled ? undefined : () => void load()}
+        onFocus={disabled ? undefined : () => void load()}
         onClick={onUse}
         onKeyDown={(event: KeyboardEvent) => {
           if (!OPENING_KEYS.has(event.key) || !onUse) return;
