@@ -11,7 +11,7 @@ applications:
             - cd ../..
             - npm ci
             - npm run lint --if-present --workspace @smart-finances/web
-            - npm test --workspace @smart-finances/web
+            - env -u AWS_EXECUTION_ENV -u AWS_LAMBDA_FUNCTION_NAME npm test --workspace @smart-finances/web
             - cd apps/web
         build:
           commands:

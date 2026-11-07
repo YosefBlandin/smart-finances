@@ -127,6 +127,12 @@ describe('T-WAUTH-1: settings load from the named variables', () => {
     expect(yml).toMatch(/echo "COMMIT_SHA=\$AWS_COMMIT_ID" >> \.env\.production/);
     expect(yml).not.toMatch(/AWS_REGION/);
   });
+
+  it('T-WEB-14: amplify.yml runs the unit tests without the build host AWS runtime markers, so the STAGE=test refusal stays for deployed runtimes', () => {
+    const yml = readFileSync(new URL('../../amplify.yml', import.meta.url), 'utf8');
+    const line = yml.split('\n').find((l) => l.includes('npm test --workspace @smart-finances/web'));
+    expect(line).toMatch(/env -u AWS_EXECUTION_ENV -u AWS_LAMBDA_FUNCTION_NAME npm test --workspace @smart-finances\/web/);
+  });
 });
 
 // A hand-written Secrets Manager client: records each call and answers from a map.
