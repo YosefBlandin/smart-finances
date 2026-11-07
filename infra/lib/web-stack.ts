@@ -16,6 +16,9 @@ import { readStageValues } from './stage-values';
 /** The Amplify branch each stage deploys (D-102); dev has no web stack. */
 const BRANCHES: Record<string, string> = { qa: 'qa', staging: 'staging', prod: 'main' };
 
+/** Amplify's framework for a Next.js app on web compute (D-189). */
+export const BRANCH_FRAMEWORK = 'Next.js - SSR';
+
 /** Stage values this stack reads at deploy time (Contracts "Stage parameters"). */
 const STAGE_VALUES = ['amplify-app-id', 'api-url', 'bucket-name', 'support-address', 'user-pool-id', 'web-client-id', 'web-client-secret-arn'] as const;
 
@@ -443,10 +446,12 @@ export class WebStack extends cdk.Stack {
       ]),
     });
 
+    // The branch's framework is Next.js SSR on every stage: with the console's "Web" the build refuses to deploy the
+    // server output (set by hand on qa on 2026-11-07, D-189). Delete leaves it, as the branch keeps serving the app.
     const setBranch: cr.AwsSdkCall = {
       service: 'Amplify',
       action: 'updateBranch',
-      parameters: { appId, branchName, enableAutoBuild: false, computeRoleArn: this.computeRole.roleArn },
+      parameters: { appId, branchName, enableAutoBuild: false, computeRoleArn: this.computeRole.roleArn, framework: BRANCH_FRAMEWORK },
       physicalResourceId: cr.PhysicalResourceId.of(`amplify-branch/${appId}/${branchName}`),
       outputPaths: ['branch.branchName'],
       logging: cr.Logging.withDataHidden(),
