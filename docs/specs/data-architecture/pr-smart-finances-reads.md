@@ -9,8 +9,8 @@ status: executing
 <!-- The executor's main document. It must stand alone: copy values in, and link only to sections a task cites. At most 6k tokens; comments do not count. Required reading (intent.md, this file and its Read first sections) stays under 15k. Before the lock, the cold-read dry run must find zero "cannot start" items. -->
 
 - Goal: the owner can list, total, review, convert, export and delete their data, month totals stay correct, and a second account sees nothing.
-- Implements: AC-2, AC-3, AC-10, AC-11, AC-12, AC-13, AC-14, AC-15, AC-16, AC-17, AC-18, D-7, D-8, D-14, D-26, D-27, D-29, D-30
-- Spec folder: /Users/v/projects/smart-finances/.claude/worktrees/data-architecture/docs/specs/data-architecture
+- Implements: AC-2, AC-3, AC-10, AC-11, AC-12, AC-13, AC-14, AC-15, AC-16, AC-17, AC-18, D-7, D-8, D-14, D-26, D-27, D-29, D-30, D-39, D-40
+- Spec folder: docs/specs/data-architecture in this PR's worktree (/Users/v/projects/smart-finances/.claude/worktrees/data-reads), branched from origin/qa
 - Refs: smart-finances at the sha in intent.md refs. Before the first task: `git -C /Users/v/projects/smart-finances fetch origin qa`, then `node ~/.claude/skills/spec/scripts/drift.mjs <spec folder> --strict` (exit 0; NEW lines are expected)
 - Worktree: /Users/v/projects/smart-finances/.claude/worktrees/data-reads
 - Branch: feature/data-reads · Base: origin/qa, after PR 2 (feature/data-imports) is merged into qa
@@ -39,6 +39,10 @@ status: executing
 - D-26: List, text search, review list and export read one person's rows for the asked months and filter, sort and page in the function.
 - D-27: The dollar view is computed when read, from rates stored as pesos per dollar with two decimals, using integer cents.
 - D-29: Extends D-12 for D-14: adds SUM#<yyyy-mm> month totals and one ERASED marker per person, and review choices move to OVR#<date>#<id> so the rollup finds them by month.
+- D-39: Accepts D-37 for PR 2 and PR 3: where these briefs and packages/contracts differ, the contracts package wins. Requests and replies are checked with its route schemas; rates travel as numbers with at most two decimals and are stored as two-decimal strings; an import's error is sent as its message text while the stored record keeps code and message; period is an empty string until the parser sets it; optional fields are left out, never null; file names and size caps come from its import check; categories come from its list.
+- D-40: Accepts D-38 for PR 3: the delete function smart-finances-<stage>-api-delete also takes a direct invoke of { sub } and runs the same erase; the API stack publishes its name as the stage parameter delete-function-name.
+- D-41: D-35 and D-36 stay out of PR 2 and PR 3: the web UI already set the stage throttle and per-person limits, and reserved concurrency waits for a raise of the account's Lambda quota, which is 10 today. PR 2 and PR 3 keep the API stack's web UI changes: both client audiences, no browser rule, the access log and the throttle.
+- D-42: Narrows D-4 for qa only: the agent merges PR 2, then PR 3, into qa once CI is green and the conformance review has no blocker; CI then deploys qa. Staging and prod stay human.
 - D-30: After delete-all, imports, undo, repair and totals are refused for a quiet window of 65 minutes, so no late background work can bring erased data back.
 - Values:
   - Review reasons are the flags needs_review and possible_duplicate. approved true hides both for that row, in lists, review and export. Review choices apply before filters.
@@ -50,7 +54,9 @@ status: executing
   - The erase check compares quiet_until (ISO string) with new Date(t).toISOString(), never with t in ms. Env: ROLLUP_FUNCTION on api-write, next to TABLE_NAME, BUCKET_NAME and PARSER_FUNCTION.
   - q matches, case-insensitively, a substring of description_raw, merchant or category. Ties in a sort break by date, then id.
   - Cursor: base64url of { offset, hash }, where hash is a sha-256 of the query without cursor.
-  - Rates: month yyyy-mm; ars_per_usd a string with exactly two decimals, above 0.00; else bad_request.
+  - Rates (D-39): month yyyy-mm; on the wire ars_per_usd is a JSON number above 0 with at most two decimals (ROUTES['PUT /rates/{month}'].request), else bad_request; it is stored as a string with exactly two decimals and sent back as a number.
+  - Replies (D-39): every 2xx JSON body parses with ROUTES[route].reply from @smart-finances/contracts/routes, and each handler test checks that; requests are checked with ROUTES[route].request where one exists (a failed check is bad_request); optional fields are omitted, never null.
+  - Direct erase (D-40): api-delete invoked with { sub } (no requestContext) runs the same erase for that sub and returns { deleted: { items, files } }; an erase already finished returns zero counts. The API stack publishes /smart-finances/<stage>/delete-function-name = smart-finances-<stage>-api-delete.
   - Export: text columns (every field except amount) whose first character is =, +, -, @, tab or carriage return get a leading single quote.
   - DELETE /data needs { confirm: "DELETE" }, else bad_request. quiet_until = erase end + 65 minutes.
   - Totals during the erase window: GET /totals answers conflict.
@@ -143,7 +149,7 @@ status: executing
 - Files: apps/api/src/store/review.mjs (new), smart-finances:apps/api/src/ingest/categories.mjs#CATEGORIES (new), apps/api/src/handlers/read.mjs, apps/api/src/handlers/write.mjs, apps/api/test/review.test.mjs (new)
 - Tests first: T-API-8, T-API-9, T-API-10
 - Do:
-  - CATEGORIES lists every category string the importers can emit; a test fails when an importer emits one not in it.
+  - CATEGORIES already lives in @smart-finances/contracts/categories and apps/api imports it (D-39): add only the test that fails when an importer emits a category not in it.
   - GET /review: rows with a review reason that no approved choice hides, each with reasons.
   - PUT /transactions/{id}/review per the notes below the routes table; source other than mercadopago gives source_file_only.
   - T-API-9 re-imports the same payments report through PR 2's import core and expects the choice still applied.
@@ -166,6 +172,7 @@ status: executing
 - Do:
   - Follow the erasing and quiet rows of "States and exits": refuse with conflict while a lock is live or an import is requested and unexpired; write ERASED with erased_at; delete every other item under the person and every object under uploads/<sub>/; then set quiet_until.
   - A repeat call with quiet_until unset finishes the erase.
+  - The direct { sub } invoke per the Values (D-40).
   - T-ERA-2 drives imports, undo, repair, rollups and GET /totals inside the window.
 - Verify: `node --test apps/api/test/erase.test.mjs` → T-ERA-1 to T-ERA-3 pass
 - Done when: verify is green, evidence is recorded, and the reviewer has no blocker
@@ -185,6 +192,7 @@ status: executing
 - Files: smart-finances:infra/lib/api-stack.ts#ApiStack, infra/test/api-stack.test.ts
 - Tests first: T-INF-11, T-INF-12
 - Do:
+  - Keep the stack's web UI changes (D-41). Publish delete-function-name (D-40).
   - Add the remaining routes of Contracts "HTTP routes" to api-read, api-write and api-delete; add rollup with the stream source, queue, alarm and topic per the Values; grants exactly as Components "API stack".
   - T-INF-11: all 15 routes exist and every one but GET /health has the JWT authorizer. T-INF-12: the event source mapping and alarm settings.
 - Verify: `cd infra && node --require ts-node/register --test test/api-stack.test.ts` → T-INF-7 to T-INF-9, T-INF-11 and T-INF-12 pass
