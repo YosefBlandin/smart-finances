@@ -30,6 +30,7 @@
     "@tabler/icons-react": "3.49.0",
     "@tanstack/react-query": "5.104.3",
     "@tanstack/react-query-devtools": "5.104.3",
+    "aws-rum-web": "3.2.1",
     "next": "15.5.28",
     "next-intl": "4.14.9",
     "qrcode": "1.5.4",
