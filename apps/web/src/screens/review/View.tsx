@@ -2,14 +2,12 @@
 
 import { CATEGORIES } from '@smart-finances/contracts/categories';
 import { useLocale, useTranslations } from 'next-intl';
-import { useSyncExternalStore } from 'react';
 import { formatAmount } from '@/i18n/format';
 import type { ReviewReply } from '@/queries/keys';
 import { DataTable } from '@/ui/patterns/DataTable/DataTable';
 import { Button } from '@/ui/primitives/Button/Button';
 import { SelectField } from '@/ui/primitives/Field/Field';
 import { Note } from '@/ui/primitives/Note/Note';
-import { Skeleton } from '@/ui/primitives/Skeleton/Skeleton';
 import { categoryName, lang } from '../overview/text';
 import styles from './Review.module.css';
 
@@ -26,16 +24,6 @@ export const CHOICE_SOURCE = 'mercadopago';
 
 const INTL = { en: 'en-US', es: 'es-AR' } as const;
 
-// React Aria's select renders a hidden native select with a style attribute, which the content policy refuses in
-// server HTML; the selects render after hydration with a skeleton until then (SF-165's workaround; SF-171 fixes Field).
-const noSubscribe = () => () => {};
-const useHydrated = () =>
-  useSyncExternalStore(
-    noSubscribe,
-    () => true,
-    () => false,
-  );
-
 export type ReviewViewProps = {
   rows: ReviewRow[];
   /** A plain message after a refused choice, which was rolled back. */
@@ -46,7 +34,6 @@ export type ReviewViewProps = {
 export function ReviewView({ rows, failed, onChoose }: ReviewViewProps) {
   const t = useTranslations();
   const locale = lang(useLocale());
-  const hydrated = useHydrated();
   const day = new Intl.DateTimeFormat(INTL[locale], { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
   const source = (s: string) => (t.has(`sources.names.${s}`) ? t(`sources.names.${s}`) : s);
   const reason = (flag: string) => (t.has(`review.reasons.${flag}`) ? t(`review.reasons.${flag}`) : '');
@@ -102,18 +89,14 @@ export function ReviewView({ rows, failed, onChoose }: ReviewViewProps) {
               <DataTable.Cell>
                 {row.source === CHOICE_SOURCE ? (
                   <div className={styles.actions}>
-                    {hydrated ? (
-                      <SelectField
-                        label={t('review.categorize')}
-                        value={row.category}
-                        options={options(row.category)}
-                        onChange={(category) => {
-                          if (category !== row.category) onChoose({ id: row.id, date: row.date, category });
-                        }}
-                      />
-                    ) : (
-                      <Skeleton width="short" height="block" />
-                    )}
+                    <SelectField
+                      label={t('review.categorize')}
+                      value={row.category}
+                      options={options(row.category)}
+                      onChange={(category) => {
+                        if (category !== row.category) onChoose({ id: row.id, date: row.date, category });
+                      }}
+                    />
                     <Button size="sm" variant="primary" onClick={() => onChoose({ id: row.id, date: row.date, approved: true })}>
                       {t('review.approve')}
                     </Button>

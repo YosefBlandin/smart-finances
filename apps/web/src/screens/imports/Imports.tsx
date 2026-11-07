@@ -1,14 +1,13 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { useState, useSyncExternalStore, type DragEvent } from 'react';
+import { useState, type DragEvent } from 'react';
 import { useImports } from '@/queries/data';
 import { DataTable } from '@/ui/patterns/DataTable/DataTable';
 import { StateBlock } from '@/ui/patterns/StateBlock/StateBlock';
 import { Chip } from '@/ui/primitives/Chip/Chip';
 import { SelectField } from '@/ui/primitives/Field/Field';
 import { Note } from '@/ui/primitives/Note/Note';
-import { Skeleton } from '@/ui/primitives/Skeleton/Skeleton';
 import { SOURCES } from '@smart-finances/contracts/routes';
 import { ImportDetail } from './Detail';
 import styles from './Imports.module.css';
@@ -26,23 +25,12 @@ export type ImportsProps = {
   request: (input: { source: string; fileName: string; size: number }) => Promise<RequestResult>;
 };
 
-// React Aria's select renders a hidden native select with a style attribute, which the content policy refuses in
-// server HTML; the select renders after hydration with a skeleton until then (SF-165's workaround; SF-171 fixes Field).
-const noSubscribe = () => () => {};
-const useHydrated = () =>
-  useSyncExternalStore(
-    noSubscribe,
-    () => true,
-    () => false,
-  );
-
 /** "Mercado Pago", "Monthly budget": the source's name as an option, first letter up. */
 const capitalised = (name: string, locale: string) => name.charAt(0).toLocaleUpperCase(locale) + name.slice(1);
 
 export function Imports({ request }: ImportsProps) {
   const t = useTranslations();
   const locale = useLocale();
-  const hydrated = useHydrated();
   const list = useImports();
   const [source, setSource] = useState<SourceId>('mercadopago');
   const [sending, setSending] = useState(false);
@@ -100,11 +88,7 @@ export function Imports({ request }: ImportsProps) {
     <div className={styles.screen}>
       <div className={styles.picker}>
         <div className={styles.source}>
-          {hydrated ? (
-            <SelectField label={t('imports.whereFrom')} value={source} options={options} onChange={(id) => setSource(id)} />
-          ) : (
-            <Skeleton width="short" height="block" />
-          )}
+          <SelectField label={t('imports.whereFrom')} value={source} options={options} onChange={(id) => setSource(id)} />
           <p className={styles.rule}>{t(`imports.rules.${source}`)}</p>
         </div>
         <div

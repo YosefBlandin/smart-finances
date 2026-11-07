@@ -172,6 +172,12 @@ export const TEST_PERSON = {
  * e2e-<name>-not-secret- padded with zeros to the 43 characters of a session id. A browser test adds its name here and
  * uses that person only.
  */
+const A11Y_SCREENS = ['overview', 'transactions', 'review', 'imports', 'rates', 'data', 'delete'] as const;
+const A11Y_PEOPLE = A11Y_SCREENS.flatMap((screen) => [
+  ...(['en', 'es'] as const).flatMap((lang) => (['light', 'dark'] as const).map((theme) => `a11y-${screen}-${lang}-${theme}` as const)),
+  `a11y-keys-${screen}` as const,
+]);
+
 export const E2E_PEOPLE = [
   'overview-good',
   'overview-bad',
@@ -226,6 +232,10 @@ export const E2E_PEOPLE = [
   'hostile-transactions-3',
   'hostile-review',
   'hostile-imports',
+  // e2e/a11y.spec.ts (SF-171): one person per screen, language and colour scheme for axe, one per screen for the
+  // keyboard walk, and one for the language switch.
+  ...A11Y_PEOPLE,
+  'a11y-lang',
 ] as const;
 
 type E2EName = (typeof E2E_PEOPLE)[number];
