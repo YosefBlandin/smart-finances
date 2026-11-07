@@ -225,7 +225,7 @@ export const E2E_PEOPLE = [
 type E2EName = (typeof E2E_PEOPLE)[number];
 
 /** STAGE=test people whose data is not the fixtures as is: none at all (the empty states), a data API that fails (AC-8), or one whose first erase fails (SF-168). */
-type E2EData = 'empty' | 'failing' | 'erase-fails-once' | 'erase-fails-twice';
+type E2EData = 'empty' | 'failing' | 'erase-fails-once';
 const E2E_DATA: Partial<Record<E2EName, E2EData>> = {
   'review-empty': 'empty',
   'review-failed': 'failing',
@@ -233,10 +233,10 @@ const E2E_DATA: Partial<Record<E2EName, E2EData>> = {
   'rates-failed': 'failing',
   // Its first erase fails as a timeout would, so Finish erasing can be shown and used (SF-168).
   'data-erase-retry': 'erase-fails-once',
-  // Its first finish's erase attempts both fail, so Finish deleting can be shown and used (SF-169).
-  'delete-account-retry': 'erase-fails-twice',
+  // Its first finish's erase fails (one try per finish), so Finish deleting can be shown and used (SF-169).
+  'delete-account-retry': 'erase-fails-once',
   // The same, so the deletion is left unfinished and a reload shows Finish deleting (SF-169).
-  'delete-account-reload': 'erase-fails-twice',
+  'delete-account-reload': 'erase-fails-once',
 };
 
 /**
@@ -251,7 +251,7 @@ export function e2ePerson(name: E2EName) {
   return { sessionId: `e2e-${name}-not-secret-`.padEnd(43, '0'), sub: `e2e-person-${name}`, email: `${name}@example.com` } as const;
 }
 
-const ERASE_FAILURES: Partial<Record<E2EData | 'fixtures', number>> = { 'erase-fails-once': 1, 'erase-fails-twice': 2 };
+const ERASE_FAILURES: Partial<Record<E2EData | 'fixtures', number>> = { 'erase-fails-once': 1 };
 
 function seedTestPerson(c: Container) {
   // The money screens read the fixtures (sample plus hostile rows) through memory data APIs that count the person's

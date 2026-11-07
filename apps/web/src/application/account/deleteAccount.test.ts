@@ -226,15 +226,25 @@ describe('T-WSCR-11: delete account (D-104)', () => {
     },
   );
 
-  it('T-WSCR-11: each step is tried again within one finish before it gives up', async () => {
+  it('T-WSCR-11: one finish tries the erase once (it has 25 s, the host cuts at about 30 s); the next finish resumes it', async () => {
+    expect(ERASE_ATTEMPTS).toBe(1);
     const s = setup();
     expect(await s.deletion.start(WHO, RIGHT, CTX)).toEqual({ ok: true });
     let erases = 0;
     const erase = s.api.erase.bind(s.api);
     s.api.erase = async (token, input) => {
       erases += 1;
-      return erases < ERASE_ATTEMPTS ? { ok: false, kind: 'failed', code: 'timeout' } : erase(token, input);
+      return erases === 1 ? { ok: false, kind: 'failed', code: 'timeout' } : erase(token, input);
     };
+    expect(await s.deletion.finish(WHO, CTX)).toEqual({ ok: false, reason: 'step', step: 'erase' });
+    expect(erases).toBe(1);
+    expect(await s.deletion.finish(WHO, CTX)).toEqual({ ok: true, erased: ERASED });
+    expect(erases).toBe(2);
+  });
+
+  it('T-WSCR-11: each step after the erase is tried again within one finish before it gives up', async () => {
+    const s = setup();
+    expect(await s.deletion.start(WHO, RIGHT, CTX)).toEqual({ ok: true });
     let deletes = 0;
     const adminDelete = s.identity.adminDelete.bind(s.identity);
     s.identity.adminDelete = async (sub) => {
@@ -242,7 +252,7 @@ describe('T-WSCR-11: delete account (D-104)', () => {
       return deletes < STEP_ATTEMPTS ? { ok: false, reason: 'failed' } : adminDelete(sub);
     };
     expect(await s.deletion.finish(WHO, CTX)).toEqual({ ok: true, erased: ERASED });
-    expect(erases).toBe(ERASE_ATTEMPTS);
+    expect(STEP_ATTEMPTS).toBeGreaterThan(1);
     expect(deletes).toBe(STEP_ATTEMPTS);
   });
 

@@ -10,14 +10,19 @@ import type { Lang } from '@/ports/identity-provider';
 //    then verifyCode(code) in reauth mode (the code must belong to this sub; no session is created), then no running
 //    import (a slot whose import already ended is settled first, as the import use case does), then markDeleting,
 //    which is itself conditional on no running import, a placeholder included (AC-18).
-//  finish: only for an account marked deleting; runs domain/deletion.ts's steps in order, each tried again within the
-//    call before it gives up (erase until 202), and answers the counts or the step that stopped it. Every step is safe
-//    to repeat, so calling finish again finishes a deletion that stopped at any step.
+//  finish: only for an account marked deleting; runs domain/deletion.ts's steps in order and answers the counts or the
+//    step that stopped it. The erase is tried once per finish (it has 25 s and the host cuts a request at about 30 s);
+//    the later steps are tried again within the call. Every step is safe to repeat, so calling finish again (Finish
+//    deleting, or the hourly job) finishes a deletion that stopped at any step, and a repeated erase resumes it.
 // Security events: account_delete started, done or failed_<step>, with the sub and never an email (Contracts
 // "Security events"). goodbye and readGoodbye sign and read the goodbye cookie with the stage's HMAC secret.
 
-/** Erase attempts within one finish ("erase until 202"); a repeat of an unfinished erase resumes it (data spec T-ERA-3). */
-export const ERASE_ATTEMPTS = 2;
+/**
+ * Erase attempts within one finish: one, since the erase has 25 s and Amplify compute cuts a request at about 30 s
+ * (owner decision, 2026-11-06). An unfinished erase answers the erase step as stopped; Finish deleting repeats it, which
+ * resumes it (data spec T-ERA-3), and the hourly job is the backstop (D-104).
+ */
+export const ERASE_ATTEMPTS = 1;
 /** Attempts of each later step within one finish. */
 export const STEP_ATTEMPTS = 2;
 
