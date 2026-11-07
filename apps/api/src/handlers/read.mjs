@@ -4,6 +4,7 @@
 import { createHash } from 'node:crypto';
 import { getImport, lockLive } from '../store/imports.mjs';
 import { personPk, PREFIX } from '../store/keys.mjs';
+import { selectRows, shownRows } from '../store/query.mjs';
 import { createRepo } from '../store/repo.mjs';
 import { HttpError, checked, fail, personOf, reply } from './http.mjs';
 
@@ -88,9 +89,26 @@ async function readImport(deps, sub, event) {
   return reply(200, importRecord(record, pointerFor(map, record), deps.now()));
 }
 
+// One page of a filtered, sorted list, with a cursor bound to the query that made it.
+function paged(items, route, query, limit) {
+  const { cursor, ...rest } = query;
+  const offset = decodeCursor(cursor, route, rest);
+  const page = items.slice(offset, offset + limit);
+  const next = offset + limit < items.length ? encodeCursor(offset + limit, route, rest) : undefined;
+  return { items: page, ...(next ? { cursor: next } : {}) };
+}
+
+// GET /transactions (D-26): the asked months' rows, review choices applied, then filtered.
+async function listTransactions(deps, sub, event) {
+  const query = checked('GET /transactions', event.queryStringParameters ?? {});
+  const rows = selectRows(await shownRows(deps.store, sub, query.from, query.to), query);
+  return reply(200, paged(rows, 'GET /transactions', query, query.limit));
+}
+
 const ROUTE_HANDLERS = {
   'GET /imports': listImports,
   'GET /imports/{id}': readImport,
+  'GET /transactions': listTransactions,
 };
 
 export function createReadHandler({ store, now = () => Date.now(), routes = {} } = {}) {
