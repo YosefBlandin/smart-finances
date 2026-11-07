@@ -151,7 +151,7 @@
     {
       "id": "SF-171",
       "status": "done",
-      "commit": "",
+      "commit": "bcc897c",
       "evidence": [
         "Tests first (T-WSCR-15, T-WSCR-16, apps/web/e2e/a11y.spec.ts: axe on overview, transactions, review, imports, rates, data and data/delete in en/es x light/dark, each its own STAGE=test person; axe on the public and auth screens per language and scheme through a real sign-up, sign-in, code and reset; a keyboard walk of every money screen; a keyboard language switch). First run, before the people existed: 35 passed, 5 failed, because the money tests passed on the 'Your session ended' screen; the tests were tightened to assert each screen's own heading (messages en/es). Second run: exit 1, \"36 failed\" (each \"expect(locator).toHaveText(expected) failed ... Received: \\\"Your session ended\\\"\", expected: the people were not seeded) and 4 passed (the public and auth screens, which need no seeded person).",
         "Tests first (T-WEB-9, the Field fix the owner allowed in SF-171): Field.test.tsx 'SelectField renders on the server with no style attribute ...' (renderToString): exit 1, \"Tests  1 failed | 4 passed (5)\", \"AssertionError: expected '<template></template><div class=\\\"_fie…' not to match /\\\\sstyle=/\".",
