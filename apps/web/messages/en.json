@@ -212,7 +212,7 @@
       "upload": "The file didn’t upload. Choose it again to retry."
     },
     "sending": "Sending the file…",
-    "continues": "Still working. Open it again in a few minutes to see how it ended.",
+    "continues": "Still running. It keeps going without this page: check back in a few minutes to see how it ended.",
     "statusCol": "Status"
   },
   "rates": {

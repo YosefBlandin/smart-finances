@@ -212,7 +212,7 @@
       "upload": "El archivo no se subió. Vuelve a elegirlo para reintentar."
     },
     "sending": "Enviando el archivo…",
-    "continues": "Sigue en curso. Vuelve a abrirla en unos minutos para ver cómo terminó.",
+    "continues": "Todavía está en curso y sigue aunque cierres esta página. Vuelve en unos minutos para ver cómo terminó.",
     "statusCol": "Estado"
   },
   "rates": {
