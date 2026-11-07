@@ -1,0 +1,69 @@
+/* BandStrip, from the prototype's .strip: 44px tall, rounded, a 4px gap between bands. */
+.strip {
+  border-radius: var(--r-m);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.svg {
+  display: block;
+}
+
+/* The stroke in the surface colour leaves the gap between bands. */
+.band {
+  stroke: var(--surface);
+  stroke-width: var(--s1);
+}
+
+.gap {
+  fill: var(--surface);
+}
+
+.band[data-cat='1'] {
+  fill: var(--cat1);
+}
+
+.band[data-cat='2'] {
+  fill: var(--cat2);
+}
+
+.band[data-cat='3'] {
+  fill: var(--cat3);
+}
+
+.band[data-cat='4'] {
+  fill: var(--cat4);
+}
+
+.band[data-cat='5'] {
+  fill: var(--cat5);
+}
+
+.band[data-cat='7'] {
+  fill: var(--cat7);
+}
+
+.band[data-cat='8'] {
+  fill: var(--cat8);
+}
+
+.band[data-cat='9'] {
+  fill: var(--cat9);
+}
+
+.band[data-cat='10'] {
+  fill: var(--cat10);
+}
+
+.band[data-cat='11'] {
+  fill: var(--cat11);
+}
+
+.band[data-cat='12'] {
+  fill: var(--cat12);
+}
+
+/* Grey is only for "Everything else" (D-25). */
+.band[data-cat='other'] {
+  fill: var(--cat6);
+}

@@ -1,6 +1,9 @@
 // Rules for the short labels in the Notion log (and later the Excel budgets). First match
 // wins, so the narrow rules sit above the broad ones. Anything unmatched is 'Uncategorized'
 // for the assistant to fill in later.
+import { CATEGORIES } from '@smart-finances/contracts/categories';
+
+const UNCATEGORIZED = CATEGORIES.at(-1);
 const RULES = [
   [/girl/, 'Partner'],
   [/^food out$|^delivery$/, 'Dining out'],
@@ -24,5 +27,8 @@ const RULES = [
 export function categoryFor(label) {
   const l = label.trim().toLowerCase();
   for (const [re, category] of RULES) if (re.test(l)) return category;
-  return 'Uncategorized';
+  return UNCATEGORIZED;
 }
+
+// A rule that names a category the shared list lacks would reach the web app as an unknown label.
+for (const [, category] of RULES) if (!CATEGORIES.includes(category)) throw new Error(`category missing from @smart-finances/contracts: ${category}`);

@@ -1,0 +1,18 @@
+{
+  "name": "@smart-finances/contracts",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Field lists, categories and route schemas shared by the data API and the web app (browser-safe: no Node imports).",
+  "exports": {
+    "./fields": "./src/fields.mjs",
+    "./categories": "./src/categories.mjs",
+    "./routes": "./src/routes.mjs"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  }
+}

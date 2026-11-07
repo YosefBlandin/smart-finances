@@ -1,0 +1,86 @@
+/* Button, from the prototype's .btn: hairline secondary, ink primary, red outline for destructive actions only (D-146). */
+.button {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  min-height: 40px;
+  padding: 0 var(--s4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  vertical-align: middle;
+  border-radius: var(--r-s);
+  cursor: pointer;
+  font-weight: var(--w-em);
+  font-size: var(--t-s);
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+
+.button:hover {
+  background: var(--sunken);
+}
+
+.button[data-variant='primary'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+}
+
+.button[data-variant='primary']:hover {
+  opacity: 0.88;
+}
+
+.button[data-variant='danger'] {
+  border-color: var(--bad);
+  color: var(--bad);
+  background: var(--surface);
+}
+
+.button[data-variant='danger']:hover {
+  background: var(--sunken);
+}
+
+.button[data-size='sm'] {
+  min-height: var(--target);
+  padding: 0 var(--s3);
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.button[data-busy] {
+  cursor: progress;
+}
+
+.spinner {
+  display: inline-flex;
+}
+
+/* The only spinner in the app (D-128). */
+.spinner svg {
+  animation: turn 1s linear infinite;
+}
+
+@keyframes turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner svg {
+    animation: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .button,
+  .button[data-size='sm'] {
+    min-height: 44px;
+  }
+}

@@ -1,0 +1,39 @@
+/* The goodbye page (SF-169): the counts as two figures with uppercase labels, from the prototype's .counts; tokens only. */
+.counts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--edge);
+  border-radius: var(--r-m);
+  overflow: hidden;
+}
+
+.counts div {
+  padding: var(--s2) var(--s3);
+  background: var(--sunken);
+  min-width: 0;
+}
+
+.counts dt,
+.label {
+  margin: 0;
+  font-size: var(--t-xs);
+  font-weight: var(--w-head);
+  text-transform: uppercase;
+  letter-spacing: var(--track-caps);
+  color: var(--muted);
+}
+
+.counts dd {
+  margin: 0;
+  font-size: var(--t-l);
+  font-weight: var(--w-em);
+  font-variant-numeric: tabular-nums;
+}
+
+.small {
+  margin: 0;
+  font-size: var(--t-s);
+  color: var(--muted);
+}

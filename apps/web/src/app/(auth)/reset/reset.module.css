@@ -1,0 +1,18 @@
+/* The reset screens. Tokens only (D-57). */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.small {
+  font-size: var(--t-s);
+  color: var(--muted);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s4);
+  font-size: var(--t-s);
+}

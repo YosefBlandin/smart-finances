@@ -1,0 +1,57 @@
+/* CategorySquare, from the prototype's .catdot and .catrow i: 10px, solid, a 4px corner. */
+.square {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-xs);
+}
+
+.square[data-cat='1'] {
+  background: var(--cat1);
+}
+
+.square[data-cat='2'] {
+  background: var(--cat2);
+}
+
+.square[data-cat='3'] {
+  background: var(--cat3);
+}
+
+.square[data-cat='4'] {
+  background: var(--cat4);
+}
+
+.square[data-cat='5'] {
+  background: var(--cat5);
+}
+
+.square[data-cat='7'] {
+  background: var(--cat7);
+}
+
+.square[data-cat='8'] {
+  background: var(--cat8);
+}
+
+.square[data-cat='9'] {
+  background: var(--cat9);
+}
+
+.square[data-cat='10'] {
+  background: var(--cat10);
+}
+
+.square[data-cat='11'] {
+  background: var(--cat11);
+}
+
+.square[data-cat='12'] {
+  background: var(--cat12);
+}
+
+/* Grey is only for "Everything else" (D-25). */
+.square[data-cat='other'] {
+  background: var(--cat6);
+}

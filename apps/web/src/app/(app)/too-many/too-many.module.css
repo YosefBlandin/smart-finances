@@ -1,0 +1,53 @@
+/* The person limit page (SF-172): one column on white, the label, the heading, the wait and the way back (D-21); tokens only. */
+.screen {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s3);
+  max-width: 64ch;
+}
+
+.label {
+  margin: 0;
+  font-size: var(--t-xs);
+  font-weight: var(--w-head);
+  text-transform: uppercase;
+  letter-spacing: var(--track-caps);
+  color: var(--muted);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--t-2xl);
+  font-weight: var(--w-head);
+}
+
+.heading:focus {
+  outline: none;
+}
+
+.lead {
+  margin: 0;
+}
+
+.why {
+  margin: 0;
+  color: var(--muted);
+}
+
+.go {
+  margin-top: var(--s3);
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 var(--s4);
+  border-radius: var(--r-s);
+  background: var(--ink);
+  color: var(--surface);
+  font-weight: var(--w-em);
+  text-decoration: none;
+}
+
+.go:hover {
+  opacity: 0.88;
+}

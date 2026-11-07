@@ -1,0 +1,18 @@
+/* The frame every story sits in: the page colour of its theme, the parts laid out in a row or a column. */
+.frame {
+  min-height: 100vh;
+  padding: var(--s5);
+  background: var(--paper);
+  color: var(--ink);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--s4);
+}
+
+.frame[data-stack='column'] {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  max-width: 720px;
+}

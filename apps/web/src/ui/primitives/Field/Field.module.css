@@ -1,0 +1,135 @@
+/* Field, from the prototype's .field: a small bold label over a 40px input with a 3:1 border (D-22). */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--t-xs);
+  color: var(--muted);
+  font-weight: var(--w-head);
+}
+
+.input,
+.select {
+  border: 1px solid var(--control);
+  border-radius: var(--r-s);
+  background: var(--surface);
+  padding: 7px 11px;
+  color: var(--ink);
+  min-width: 0;
+  font-weight: var(--w-text);
+  font-size: var(--t-m);
+  min-height: 40px;
+}
+
+.select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  cursor: pointer;
+  text-align: left;
+}
+
+.select[data-focus-visible] {
+  outline: 2px solid var(--income);
+  outline-offset: 2px;
+}
+
+.value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.field[data-invalid] .input,
+.field[data-invalid] .select {
+  border-color: var(--ink);
+}
+
+.hint {
+  font-size: var(--t-xs);
+  color: var(--muted);
+  margin: 0;
+}
+
+/* The field's error note: red text with an icon (D-63). */
+.error {
+  display: flex;
+  gap: var(--s1);
+  align-items: flex-start;
+  font-size: var(--t-s);
+  color: var(--bad);
+  margin: 0;
+}
+
+.error svg {
+  margin-top: 2px;
+}
+
+.popover {
+  min-width: var(--trigger-width);
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-s);
+  box-shadow: var(--pop);
+  padding: var(--s1);
+  overflow-y: auto;
+}
+
+.listbox {
+  outline: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.option {
+  min-height: var(--target);
+  padding: var(--s1) var(--s3);
+  border-radius: var(--r-xs);
+  display: flex;
+  align-items: center;
+  font-size: var(--t-s);
+  cursor: pointer;
+  outline: none;
+}
+
+.option[data-focused],
+.option[data-hovered] {
+  background: var(--sunken);
+}
+
+.option[data-selected] {
+  font-weight: var(--w-head);
+}
+
+.option[data-focus-visible] {
+  outline: 2px solid var(--income);
+  outline-offset: -2px;
+}
+
+/* React Aria renders its hidden native select with an inline style, which the content policy blocks; hide it here instead. */
+.field [data-testid='hidden-select-container'] {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (pointer: coarse) {
+  .input,
+  .select,
+  .option {
+    min-height: 44px;
+  }
+}
