@@ -75,13 +75,27 @@ export function guestCredentials(region: string, identityPoolId: string, fetchFn
 
 let started: Promise<AwsRum | undefined> | undefined;
 
-/** Starts the client once per page (the root layout stays mounted); a failure leaves monitoring off. */
+/**
+ * Starts the client once per page (the root layout stays mounted); a failure leaves monitoring off. The first guest
+ * credentials are fetched before the client starts, because the client calls the provider without handling a refusal
+ * (an unhandled rejection in the page). A later renewal that fails turns monitoring off and hands back the last
+ * credentials, so the client's request fails as an ordinary HTTP error and nothing is thrown at the page.
+ */
 export function startRum(settings: RumSettings): Promise<AwsRum | undefined> {
   started ??= (async () => {
     try {
+      const fetchCredentials = guestCredentials(settings.region, settings.identityPoolId);
+      let last = await fetchCredentials();
       const { AwsRum } = await import('aws-rum-web');
       const rum = new AwsRum(settings.appMonitorId, settings.version, settings.region, rumOptions(settings));
-      rum.setAwsCredentials(guestCredentials(settings.region, settings.identityPoolId));
+      rum.setAwsCredentials(async () => {
+        try {
+          last = await fetchCredentials();
+        } catch {
+          rum.disable();
+        }
+        return last;
+      });
       return rum;
     } catch {
       return undefined;

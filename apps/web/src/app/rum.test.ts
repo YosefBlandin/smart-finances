@@ -172,4 +172,57 @@ describe('T-WSCR-20: the client starts RUM with no cookies, no storage, no searc
     expect(sessionStorage.length).toBe(0);
     rum!.disable();
   });
+
+  it('T-WSCR-20: when the identity pool refuses (500), monitoring stays off and nothing is thrown at the page', async () => {
+    const sent: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.startsWith('https://cognito-identity.')) return new Response('{}', { status: 500 });
+        sent.push(url);
+        return new Response('{}', { status: 200 });
+      }),
+    );
+    vi.resetModules(); // a fresh client: startRum starts once per module
+    const { startRum } = await import('./rum');
+    await expect(startRum(SETTINGS)).resolves.toBeUndefined();
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith('https://cognito-identity.us-east-1.amazonaws.com/', expect.anything());
+    await new Promise((r) => setTimeout(r, 50));
+    expect(sent).toEqual([]);
+  });
+
+  it('T-WSCR-20: a renewal the identity pool refuses turns monitoring off without an unhandled rejection', async () => {
+    const sent: string[] = [];
+    let credentialCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.startsWith('https://cognito-identity.')) {
+          const target = new Headers(init?.headers).get('x-amz-target') ?? '';
+          if (target.endsWith('GetId')) return Response.json({ IdentityId: 'us-east-1:synthetic-identity' });
+          credentialCalls += 1;
+          if (credentialCalls > 1) return new Response('{}', { status: 500 });
+          // Expires within the renewal window, so the client's next call renews.
+          const soon = Math.floor(Date.now() / 1000) + 60;
+          return Response.json({
+            Credentials: { AccessKeyId: 'ASIASYNTHETIC', SecretKey: 'synthetic', SessionToken: 'synthetic', Expiration: soon },
+          });
+        }
+        sent.push(url);
+        return new Response('{}', { status: 200 });
+      }),
+    );
+    vi.resetModules();
+    const { startRum } = await import('./rum');
+    const rum = await startRum(SETTINGS);
+    expect(rum).toBeDefined();
+    await vi.waitFor(() => expect(credentialCalls).toBeGreaterThan(1));
+    await new Promise((r) => setTimeout(r, 20)); // the refused renewal has turned monitoring off
+    expect(() => rum!.dispatch()).not.toThrow();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(sent).toEqual([]);
+    rum!.disable();
+  });
 });
