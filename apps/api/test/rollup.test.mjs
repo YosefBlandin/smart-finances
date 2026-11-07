@@ -148,3 +148,27 @@ test('T-ROL-4 POST /totals/rebuild invokes the rollup async and answers 202 with
   const refused = await handler(httpEvent(A, 'POST /totals/rebuild'));
   assert.deepEqual([refused.statusCode, JSON.parse(refused.body).error.code], [409, 'conflict']);
 });
+
+test('T-ROL-3 malformed stream records are skipped without a recompute; a batch without Records is refused', async () => {
+  const { store, rollup } = setup();
+  let calls = 0;
+  const realQuery = store.query.bind(store);
+  store.query = async (q) => {
+    calls += 1;
+    return realQuery(q);
+  };
+  await rollup({
+    Records: [
+      null,
+      {},
+      { dynamodb: {} },
+      { dynamodb: { Keys: { pk: { S: `U#${A}` }, sk: { N: '1' } } } },
+      { dynamodb: { Keys: { pk: { S: 'U#' }, sk: { S: 'TXN#2026-05-01#0000000000000001' } } } },
+      { dynamodb: { Keys: { pk: { S: `X#${A}` }, sk: { S: 'TXN#2026-05-01#0000000000000001' } } } },
+      { dynamodb: { Keys: { pk: { S: `U#${A}` }, sk: { S: 'TXN#2026-5-01#x' } } } },
+    ],
+  });
+  assert.equal(calls, 0);
+  await assert.rejects(rollup({ Records: 'x' }), /unexpected rollup input/);
+  await assert.rejects(rollup(undefined), /unexpected rollup input/);
+});
