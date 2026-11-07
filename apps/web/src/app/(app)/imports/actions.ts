@@ -18,9 +18,13 @@ const request = z.object({
 
 export type ImportStart = { importId: string; upload: { url: string; fields: Record<string, string> } };
 
-export const requestImport = guarded(request, { kind: 'money' }, async (input, { container, session }): Promise<ActionResult<ImportStart>> => {
-  const started = await createImports(container).requestImport(session!, input);
-  if (started.ok) return { ok: true, data: { importId: started.data.importId, upload: started.data.upload } };
-  const refusal = { ok: false as const, messageKey: refusalKey(started.reason, input.source) };
-  return started.retryAfter === undefined ? refusal : { ...refusal, retryAfterSeconds: started.retryAfter };
-});
+export const requestImport = guarded(
+  request,
+  { kind: 'money' },
+  async (input, { container, session, requestId }): Promise<ActionResult<ImportStart>> => {
+    const started = await createImports(container).requestImport(session!, input, { requestId });
+    if (started.ok) return { ok: true, data: { importId: started.data.importId, upload: started.data.upload } };
+    const refusal = { ok: false as const, messageKey: refusalKey(started.reason, input.source) };
+    return started.retryAfter === undefined ? refusal : { ...refusal, retryAfterSeconds: started.retryAfter };
+  },
+);

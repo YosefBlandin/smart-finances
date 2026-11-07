@@ -34,6 +34,12 @@ export type ImportsDeps = {
 };
 
 type Who = Pick<Session, 'accessToken' | 'sub'>;
+/**
+ * The request being served: its id goes into the import events (import_refused, import_release) as request_id. The
+ * import or placeholder id is never logged: the Logger port carries only sub and request_id, and the contracts bound
+ * no import id (owner decision of 2026-11-06: log it validated against a contract id schema, or omit it).
+ */
+export type ImportContext = { requestId: string };
 type ImportRecord = Awaited<ReturnType<DataApi['getImport']>> extends DataApiResult<infer T> ? T : never;
 type Requested = Awaited<ReturnType<DataApi['requestImport']>> extends DataApiResult<infer T> ? T : never;
 
@@ -157,7 +163,7 @@ export function createImports(deps: ImportsDeps) {
   return {
     settleRunning,
 
-    async requestImport(who: Who, request: ImportRequest): Promise<RequestResult> {
+    async requestImport(who: Who, request: ImportRequest, ctx: ImportContext): Promise<RequestResult> {
       const bad = checkFile(request);
       if (bad) return refuse(bad);
       const pause = await paused();
@@ -175,7 +181,7 @@ export function createImports(deps: ImportsDeps) {
       const placeholder = `${PENDING_IMPORT}${clock.now()}:${crypto.randomUUID()}`;
       const reserved = await accountStore.reserveImport(who.sub, { day, bytes, importId: placeholder });
       if (!reserved.ok) {
-        logger.event('import_refused', reserved.reason, { sub: who.sub, requestId: placeholder });
+        logger.event('import_refused', reserved.reason, { sub: who.sub, requestId: ctx.requestId });
         // An account being deleted reads like a session that ended: no import starts during a deletion (AC-18).
         return refuse(reserved.reason === 'deleting' ? 'unauthorized' : reserved.reason);
       }
@@ -184,7 +190,7 @@ export function createImports(deps: ImportsDeps) {
           await releasePlaceholder(who.sub, placeholder, day);
         } catch {
           // Left on the row, the placeholder is released once PENDING_STALE_MS have passed.
-          logger.event('import_release', 'failed', { sub: who.sub, requestId: placeholder });
+          logger.event('import_release', 'failed', { sub: who.sub, requestId: ctx.requestId });
         }
       };
       let asked: Awaited<ReturnType<DataApi['requestImport']>>;
@@ -205,21 +211,21 @@ export function createImports(deps: ImportsDeps) {
       }
       if (!(await accountStore.confirmImport(who.sub, placeholder, asked.data.import_id))) {
         // The placeholder no longer holds the slot: this import gets no upload form, so its record expires.
-        logger.event('import_refused', 'conflict', { sub: who.sub, requestId: asked.data.import_id });
+        logger.event('import_refused', 'conflict', { sub: who.sub, requestId: ctx.requestId });
         return refuse('conflict');
       }
       return { ok: true, data: { importId: asked.data.import_id, upload: asked.data.upload, expiresAt: asked.data.expires_at } };
     },
 
     /** One import, as the API answers it; at its final status (or stalled) the person's slot is released (D-114). */
-    async getImport(who: Who, id: string): Promise<DataApiResult<ImportRecord>> {
+    async getImport(who: Who, id: string, ctx: ImportContext): Promise<DataApiResult<ImportRecord>> {
       const read = await dataApi.getImport(who.accessToken, { id });
       if (read.ok) {
         try {
           await settle(who.sub, read.data);
         } catch {
           // The read still answers; the next request settles the slot again.
-          logger.event('import_release', 'failed', { sub: who.sub, requestId: id });
+          logger.event('import_release', 'failed', { sub: who.sub, requestId: ctx.requestId });
         }
       }
       return read;

@@ -128,7 +128,7 @@ describe('T-WSCR-11: delete account (D-104)', () => {
 
   it('T-WSCR-11: start is refused while an import runs, and goes ahead once it has ended', async () => {
     const s = setup();
-    const imported = await createImports(s.c).requestImport(WHO, { source: 'mercadopago', fileName: 'release-report-2026-10.csv', size: 1_200 });
+    const imported = await createImports(s.c).requestImport(WHO, { source: 'mercadopago', fileName: 'release-report-2026-10.csv', size: 1_200 }, CTX);
     expect(imported.ok).toBe(true);
     expect(await s.deletion.start(WHO, RIGHT, CTX)).toEqual({ ok: false, messageKey: 'auth.delete.running' });
     expect((await s.c.accountStore.getAccount(SUB))?.status).toBe('active');
