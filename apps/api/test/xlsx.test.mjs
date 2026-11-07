@@ -71,7 +71,7 @@ test('T-IMP-3 more than 500 zip entries fail before anything is inflated', () =>
   const filler = Array.from({ length: 500 }, (_, i) => ({ name: `junk/${i}.bin`, text: 'x' }));
   // The sheet would throw if inflated (it is not deflate data), so the error proves the count came first.
   const entries = [...book(1, () => ({ data: Buffer.from('not deflate'), raw: Buffer.from('x') })), ...filler];
-  assert.throws(() => readWorkbook(zip(entries)), /entries/);
+  assert.throws(() => readWorkbook(zip(entries)), /too many zip entries/);
 });
 
 test('T-IMP-3 exactly 500 entries are allowed', () => {
@@ -82,13 +82,13 @@ test('T-IMP-3 exactly 500 entries are allowed', () => {
 test('T-IMP-3 declared sizes over 100 MiB in total fail before inflating', () => {
   const entries = [...book(1, () => ({ data: Buffer.from('not deflate'), raw: Buffer.from('x') })),
     ...[1, 2, 3].map((n) => ({ name: `xl/media/big${n}.bin`, data: Buffer.from('z'), raw: Buffer.from('z'), declaredSize: 40 * MiB }))];
-  assert.throws(() => readWorkbook(zip(entries)), /inflated/);
+  assert.throws(() => readWorkbook(zip(entries)), /add up past the total inflated size limit/);
 });
 
 test('T-IMP-3 sheets that really inflate past 100 MiB in total fail, even when their headers lie', () => {
   const zeros = Buffer.alloc(40 * MiB, 0x20);
   const lying = (n) => ({ raw: Buffer.concat([Buffer.from(`<worksheet><sheetData/></worksheet><!--${n}`), zeros, Buffer.from('-->')]), declaredSize: 10 });
-  assert.throws(() => readWorkbook(zip(book(3, lying))), /inflated|too large/);
+  assert.throws(() => readWorkbook(zip(book(3, lying))), /inflated past the total size limit/);
 });
 
 test('T-IMP-3 parts the reader does not need are never inflated', () => {
@@ -102,4 +102,27 @@ test('T-IMP-3 the existing 50 MiB per-part and 20 MiB file caps stay', () => {
   const [wb, rels] = book();
   assert.throws(() => readWorkbook(zip([wb, rels, huge])), /too large/);
   assert.throws(() => readWorkbook(Buffer.alloc(20 * MiB + 1)), /too large/);
+});
+
+test('T-IMP-3 a workbook that lists one sheet part many times is refused, not parsed again and again', () => {
+  const [, , sheet] = book();
+  const tags = Array.from({ length: 20 }, (_, i) => `<sheet name="S${i}" sheetId="${i + 1}" r:id="rId1"/>`).join('');
+  const entries = [
+    { name: 'xl/workbook.xml', text: `<workbook><sheets>${tags}</sheets></workbook>` },
+    { name: 'xl/_rels/workbook.xml.rels', text: '<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>' },
+    sheet,
+  ];
+  assert.throws(() => readWorkbook(zip(entries)), /more than once/);
+});
+
+test('T-IMP-3 stored (uncompressed) parts are read and charged like the others', () => {
+  const entries = book().map((e) => ({ ...e, method: 0 }));
+  assert.deepEqual(readWorkbook(zip(entries)), { S1: { A1: 'hello' } });
+});
+
+test('T-IMP-3 a budget used up exactly gives the total-limit error, not a raw RangeError', () => {
+  const big = (n) => ({ raw: Buffer.concat([Buffer.from(`<worksheet><sheetData/></worksheet><!--${n}`), Buffer.alloc(50 * 1024 * 1024 - 43, 0x20), Buffer.from('-->')]), declaredSize: 10 });
+  // Two sheets of exactly 50 MiB use the whole 100 MiB; the third has nothing left.
+  const entries = book(3, big);
+  assert.throws(() => readWorkbook(zip(entries)), /inflated past the total size limit/);
 });

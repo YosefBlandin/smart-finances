@@ -59,6 +59,7 @@ function unzip(buf) {
       let out;
       if (e.method === 0) out = data;
       else if (e.method === 8) {
+        if (budget <= 0) throw new Error('xlsx inflated past the total size limit');
         const limit = Math.min(MAX_PART, budget);
         try {
           out = inflateRawSync(data, { maxOutputLength: limit });
@@ -103,9 +104,15 @@ export function readWorkbook(buf) {
   );
 
   const sheets = {};
+  // Each sheet part is parsed once: a workbook that lists one part many times could otherwise
+  // re-parse it without bound, past what the inflate caps allow for.
+  const read = new Set();
   for (const [tag] of part('xl/workbook.xml').matchAll(/<sheet\s[^>]*>/g)) {
     const target = rels.get(attr(tag, 'r:id'));
+    if (!target) throw new Error('xlsx sheet has no relationship target');
     const path = target.startsWith('/') ? target.slice(1) : `xl/${target}`;
+    if (read.has(path)) throw new Error(`xlsx lists sheet part ${path} more than once`);
+    read.add(path);
     const cells = {};
     for (const m of part(path).matchAll(/<c\s([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
       const tagAttrs = ` ${m[1]}`;
