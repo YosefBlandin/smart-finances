@@ -1,8 +1,13 @@
 // Field: a labelled input whose hint and error are tied to it with aria-describedby, and aria-invalid while it has an
 // error (AC-10). The error is a red note with an icon (D-63). SelectField is the same field around a React Aria select (D-141).
+// React Aria's select always renders a hidden native select with a style attribute, which the content policy refuses in
+// server HTML (style-src has no 'unsafe-inline'; in the browser React sets it through the CSSOM, which the policy allows).
+// So the server and the hydration pass render the same field as plain markup (label, the button with its value, hint,
+// error, and a hidden input carrying the value for a form), and React Aria's select takes its place once hydrated: the
+// field shows at once, with no skeleton and no layout shift (SF-171, owner decision on the SF-165 workaround).
 'use client';
 
-import { forwardRef, useId, type ChangeEvent } from 'react';
+import { forwardRef, useId, useSyncExternalStore, type ChangeEvent } from 'react';
 import { Button as AriaButton, ListBox, ListBoxItem, Popover, Select, SelectValue, Text, Label } from 'react-aria-components';
 import { Icon } from '../Icon/Icon';
 import styles from './Field.module.css';
@@ -81,7 +86,64 @@ export type SelectFieldProps<T extends string> = {
   disabled?: boolean;
 };
 
-export function SelectField<T extends string>({ label, options, value, onChange, name, hint, error, disabled }: SelectFieldProps<T>) {
+const noSubscribe = () => () => {};
+/** False on the server and during hydration, true after it (and on any client-only render). */
+const useHydrated = () =>
+  useSyncExternalStore(
+    noSubscribe,
+    () => true,
+    () => false,
+  );
+
+export function SelectField<T extends string>(props: SelectFieldProps<T>) {
+  return useHydrated() ? <AriaSelectField {...props} /> : <ServerSelectField {...props} />;
+}
+
+/** The select as the server renders it: what React Aria's shows when closed, without its hidden native select. */
+function ServerSelectField<T extends string>({ label, options, value, name, hint, error, disabled }: SelectFieldProps<T>) {
+  const id = useId();
+  const labelId = `${id}-label`;
+  const valueId = `${id}-value`;
+  const hintId = `${id}-hint`;
+  const errorId = `${id}-error`;
+  const describedBy = [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined;
+  const selected = options.find((option) => option.id === value);
+  return (
+    <div className={styles.field} data-invalid={error ? true : undefined}>
+      <span id={labelId} className={styles.label}>
+        {label}
+      </span>
+      <button
+        type="button"
+        className={styles.select}
+        aria-haspopup="listbox"
+        aria-expanded={false}
+        aria-labelledby={`${labelId} ${valueId}`}
+        aria-describedby={describedBy}
+        disabled={disabled}
+      >
+        <span id={valueId} className={styles.value}>
+          {selected?.label ?? ''}
+        </span>
+        <Icon name="chevronDown" />
+      </button>
+      {hint ? (
+        <span id={hintId} className={styles.hint}>
+          {hint}
+        </span>
+      ) : null}
+      {error ? (
+        <span id={errorId} className={styles.error}>
+          <Icon name="failed" />
+          {error}
+        </span>
+      ) : null}
+      {name ? <input type="hidden" name={name} value={value ?? ''} disabled={disabled} /> : null}
+    </div>
+  );
+}
+
+function AriaSelectField<T extends string>({ label, options, value, onChange, name, hint, error, disabled }: SelectFieldProps<T>) {
   return (
     <Select
       className={styles.field}

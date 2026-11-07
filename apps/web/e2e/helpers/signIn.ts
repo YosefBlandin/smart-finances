@@ -37,7 +37,8 @@ export async function setAddress(context: BrowserContext): Promise<string> {
 
 /**
  * Submits a form that carries a proof-of-work answer (PowField): waits until the answer is solved, clicks the form's
- * submit button and waits for the server action's reply. A redirect that follows is the caller's to wait for.
+ * submit button and waits for the server action's reply and for React to commit it. A redirect that follows is the
+ * caller's to wait for.
  */
 export async function submit(form: Locator) {
   await expect(form.locator('input[name="powSalt"]')).toHaveAttribute('data-state', 'ready', { timeout: 60_000 });
@@ -50,6 +51,10 @@ export async function submit(form: Locator) {
   });
   await button.click();
   await reply;
+  // The reply arrives before React commits it. React resets an action's form, sets its new state and clears the busy
+  // flag in that one commit, so wait for it: a field filled before it lands is wiped, and the next click then sends
+  // nothing (the empty required field stops the post). A form that went away with a redirect passes at once.
+  await expect(button.and(page.locator('[aria-busy="true"]'))).toHaveCount(0, { timeout: 60_000 });
 }
 
 /**

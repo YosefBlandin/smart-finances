@@ -380,22 +380,33 @@ class FakeAccounts implements DocClient {
       throw e;
     };
     const cond = input.ConditionExpression as string | undefined;
+    const notDeleting = () => item[at('#s')] === undefined || item[at('#s')] !== v[':deleting'];
     switch (cond) {
       case undefined:
         break;
       case 'attribute_exists(pk)':
         if (!old) fail();
         break;
-      case '#t.#d = :day AND #t.#n < :perDay AND attribute_not_exists(#r) AND #b <= :room':
+      case '#t.#d = :day AND #t.#n < :perDay AND attribute_not_exists(#r) AND #b <= :room AND (attribute_not_exists(#s) OR #s <> :deleting)':
         if (!old || !today || today.day !== v[':day'] || !(today.n < (v[':perDay'] as number)) || item[at('#r')] !== undefined) fail();
-        if (!((item[at('#b')] as number) <= (v[':room'] as number))) fail();
+        if (!((item[at('#b')] as number) <= (v[':room'] as number)) || !notDeleting()) fail();
         break;
-      case '(attribute_not_exists(#t) OR #t.#d <> :day) AND attribute_not_exists(#r) AND (attribute_not_exists(#b) OR #b <= :room)':
+      case '(attribute_not_exists(#t) OR #t.#d <> :day) AND attribute_not_exists(#r) AND (attribute_not_exists(#b) OR #b <= :room) AND (attribute_not_exists(#s) OR #s <> :deleting)':
         if ((today && today.day === v[':day']) || item[at('#r')] !== undefined) fail();
-        if (item[at('#b')] !== undefined && !((item[at('#b')] as number) <= (v[':room'] as number))) fail();
+        if ((item[at('#b')] !== undefined && !((item[at('#b')] as number) <= (v[':room'] as number))) || !notDeleting()) fail();
+        break;
+      case 'attribute_not_exists(#r)':
+        if (item[at('#r')] !== undefined) fail();
+        break;
+      case '#r = :placeholder':
+        if (!old || item[at('#r')] !== v[':placeholder']) fail();
         break;
       case '#r = :id AND #b = :stored':
         if (!old || item[at('#r')] !== v[':id'] || item[at('#b')] !== v[':stored']) fail();
+        break;
+      case '#r = :id AND #b = :stored AND #t.#d = :day AND #t.#n > :zero':
+        if (!old || item[at('#r')] !== v[':id'] || item[at('#b')] !== v[':stored']) fail();
+        if (!today || today.day !== v[':day'] || !(today.n > (v[':zero'] as number))) fail();
         break;
       default:
         throw new Error(`unexpected condition ${cond}`);
@@ -428,8 +439,17 @@ class FakeAccounts implements DocClient {
         item[at('#b')] = (ifNotExists('#b', v[':zero']) as number) + (v[':bytes'] as number);
         item[at('#s')] = ifNotExists('#s', v[':active']);
         break;
+      case 'SET #r = :id':
+        item[at('#r')] = v[':id'];
+        break;
       case 'SET #b = :next REMOVE #r, #rb':
         item[at('#b')] = v[':next'];
+        delete item[at('#r')];
+        delete item[at('#rb')];
+        break;
+      case 'SET #b = :next, #t.#n = #t.#n - :one REMOVE #r, #rb':
+        item[at('#b')] = v[':next'];
+        today!.n -= v[':one'] as number;
         delete item[at('#r')];
         delete item[at('#rb')];
         break;
@@ -544,6 +564,85 @@ describe('T-WAUTH-13: the accounts table adapter (DynamoDB, conditional updates)
     expect(await store.getAccount(SUB)).toMatchObject({ status: 'deleting', deletingSince: START, consent: consent() });
     await store.deleteAccountRow(SUB);
     expect(await store.getAccount(SUB)).toBeUndefined();
+  });
+
+  it('T-WSCR-11: markDeleting is conditional on no running import, and a concurrent reservation that lands first wins', async () => {
+    const { client, store } = dynamo();
+    await store.putConsent(SUB, consent());
+    await store.reserveImport(SUB, { day: '2026-11-04', bytes: MiB, importId: 'imp-1' });
+    expect(await store.markDeleting(SUB, START)).toEqual({ ok: false, reason: 'running' });
+    expect((await store.getAccount(SUB))?.status).toBe('active');
+    await store.releaseImport(SUB, 'imp-1', MiB);
+    client.beforeUpdate = () => {
+      client.items.get(`ACCT#${SUB}`)!.running_import_id = 'pending:1:other-tab';
+    };
+    expect(await store.markDeleting(SUB, START)).toEqual({ ok: false, reason: 'running' });
+    expect((await store.getAccount(SUB))?.status).toBe('active');
+  });
+
+  it('T-WSCR-8: reserveImport is refused for an account being deleted, on a new day and the same day', async () => {
+    const { client, store } = dynamo();
+    await store.putConsent(SUB, consent());
+    expect(await store.markDeleting(SUB, START)).toEqual({ ok: true });
+    expect(await store.reserveImport(SUB, { day: '2026-11-04', bytes: 1, importId: 'imp-1' })).toEqual({ ok: false, reason: 'deleting' });
+    // The condition alone decides: a mark that lands between the read and the update fails the reservation.
+    const other = dynamo();
+    await other.store.putConsent(SUB, consent());
+    expect(await other.store.reserveImport(SUB, { day: '2026-11-04', bytes: 1, importId: 'imp-1' })).toEqual({ ok: true });
+    await other.store.releaseImport(SUB, 'imp-1', 1);
+    other.client.beforeUpdate = () => {
+      other.client.items.get(`ACCT#${SUB}`)!.status = 'deleting';
+    };
+    expect(await other.store.reserveImport(SUB, { day: '2026-11-04', bytes: 1, importId: 'imp-2' })).toEqual({ ok: false, reason: 'deleting' });
+    expect((await other.store.getAccount(SUB))?.runningImportId).toBeUndefined();
+    expect(client.items.get(`ACCT#${SUB}`)?.running_import_id).toBeUndefined();
+  });
+
+  it('T-WSCR-8: confirmImport swaps only its own placeholder for the import id, keeping the reserved bytes', async () => {
+    const { store } = dynamo();
+    await store.putConsent(SUB, consent());
+    await store.reserveImport(SUB, { day: '2026-11-04', bytes: 5 * MiB, importId: 'pending:1:a' });
+    expect(await store.confirmImport(SUB, 'pending:1:b', 'imp-b')).toBe(false);
+    expect((await store.getAccount(SUB))?.runningImportId).toBe('pending:1:a');
+    expect(await store.confirmImport(SUB, 'pending:1:a', 'imp-a')).toBe(true);
+    expect((await store.getAccount(SUB))?.runningImportId).toBe('imp-a');
+    await store.releaseImport(SUB, 'imp-a', 2 * MiB);
+    expect((await store.getAccount(SUB))?.runningImportId).toBeUndefined();
+    expect((await store.getAccount(SUB))?.storedBytes).toBe(2 * MiB);
+  });
+
+  it('T-WSCR-8: the reserved size stays on the row with the reservation; releasing with it keeps it counted', async () => {
+    const { client, store } = dynamo();
+    await store.putConsent(SUB, consent());
+    await store.reserveImport(SUB, { day: '2026-11-04', bytes: 1_200, importId: 'imp-1' });
+    expect(client.items.get(`ACCT#${SUB}`)?.running_import_bytes).toBe(1_200);
+    expect(await store.getAccount(SUB)).toMatchObject({ runningImportId: 'imp-1', runningImportBytes: 1_200, storedBytes: 1_200 });
+    await store.releaseImport(SUB, 'imp-1', 1_200);
+    const account = await store.getAccount(SUB);
+    expect(account).toMatchObject({ storedBytes: 1_200, importsToday: { day: '2026-11-04', n: 1 } });
+    expect(account?.runningImportBytes).toBeUndefined();
+  });
+
+  it("T-WSCR-8: a placeholder release gives back the day's count in the same conditional update, once, and only for its day", async () => {
+    const { client, store } = dynamo();
+    await store.putConsent(SUB, consent());
+    await store.reserveImport(SUB, { day: '2026-11-04', bytes: MiB, importId: 'pending:1:a' });
+    await store.releaseImport(SUB, 'pending:1:a', 0, { giveBackDay: '2026-11-04' });
+    expect(await store.getAccount(SUB)).toMatchObject({ storedBytes: 0, importsToday: { day: '2026-11-04', n: 0 } });
+    expect((await store.getAccount(SUB))?.runningImportId).toBeUndefined();
+    const updates = client.sent.filter((c) => c.name === 'UpdateCommand');
+    expect(updates.at(-1)?.input).toMatchObject({
+      UpdateExpression: 'SET #b = :next, #t.#n = #t.#n - :one REMOVE #r, #rb',
+      ConditionExpression: '#r = :id AND #b = :stored AND #t.#d = :day AND #t.#n > :zero',
+    });
+    // Once: the slot is no longer this placeholder's, so a second release changes nothing.
+    await store.releaseImport(SUB, 'pending:1:a', 0, { giveBackDay: '2026-11-04' });
+    expect((await store.getAccount(SUB))?.importsToday).toEqual({ day: '2026-11-04', n: 0 });
+    // Another day's count is never taken back.
+    await store.reserveImport(SUB, { day: '2026-11-05', bytes: MiB, importId: 'pending:2:b' });
+    await store.releaseImport(SUB, 'pending:2:b', 0, { giveBackDay: '2026-11-04' });
+    expect(await store.getAccount(SUB)).toMatchObject({ storedBytes: 0, importsToday: { day: '2026-11-05', n: 1 } });
+    expect((await store.getAccount(SUB))?.runningImportId).toBeUndefined();
   });
 
   it('T-WAUTH-13: a service error is thrown, never read as a missing row or a refusal', async () => {

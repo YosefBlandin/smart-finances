@@ -58,8 +58,9 @@ test('T-WEB-8: in a browser, an inline script without the nonce does not run', a
 });
 
 test("T-WEB-8: the app's own scripts run under the policy without a script violation", async ({ page, context }) => {
-  // Real app pages: the sign-in page, then a money page behind the STAGE=test person's session cookie (TEST_PERSON in
-  // src/adapters/container.ts; the money layout checks the session and consent; with the cookie, /sign-in would
+  // Real app pages: the sign-in page, then a money page behind the session cookie of this test's own STAGE=test person
+  // (headers-scripts in E2E_PEOPLE, src/adapters/container.ts: the overview's first view makes all 5 of a person's data
+  // reads a minute, D-157; the money layout checks the session and consent; with the cookie, /sign-in would
   // redirect to /overview). A blocked script shows up three ways: a
   // console error, a thrown error (a blocked eval is an EvalError, not a console message) and a securitypolicyviolation
   // event; all three are collected.
@@ -81,7 +82,7 @@ test("T-WEB-8: the app's own scripts run under the policy without a script viola
       await context.addCookies([
         {
           name: '__Host-sid',
-          value: 'e2e-test-person-session-not-a-secret-000000',
+          value: 'e2e-headers-scripts-not-secret-'.padEnd(43, '0'),
           url: 'https://localhost:3000/',
           secure: true,
           httpOnly: true,

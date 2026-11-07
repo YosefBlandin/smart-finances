@@ -93,7 +93,11 @@
     "missingTitle": "{m} no tiene cotización.",
     "missingBody": "Su gasto en pesos queda fuera de todas las cifras en dólares hasta que agregues una.",
     "addRate": "Agregar cotización",
-    "noName": "Sin nombre"
+    "noName": "Sin nombre",
+    "spentIncl": "incluye {u} en dólares",
+    "sectionFailed": "Esta parte del resumen no cargó.",
+    "placesCount": "{n, plural, one {# compra} other {# compras}}",
+    "placesNone": "Este mes no hay gastos en pesos en ningún lugar."
   },
   "transactions": {
     "sub": "Cada movimiento de cada fuente, con tus revisiones aplicadas. El texto de los archivos se muestra tal como llegó.",
@@ -121,7 +125,8 @@
     "saveApprove": "Guardar y aprobar",
     "choiceKept": "Tu elección se guarda aparte del movimiento importado y se mantiene si vuelves a importar el mismo mes.",
     "fixInSource": "Corrige este en el {s}.",
-    "fixInSourceBody": "Los movimientos de esa fuente se corrigen en el archivo y se vuelven a subir. Aquí solo se cambian los de Mercado Pago."
+    "fixInSourceBody": "Los movimientos de esa fuente se corrigen en el archivo y se vuelven a subir. Aquí solo se cambian los de Mercado Pago.",
+    "nextPage": "Mostrar los {n} siguientes"
   },
   "review": {
     "sub": "Movimientos sobre los que los importadores no estaban seguros. Apruébalos o elige una categoría mejor; tus totales se actualizan en segundos.",
@@ -136,7 +141,8 @@
       "possible_duplicate": "Mismo monto, lugar y día que otro movimiento",
       "bcv_rate": "Convertido a la tasa oficial venezolana",
       "summed": "Un total del mes, no compras sueltas"
-    }
+    },
+    "saveFailed": "Ese cambio no se guardó. No cambió nada; inténtalo de nuevo."
   },
   "imports": {
     "sub": "Sube un archivo de cada fuente. Un archivo nuevo del mismo mes reemplaza al anterior, y puedes deshacerlo.",
@@ -189,7 +195,25 @@
     "errors": {
       "name": "El nombre del archivo necesita el mes y el año, como budget_Jun_2026.xlsx.",
       "never": "El archivo nunca llegó. Quizás superaba el límite de 20 MiB."
-    }
+    },
+    "refused": {
+      "source": "Primero elige de dónde viene el archivo.",
+      "empty": "Ese archivo está vacío. Vuelve a elegirlo.",
+      "name": "Ese archivo no corresponde a esta fuente. Revisa la regla sobre el botón del archivo.",
+      "tooLarge": "Ese archivo supera el límite de tamaño de esta fuente.",
+      "paused": "Las importaciones están en pausa por un rato. No se envió nada; inténtalo más tarde.",
+      "unavailable": "Las importaciones no pueden empezar ahora. No se envió nada; inténtalo en un minuto.",
+      "daily": "Ya hiciste 10 importaciones hoy, el límite diario. Inténtalo mañana.",
+      "bytes": "Tus archivos guardados están cerca del límite de 200 MiB. Borra tus datos para hacer lugar.",
+      "running": "Otra importación sigue en curso. Espera a que termine y envía este archivo.",
+      "conflict": "Esa importación no empezó. No se envió nada; inténtalo de nuevo.",
+      "limited": "Demasiados pedidos por ahora. Espera un minuto y vuelve a intentarlo.",
+      "failed": "Esa importación no empezó. No se envió nada; inténtalo de nuevo.",
+      "upload": "El archivo no se subió. Vuelve a elegirlo para reintentar."
+    },
+    "sending": "Enviando el archivo…",
+    "continues": "Todavía está en curso y sigue aunque cierres esta página. Vuelve en unos minutos para ver cómo terminó.",
+    "statusCol": "Estado"
   },
   "rates": {
     "ratesTitle": "Cotización del dólar",
@@ -198,7 +222,11 @@
     "addRatePh": "Agregar cotización",
     "saved2": "guardada",
     "missing": "Falta",
-    "rtFoot": "Las cotizaciones llevan dos decimales. Cambiar una actualiza al instante las cifras en dólares de ese mes."
+    "rtFoot": "Las cotizaciones llevan dos decimales. Cambiar una actualiza al instante las cifras en dólares de ese mes.",
+    "save": "Guardar",
+    "saveFailed": "Esa cotización no se guardó. No cambió nada; inténtalo de nuevo.",
+    "invalid": "Usa un número mayor que 0 con dos decimales como máximo, como 1.424,37.",
+    "statusCol": "Estado"
   },
   "data": {
     "sub": "Qué guarda Cuenta sobre ti, dónde vive y cómo sacarlo o borrarlo.",
@@ -224,7 +252,15 @@
     "delBtn": "Borrar todo",
     "deleting": "Borrando {a, plural, one {# movimiento} other {# movimientos}} y {b, plural, one {# archivo} other {# archivos}}…",
     "deleted": "Se borró todo.",
-    "deletedBody": "Las importaciones vuelven a las 14:35, cuando termina el trabajo de fondo, para que nada borrado reaparezca."
+    "deletedBody": "Las importaciones vuelven a las 14:35, cuando termina el trabajo de fondo, para que nada borrado reaparezca.",
+    "eraseUnfinishedTitle": "Puede que el borrado no haya terminado",
+    "eraseUnfinished": "El servidor no respondió a tiempo. Las importaciones siguen cerradas hasta que el borrado termine, así que termínalo ahora.",
+    "finishErase": "Terminar de borrar",
+    "eraseRunning": "Todavía hay una importación en curso. Espera a que termine y vuelve a borrar. No se borró nada.",
+    "eraseFailed": "No pudimos empezar el borrado. No se borró nada; vuelve a intentar en un minuto.",
+    "erasedNote": "Las importaciones vuelven a abrirse alrededor de una hora después del borrado, cuando termina el trabajo de fondo, así nada borrado puede volver.",
+    "countRecords": "Registros",
+    "countFiles": "Archivos"
   },
   "states": {
     "errT": "No se pudo cargar esta pantalla.",
@@ -282,7 +318,11 @@
     "transfers": "Transferencias",
     "transport": "Transporte",
     "travel": "Viajes",
-    "uncategorized": "Sin categoría"
+    "uncategorized": "Sin categoría",
+    "partner": "Pareja",
+    "gifts": "Regalos",
+    "debt_payments": "Pagos de deudas",
+    "cash": "Efectivo"
   },
   "txKinds": {
     "expense": "gasto",
@@ -464,7 +504,16 @@
       "rates": "Cotizaciones",
       "doneNote": "Esta página es el único registro. No podemos mostrarla de nuevo.",
       "doneBackups": "Las copias de seguridad lo guardan 35 días y luego desaparece del todo.",
-      "start": "Volver al inicio"
+      "start": "Volver al inicio",
+      "running": "Todavía hay una importación en curso. Espera a que termine y luego borra tu cuenta. No se borró nada.",
+      "notStarted": "Primero confirma que eres tú y luego borra tu cuenta.",
+      "unfinishedTitle": "Tu cuenta todavía no está borrada",
+      "unfinished": "El borrado de tus datos no terminó a tiempo. Sigues con la sesión iniciada y no cambió nada más. Terminar de borrar sigue desde donde quedó.",
+      "finish": "Terminar de borrar",
+      "workingPlain": "Borrando tus datos y cerrando tus sesiones…",
+      "partialClosedLead": "Se cerraron todas las sesiones y ya no puedes entrar. Un último paso no terminó; lo terminamos dentro de la próxima hora. No tienes que hacer nada.",
+      "items": "Registros",
+      "goneTitle": "Esta página ya venció"
     },
     "tooMany": {
       "title": "Demasiados intentos",
@@ -562,5 +611,12 @@
       "changesTitle": "Cuando cambian estos términos",
       "changes": "Si cambian los términos o el aviso de privacidad, Cuenta te muestra la versión nueva y te pide aceptarla antes de abrir cualquier pantalla con plata. La versión está arriba en cada página."
     }
+  },
+  "limit": {
+    "title": "Demasiadas solicitudes",
+    "label": "Límite",
+    "lead": "{seconds, plural, one {Pediste más de lo que una persona puede en un minuto. Espera # segundo y vuelve a intentar.} other {Pediste más de lo que una persona puede en un minuto. Espera # segundos y vuelve a intentar.}}",
+    "why": "El límite mantiene Cuenta rápida para todos. No se perdió nada de lo que guardaste.",
+    "back": "Volver al resumen"
   }
 }

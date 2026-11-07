@@ -79,7 +79,7 @@ describe('T-WEB-5 catalogues', () => {
         count++;
       });
     }
-    expect(count).toBe(7);
+    expect(count).toBe(9); // SF-164 adds overview.placesCount, SF-172 limit.lead
   });
 
   it('T-WEB-5 the counts that can be zero have a zero form (D-19)', () => {

@@ -1,0 +1,101 @@
+/* Delete the account (SF-169): one column on white, the warning then the re-sign-in, no cards (D-21); tokens only. */
+.heading {
+  margin: 0;
+  font-size: var(--t-2xl);
+  font-weight: var(--w-head);
+}
+
+.heading:focus {
+  outline: none;
+}
+
+.sub {
+  margin: var(--s2) 0 0;
+  padding-bottom: var(--s5);
+  max-width: 64ch;
+  color: var(--muted);
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+  max-width: 480px;
+}
+
+.what {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.list {
+  margin: 0;
+  padding-left: var(--s5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  padding-top: var(--s5);
+  border-top: 1px solid var(--edge);
+}
+
+.form h2,
+.working h2 {
+  margin: 0;
+  font-size: var(--t-l);
+  font-weight: var(--w-head);
+}
+
+.muted {
+  margin: 0;
+  font-size: var(--t-s);
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s4);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+  color: var(--ink);
+  font-size: var(--t-s);
+  font-weight: var(--w-em);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.working {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.working p {
+  margin: 0;
+}
+
+.noteText {
+  margin: 0;
+}
+
+.noteAction {
+  margin-top: var(--s2);
+}
+
+@media (pointer: coarse) {
+  .link {
+    min-height: 44px;
+  }
+}

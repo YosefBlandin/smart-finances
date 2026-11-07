@@ -93,7 +93,11 @@
     "missingTitle": "{m} has no dollar rate.",
     "missingBody": "Its peso spending is left out of every dollar figure until you add one.",
     "addRate": "Add the rate",
-    "noName": "No name"
+    "noName": "No name",
+    "spentIncl": "includes {u} in dollars",
+    "sectionFailed": "This part of the overview didn’t load.",
+    "placesCount": "{n, plural, one {# purchase} other {# purchases}}",
+    "placesNone": "No peso spending at any place this month."
   },
   "transactions": {
     "sub": "Every row from every source, with your review choices applied. Text from files is shown exactly as it arrived.",
@@ -121,7 +125,8 @@
     "saveApprove": "Save and approve",
     "choiceKept": "Your choice is kept apart from the imported row and survives a re-import of the same month.",
     "fixInSource": "Fix this one in the {s}.",
-    "fixInSourceBody": "Rows from that source are corrected in the file and uploaded again. Only Mercado Pago rows can be changed here."
+    "fixInSourceBody": "Rows from that source are corrected in the file and uploaded again. Only Mercado Pago rows can be changed here.",
+    "nextPage": "Show the next {n}"
   },
   "review": {
     "sub": "Rows the importers weren’t sure about. Approve them or pick a better category; your totals move within seconds.",
@@ -136,7 +141,8 @@
       "possible_duplicate": "Same amount, place and day as another row",
       "bcv_rate": "Converted at the official Venezuelan rate",
       "summed": "A month total, not single purchases"
-    }
+    },
+    "saveFailed": "That change didn’t save. Nothing changed; try again."
   },
   "imports": {
     "sub": "Upload a file from each source. A new file for the same month replaces the old one, and you can undo it.",
@@ -189,7 +195,25 @@
     "errors": {
       "name": "The file name needs the month and year, like budget_Jun_2026.xlsx.",
       "never": "The file never arrived. It may have been over the 20 MiB limit."
-    }
+    },
+    "refused": {
+      "source": "Choose where the file comes from first.",
+      "empty": "That file is empty. Choose the file again.",
+      "name": "That file doesn’t fit this source. Check the rule above the file button.",
+      "tooLarge": "That file is over the size limit for this source.",
+      "paused": "Imports are paused for a while. Nothing was sent; try again later.",
+      "unavailable": "Imports can’t start right now. Nothing was sent; try again in a minute.",
+      "daily": "You’ve made 10 imports today, the daily limit. Try again tomorrow.",
+      "bytes": "Your stored files are close to the 200 MiB limit. Erase your data to make room.",
+      "running": "Another import is still running. Wait for it to finish, then send this file.",
+      "conflict": "That import didn’t start. Nothing was sent; try again.",
+      "limited": "Too many requests for now. Wait a minute, then try again.",
+      "failed": "That import didn’t start. Nothing was sent; try again.",
+      "upload": "The file didn’t upload. Choose it again to retry."
+    },
+    "sending": "Sending the file…",
+    "continues": "Still running. It keeps going without this page: check back in a few minutes to see how it ended.",
+    "statusCol": "Status"
   },
   "rates": {
     "ratesTitle": "Dollar rates",
@@ -198,7 +222,11 @@
     "addRatePh": "Add a rate",
     "saved2": "saved",
     "missing": "Missing",
-    "rtFoot": "Rates keep two decimals. Changing one updates that month’s dollar figures at once."
+    "rtFoot": "Rates keep two decimals. Changing one updates that month’s dollar figures at once.",
+    "save": "Save",
+    "saveFailed": "That rate didn’t save. Nothing changed; try again.",
+    "invalid": "Use a number above 0 with at most two decimals, like 1,424.37.",
+    "statusCol": "Status"
   },
   "data": {
     "sub": "What Cuenta stores about you, where it lives, and how to take it out or remove it.",
@@ -224,7 +252,15 @@
     "delBtn": "Delete everything",
     "deleting": "Deleting {a, plural, one {# transaction} other {# transactions}} and {b, plural, one {# file} other {# files}}…",
     "deleted": "Everything is deleted.",
-    "deletedBody": "Imports reopen at 14:35, after background work finishes, so nothing deleted can come back."
+    "deletedBody": "Imports reopen at 14:35, after background work finishes, so nothing deleted can come back.",
+    "eraseUnfinishedTitle": "The erase may not have finished",
+    "eraseUnfinished": "The server didn’t answer in time. Imports stay closed until the erase finishes, so finish it now.",
+    "finishErase": "Finish erasing",
+    "eraseRunning": "An import is still running. Wait until it ends, then delete again. Nothing was erased.",
+    "eraseFailed": "We couldn’t start the erase. Nothing was erased; try again in a minute.",
+    "erasedNote": "Imports open again about an hour after the erase, once background work finishes, so nothing deleted can come back.",
+    "countRecords": "Records",
+    "countFiles": "Files"
   },
   "states": {
     "errT": "Couldn’t load this screen.",
@@ -282,7 +318,11 @@
     "transfers": "Transfers",
     "transport": "Transport",
     "travel": "Travel",
-    "uncategorized": "Uncategorized"
+    "uncategorized": "Uncategorized",
+    "partner": "Partner",
+    "gifts": "Gifts",
+    "debt_payments": "Debt payments",
+    "cash": "Cash"
   },
   "txKinds": {
     "expense": "expense",
@@ -464,7 +504,16 @@
       "rates": "Dollar rates",
       "doneNote": "This page is the only record. We can’t show it again.",
       "doneBackups": "Backups keep it for 35 days, then it’s gone for good.",
-      "start": "Back to the start"
+      "start": "Back to the start",
+      "running": "An import is still running. Wait until it ends, then delete your account. Nothing was deleted.",
+      "notStarted": "Confirm it’s you first, then delete your account.",
+      "unfinishedTitle": "Your account isn’t deleted yet",
+      "unfinished": "Erasing your data didn’t finish in time. You’re still signed in and nothing else changed. Finish deleting picks up where it stopped.",
+      "finish": "Finish deleting",
+      "workingPlain": "Erasing your data, then ending your sessions…",
+      "partialClosedLead": "Every session has ended and you can’t sign in. A last step didn’t finish; we finish it within the hour. You don’t need to do anything.",
+      "items": "Records",
+      "goneTitle": "This page has expired"
     },
     "tooMany": {
       "title": "Too many tries",
@@ -562,5 +611,12 @@
       "changesTitle": "When these terms change",
       "changes": "If the terms or the privacy notice change, Cuenta shows you the new version and asks you to accept it before any money screen opens. The version is at the top of each page."
     }
+  },
+  "limit": {
+    "title": "Too many requests",
+    "label": "Limit",
+    "lead": "{seconds, plural, one {You asked for more than one person can in a minute. Wait # second, then try again.} other {You asked for more than one person can in a minute. Wait # seconds, then try again.}}",
+    "why": "The limit keeps Cuenta quick for everyone. Nothing you saved is lost.",
+    "back": "Back to the overview"
   }
 }

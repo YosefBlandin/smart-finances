@@ -1,0 +1,236 @@
+/* Imports (SF-167): the source and its rule, the file button and drop area, then the list with one import beside it;
+   tokens only (D-21, D-22). */
+.heading {
+  margin: 0;
+  font-size: var(--t-2xl);
+  font-weight: var(--w-head);
+}
+
+.heading:focus {
+  outline: none;
+}
+
+.sub {
+  margin: var(--s2) 0 0;
+  padding-bottom: var(--s5);
+  max-width: 64ch;
+  color: var(--muted);
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  max-width: 720px;
+}
+
+.source {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.rule {
+  margin: 0;
+  max-width: 64ch;
+  font-size: var(--t-s);
+  color: var(--muted);
+}
+
+.drop {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  align-items: center;
+  padding: var(--s5);
+  border: 1px dashed var(--control);
+  border-radius: var(--r-m);
+  background: var(--surface);
+}
+
+.drop[data-dragging] {
+  border-style: solid;
+  border-color: var(--ink);
+  background: var(--sunken);
+}
+
+.choose {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+  padding: 0 var(--s4);
+  border-radius: var(--r-s);
+  background: var(--ink);
+  color: var(--surface);
+  font-size: var(--t-s);
+  font-weight: var(--w-em);
+  cursor: pointer;
+}
+
+.choose[data-busy] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.choose:focus-within {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* The native file input stays in the page for the keyboard and assistive technology, drawn by its label. */
+.file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.or {
+  font-size: var(--t-s);
+  color: var(--muted);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s5);
+  align-items: start;
+}
+
+@media (min-width: 1100px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  }
+}
+
+.open {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: var(--w-em);
+  text-align: start;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.status {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  align-items: center;
+}
+
+.inUse {
+  font-size: var(--t-xs);
+  color: var(--muted);
+}
+
+.nowrap {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  padding: var(--s5);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
+  background: var(--surface);
+  box-shadow: var(--lift);
+}
+
+.detailHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detailTitle {
+  margin: 0;
+  font-size: var(--t-l);
+  font-weight: var(--w-head);
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--s2) var(--s4);
+  margin: 0;
+  font-size: var(--t-s);
+}
+
+.facts dt {
+  color: var(--muted);
+}
+
+.facts dd {
+  margin: 0;
+}
+
+.counts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s3);
+  margin: 0;
+}
+
+.counts dt {
+  font-size: var(--t-xs);
+  color: var(--muted);
+}
+
+.counts dd {
+  margin: 0;
+  font-size: var(--t-l);
+  font-weight: var(--w-head);
+  font-variant-numeric: tabular-nums;
+}
+
+.skipped {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  margin: var(--s2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.skipped li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  align-items: baseline;
+}
+
+.where {
+  font-weight: var(--w-em);
+  white-space: nowrap;
+}
+
+/* Imported or generated text exactly as it is (D-16, D-86): Chivo Mono, wrapped anywhere. */
+.mono {
+  font-family: var(--font-data);
+  font-size: var(--t-xs);
+  overflow-wrap: anywhere;
+}

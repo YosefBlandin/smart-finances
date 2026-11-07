@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { createRef } from 'react';
+import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Field, SelectField } from './Field';
 
@@ -48,5 +49,27 @@ describe('T-WEB-9: Field', () => {
     expect(trigger.getAttribute('aria-haspopup')).toBe('listbox');
     const described = (trigger.getAttribute('aria-describedby') ?? '').split(' ').map((id) => document.getElementById(id)?.textContent);
     expect(described).toContain('Pick a kind.');
+  });
+
+  it('T-WEB-9 SelectField renders on the server with no style attribute (the content policy refuses one), showing its label and value', () => {
+    const html = renderToString(
+      <SelectField
+        label="Kind"
+        name="kind"
+        value="income"
+        hint="One kind at a time."
+        options={[
+          { id: 'expense', label: 'Spending' },
+          { id: 'income', label: 'Income' },
+        ]}
+      />,
+    );
+    expect(html).not.toMatch(/\sstyle=/);
+    expect(html).toContain('Kind');
+    expect(html).toContain('Income');
+    expect(html).toContain('One kind at a time.');
+    expect(html).toContain('aria-haspopup="listbox"');
+    // A form still gets the value before the page has hydrated.
+    expect(html).toMatch(/<input[^>]*type="hidden"[^>]*name="kind"[^>]*value="income"|<input[^>]*name="kind"[^>]*type="hidden"[^>]*value="income"/);
   });
 });

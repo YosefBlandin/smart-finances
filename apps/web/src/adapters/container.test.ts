@@ -4,9 +4,10 @@ import { createContainer, getContainer, PORT_NAMES } from './container';
 import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
+import { SSMClient } from '@aws-sdk/client-ssm';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { CognitoIdentityProvider } from './cognito';
-import { UnwiredDataApi, UnwiredParameterStore } from './container';
+import { HttpDataApi } from './data-api';
 import { DynamoAccountStore } from './dynamodb/accounts';
 import { DynamoCounter } from './dynamodb/counters';
 import { DynamoPowStore } from './dynamodb/pow';
@@ -28,6 +29,7 @@ import { MemorySessionStore } from './memory/session-store';
 import { MemorySettings } from './memory/settings';
 import { PwnedPasswordsChecker } from './pwned';
 import { SecretsManagerStore } from './secrets';
+import { SsmParameterStore, type SsmClient } from './ssm';
 
 const SHARED = Symbol.for('smart-finances.container');
 
@@ -206,8 +208,12 @@ describe('T-WEB-14: memory adapters keep the port rules', () => {
     expect(await c.accountStore.reserveImport('s', { day: '2026-10-31', bytes: 1, importId: 'n1' })).toEqual({ ok: true });
     await c.accountStore.resetStoredBytes('s');
     expect((await c.accountStore.getAccount('s'))?.storedBytes).toBe(0);
-    await c.accountStore.markDeleting('s', 5);
+    // No import starts during a deletion, and none may be running when it starts (AC-18).
+    expect(await c.accountStore.markDeleting('s', 5)).toEqual({ ok: false, reason: 'running' });
+    await c.accountStore.releaseImport('s', 'n1', 1);
+    expect(await c.accountStore.markDeleting('s', 5)).toEqual({ ok: true });
     expect(await c.accountStore.getAccount('s')).toMatchObject({ status: 'deleting', deletingSince: 5 });
+    expect(await c.accountStore.reserveImport('s', { day: '2026-10-31', bytes: 1, importId: 'n2' })).toEqual({ ok: false, reason: 'deleting' });
     await c.accountStore.deleteAccountRow('s');
     expect(await c.accountStore.getAccount('s')).toBeUndefined();
   });
@@ -295,7 +301,9 @@ describe('T-WEB-14: memory adapters keep the port rules', () => {
       data: { month: '2026-05', ars_per_usd: 1321.07 },
     });
     expect(await c.dataApi.rates('tok', {})).toEqual({ ok: true, data: { items: [{ month: '2026-05', ars_per_usd: 1321.07 }] } });
-    expect(await api.erase('tok', { confirm: 'DELETE' })).toEqual({ ok: true, data: { deleted: { items: 3, files: 0 } } });
+    // SF-168 (D-157): an erase counts every record it removes, the rate included (3 transactions and 1 rate).
+    expect(await api.erase('tok', { confirm: 'DELETE' })).toEqual({ ok: true, data: { deleted: { items: 4, files: 0 } } });
+    expect(await c.dataApi.rates('tok', {})).toEqual({ ok: true, data: { items: [] } });
   });
 
   it('T-WEB-14: the breach checker, secrets, parameters and logger fakes', async () => {
@@ -325,7 +333,7 @@ describe('T-WAUTH-19: the real container', () => {
     clock: SystemClock,
     settings: EnvSettings,
     secretStore: SecretsManagerStore,
-    parameterStore: UnwiredParameterStore,
+    parameterStore: SsmParameterStore,
     logger: JsonLogger,
     sessionStore: DynamoSessionStore,
     preAuthStore: DynamoPreAuthStore,
@@ -334,7 +342,7 @@ describe('T-WAUTH-19: the real container', () => {
     accountStore: DynamoAccountStore,
     breachChecker: PwnedPasswordsChecker,
     identityProvider: CognitoIdentityProvider,
-    dataApi: UnwiredDataApi,
+    dataApi: HttpDataApi,
   };
 
   type Internals = { client?: { config: { region: () => Promise<string> } }; table?: string };
@@ -345,7 +353,7 @@ describe('T-WAUTH-19: the real container', () => {
   }
 
   function noNetwork() {
-    const sends = [CognitoIdentityProviderClient, DynamoDBClient, DynamoDBDocumentClient, SecretsManagerClient].map((C) =>
+    const sends = [CognitoIdentityProviderClient, DynamoDBClient, DynamoDBDocumentClient, SecretsManagerClient, SSMClient].map((C) =>
       vi.spyOn(C.prototype, 'send').mockImplementation(() => {
         throw new Error('no AWS call in a unit test');
       }),
@@ -423,40 +431,47 @@ describe('T-WAUTH-19: the real container', () => {
     expect(createContainer().settings.get().WEB_ORIGIN).toBe(QA_ENV.WEB_ORIGIN);
   });
 
-  it('T-WAUTH-19: until PR 4 the data API fails closed on every method and logs once', async () => {
-    noNetwork();
+  // SF-161 (D-167): the real data API adapter replaces the fail-closed one; a token without a person never leaves.
+  it('T-WAUTH-19: the data API is the HTTP adapter, and a token without a person is refused without a request', async () => {
+    const calls = noNetwork();
     stubQa();
-    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const api = createContainer().dataApi;
-    const names = [
-      'listTransactions',
-      'totals',
-      'rates',
-      'putRate',
-      'review',
-      'putReview',
-      'listImports',
-      'getImport',
-      'requestImport',
-      'exportCsv',
-      'erase',
-    ] as const satisfies readonly (keyof typeof api)[];
-    for (const name of names) {
-      const call = api[name] as (token: string, input: unknown) => Promise<unknown>;
-      expect(await call('example-token', {}), name).toEqual({ ok: false, kind: 'failed' });
-    }
-    const lines = log.mock.calls.map((args) => JSON.parse(String(args[0])) as Record<string, string>);
-    expect(lines.filter((l) => l.event === 'adapter_unavailable' && l.outcome === 'data_api')).toHaveLength(1);
+    expect(api).toBeInstanceOf(HttpDataApi);
+    expect(await api.rates('example-token', {})).toEqual({ ok: false, kind: 'unauthorized' });
+    for (const spy of calls) expect(spy).not.toHaveBeenCalled();
   });
 
-  it('T-WAUTH-19: until PR 4 the parameter store fails closed (a refusal, never a missing value) and logs once', async () => {
-    noNetwork();
+  // SF-167 (D-167): the SSM adapter replaces the fail-closed parameter store; values are kept 60 seconds.
+  it('T-WAUTH-19: the parameter store reads SSM, keeps a value or its absence 60 seconds, and throws on a failure', async () => {
+    const calls = noNetwork();
     stubQa();
-    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const params = createContainer().parameterStore;
-    await expect(params.get('/smart-finances/qa/imports-paused')).rejects.toThrow(/not wired/);
-    await expect(params.get('/smart-finances/qa/imports-paused')).rejects.toThrow(/not wired/);
-    const lines = log.mock.calls.map((args) => JSON.parse(String(args[0])) as Record<string, string>);
-    expect(lines.filter((l) => l.event === 'adapter_unavailable' && l.outcome === 'parameter_store')).toHaveLength(1);
+    expect(createContainer().parameterStore).toBeInstanceOf(SsmParameterStore);
+    for (const spy of calls) expect(spy).not.toHaveBeenCalled();
+
+    const clock = new MemoryClock(0);
+    const answers: Record<string, () => Promise<{ Parameter?: { Value?: string } }>> = {
+      '/smart-finances/qa/imports-paused': async () => ({ Parameter: { Value: 'true' } }),
+      '/smart-finances/qa/missing': async () => Promise.reject(Object.assign(new Error('not found'), { name: 'ParameterNotFound' })),
+      '/smart-finances/qa/broken': async () => Promise.reject(Object.assign(new Error('secret detail'), { name: 'AccessDeniedException' })),
+    };
+    const asked: string[] = [];
+    const client = {
+      send: async (command: { input: { Name?: string } }) => {
+        asked.push(command.input.Name!);
+        return answers[command.input.Name!]!();
+      },
+    } as unknown as SsmClient;
+    const params = new SsmParameterStore({ client, clock });
+    const [a, b] = await Promise.all([params.get('/smart-finances/qa/imports-paused'), params.get('/smart-finances/qa/imports-paused')]);
+    expect([a, b]).toEqual(['true', 'true']);
+    expect(await params.get('/smart-finances/qa/missing')).toBeUndefined();
+    expect(await params.get('/smart-finances/qa/missing')).toBeUndefined();
+    expect(asked).toEqual(['/smart-finances/qa/imports-paused', '/smart-finances/qa/missing']);
+    clock.advance(60_000);
+    expect(await params.get('/smart-finances/qa/imports-paused')).toBe('true');
+    expect(asked).toHaveLength(3);
+    await expect(params.get('/smart-finances/qa/broken')).rejects.toThrow(/could not be read: AccessDeniedException$/);
+    await expect(params.get('/smart-finances/qa/broken')).rejects.toThrow(/AccessDeniedException/);
+    expect(asked.filter((n) => n.endsWith('broken'))).toHaveLength(2); // a failure is not kept
   });
 });
