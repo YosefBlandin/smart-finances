@@ -7,7 +7,8 @@
   "exports": {
     "./fields": "./src/fields.mjs",
     "./categories": "./src/categories.mjs",
-    "./routes": "./src/routes.mjs"
+    "./routes": "./src/routes.mjs",
+    "./sources": "./src/sources.mjs"
   },
   "scripts": {
     "test": "node --test test/*.test.mjs"

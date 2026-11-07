@@ -8,7 +8,7 @@ import { StateBlock } from '@/ui/patterns/StateBlock/StateBlock';
 import { Chip } from '@/ui/primitives/Chip/Chip';
 import { SelectField } from '@/ui/primitives/Field/Field';
 import { Note } from '@/ui/primitives/Note/Note';
-import { SOURCES } from '@smart-finances/contracts/routes';
+import { SOURCES } from '@smart-finances/contracts/sources';
 import { ImportDetail } from './Detail';
 import styles from './Imports.module.css';
 import { fileRefusal, periodText, refusalKey, SOURCE_IDS, statusText, statusTone, type ImportItem, type SourceId } from './model';

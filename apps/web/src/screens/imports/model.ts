@@ -1,4 +1,4 @@
-import { checkImportRequest, SOURCES } from '@smart-finances/contracts/routes';
+import { checkImportRequest, SOURCES } from '@smart-finances/contracts/sources';
 import type { useTranslations } from 'next-intl';
 import type { ImportRecord, ImportsPage } from '@/queries/keys';
 import type { ChipTone } from '@/ui/primitives/Chip/Chip';

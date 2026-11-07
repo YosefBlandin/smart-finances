@@ -7,21 +7,36 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { z } from 'zod';
 
 export const POW_ENDPOINT = '/api/auth/pow';
 const REFRESH_MS = 9 * 60_000;
 const MIN_REFRESH_MS = 30_000;
 
-const HEX64 = z.string().regex(/^[0-9a-f]{64}$/);
-// The route's reply, checked like any other boundary (D-124).
-const Challenge = z.object({
-  salt: z.string().min(1).max(64),
-  challenge: HEX64,
-  max: z.number().int().min(0).max(10_000_000),
-  expires: z.number(),
-  sig: HEX64,
-});
+// The route's reply, checked like any other boundary (D-124). Checked by hand rather than with zod, which would add
+// about 26 KB of compressed JavaScript to every page that holds a form (the Lighthouse budget, T-WEB-17).
+type Challenge = { salt: string; challenge: string; max: number; expires: number; sig: string };
+const isHex64 = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{64}$/.test(v);
+
+export function parseChallenge(value: unknown): Challenge {
+  const c = (typeof value === 'object' && value !== null ? value : {}) as Record<string, unknown>;
+  const { salt, challenge, max, expires, sig } = c;
+  if (
+    typeof salt !== 'string' ||
+    salt.length < 1 ||
+    salt.length > 64 ||
+    !isHex64(challenge) ||
+    typeof max !== 'number' ||
+    !Number.isInteger(max) ||
+    max < 0 ||
+    max > 10_000_000 ||
+    typeof expires !== 'number' ||
+    !Number.isFinite(expires) ||
+    !isHex64(sig)
+  ) {
+    throw new Error('invalid proof-of-work challenge');
+  }
+  return { salt, challenge, max, expires, sig };
+}
 
 export type PowPuzzle = { salt: string; challenge: string; max: number };
 type Answer = { salt: string; n: string; sig: string };
@@ -63,7 +78,7 @@ export function PowField() {
       try {
         const res = await fetch(POW_ENDPOINT, { cache: 'no-store', credentials: 'same-origin' });
         if (!res.ok || cancelled) return;
-        const c = Challenge.parse(await res.json());
+        const c = parseChallenge(await res.json());
         const n = await solvePow(c, globalThis.crypto.subtle, () => cancelled);
         if (cancelled || n === undefined) return;
         setAnswer({ salt: c.salt, n: String(n), sig: c.sig });

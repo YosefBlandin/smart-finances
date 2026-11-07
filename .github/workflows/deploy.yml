@@ -67,8 +67,11 @@ jobs:
           STAGE: test
         run: npm run test-storybook --workspace @smart-finances/web
 
-      # Phone settings on the fixtures (D-134).
+      # Phone settings on the fixtures (D-134). On qa a failure is reported but does not stop the deploy (owner,
+      # 2026-11-07): the run measures the session-ended screen, not the money screens, until a follow-up seeds a session
+      # for it and brings LCP under budget. Staging and prod keep the gate.
       - name: Lighthouse CI budgets
+        continue-on-error: ${{ github.ref_name == 'qa' }}
         env:
           STAGE: test
         run: npm run lhci --workspace @smart-finances/web
