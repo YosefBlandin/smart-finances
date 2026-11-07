@@ -611,5 +611,12 @@
       "changesTitle": "When these terms change",
       "changes": "If the terms or the privacy notice change, Cuenta shows you the new version and asks you to accept it before any money screen opens. The version is at the top of each page."
     }
+  },
+  "limit": {
+    "title": "Too many requests",
+    "label": "Limit",
+    "lead": "{seconds, plural, one {You asked for more than one person can in a minute. Wait # second, then try again.} other {You asked for more than one person can in a minute. Wait # seconds, then try again.}}",
+    "why": "The limit keeps Cuenta quick for everyone. Nothing you saved is lost.",
+    "back": "Back to the overview"
   }
 }

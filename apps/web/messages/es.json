@@ -611,5 +611,12 @@
       "changesTitle": "Cuando cambian estos términos",
       "changes": "Si cambian los términos o el aviso de privacidad, Cuenta te muestra la versión nueva y te pide aceptarla antes de abrir cualquier pantalla con plata. La versión está arriba en cada página."
     }
+  },
+  "limit": {
+    "title": "Demasiadas solicitudes",
+    "label": "Límite",
+    "lead": "{seconds, plural, one {Pediste más de lo que una persona puede en un minuto. Espera # segundo y vuelve a intentar.} other {Pediste más de lo que una persona puede en un minuto. Espera # segundos y vuelve a intentar.}}",
+    "why": "El límite mantiene Cuenta rápida para todos. No se perdió nada de lo que guardaste.",
+    "back": "Volver al resumen"
   }
 }

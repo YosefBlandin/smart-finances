@@ -236,6 +236,10 @@ export const E2E_PEOPLE = [
   // keyboard walk, and one for the language switch.
   ...A11Y_PEOPLE,
   'a11y-lang',
+  // e2e/limit.spec.ts (SF-172): one goes past the limit, the other is still served; one reads the page in Spanish.
+  'limit-first',
+  'limit-second',
+  'limit-es',
 ] as const;
 
 type E2EName = (typeof E2E_PEOPLE)[number];
