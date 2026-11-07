@@ -10,9 +10,12 @@ import type { Container } from '@/adapters/container';
 // contract-shaped JSON for the signed-in person. STAGE=test: the shared memory container with TEST_PERSON and the
 // fixtures (SF-161); a fresh container per test, so the person limit (5 a minute under STAGE=test) starts at zero.
 
-const jar = vi.hoisted(() => ({ sid: undefined as string | undefined }));
+const jar = vi.hoisted(() => ({ sid: undefined as string | undefined, set: [] as { name: string; value: string; maxAge?: number }[] }));
 vi.mock('next/headers', () => ({
-  cookies: async () => ({ get: (name: string) => (name === '__Host-sid' && jar.sid ? { name, value: jar.sid } : undefined) }),
+  cookies: async () => ({
+    get: (name: string) => (name === '__Host-sid' && jar.sid ? { name, value: jar.sid } : undefined),
+    set: (name: string, value: string, options?: { maxAge?: number }) => jar.set.push({ name, value, maxAge: options?.maxAge }),
+  }),
   headers: async () => new Headers(),
 }));
 vi.mock('next/navigation', async (orig) => ({
@@ -42,6 +45,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
   jar.sid = undefined;
+  jar.set = [];
 });
 
 const transactions = () => import('./transactions/route');
@@ -210,12 +214,13 @@ describe('T-WSCR-18: /api/data answers contract-shaped JSON', () => {
     const failed = await GET();
     expect(failed.status).toBe(502);
     expect(await failed.json()).toEqual({ error: { code: 'timeout' } });
-    vi.spyOn(container.dataApi, 'rates').mockResolvedValueOnce({ ok: false, kind: 'unauthorized' });
-    expect((await GET()).status).toBe(401);
     vi.spyOn(container.dataApi, 'rates').mockRejectedValueOnce(new Error('boom'));
     const thrown = await GET();
     expect(thrown.status).toBe(503);
     expect(await thrown.json()).toEqual({ error: { code: 'unavailable' } });
+    // Last: a refused token also ends the session (see 'signed out goes to sign-in').
+    vi.spyOn(container.dataApi, 'rates').mockResolvedValueOnce({ ok: false, kind: 'unauthorized' });
+    expect((await GET()).status).toBe(401);
   });
 
   it('T-WSCR-18: a 409 answers only a code the contracts list for 409; any other code becomes conflict', async () => {
@@ -254,6 +259,78 @@ describe('T-WSCR-18: server renders go to the limit page', () => {
     expect(redirectIfLimited(failed)).toBe(failed);
     const ok = { ok: true as const, data: 1 };
     expect(redirectIfLimited(ok)).toBe(ok);
+  });
+});
+
+// Signed out (architecture "Screen states": to sign-in, path kept; "Data access": 401, one refresh, then signed out).
+// The middleware sends /sign-in back to the overview while __Host-sid is set, and only a route handler or an action can
+// clear it, so a server render or a browser read that meets a refused token goes to GET /api/data/signed-out?next=<the
+// address>, which clears the cookie of a session that is gone and opens /sign-in?next=<the address>.
+describe('T-WSCR-18: signed out goes to sign-in with the path kept', () => {
+  const signedOut = () => import('./signed-out/route');
+  const live = async () => (await container.sessionStore.listBySub(TEST_PERSON.sub)).length;
+
+  it('T-WSCR-18: redirectIfStopped ends the session on an unauthorized read and opens sign-in with the address kept', async () => {
+    const { redirectIfStopped } = await import('./respond');
+    expect(await live()).toBe(1);
+    await expect(redirectIfStopped({ ok: false, kind: 'unauthorized' }, '/overview?month=2026-09')).rejects.toThrow(
+      'NEXT_REDIRECT /api/data/signed-out?next=%2Foverview%3Fmonth%3D2026-09',
+    );
+    expect(await live()).toBe(0);
+  });
+
+  it('T-WSCR-18: redirectIfStopped sends a limited read to /too-many and passes every other answer through', async () => {
+    const { redirectIfStopped } = await import('./respond');
+    await expect(redirectIfStopped({ ok: false, kind: 'limited', retryAfter: 42 }, '/review')).rejects.toThrow('NEXT_REDIRECT /too-many?wait=42');
+    const failed = { ok: false as const, kind: 'failed' as const };
+    expect(await redirectIfStopped(failed, '/review')).toBe(failed);
+    const ok = { ok: true as const, data: 1 };
+    expect(await redirectIfStopped(ok, '/review')).toBe(ok);
+    expect(await live()).toBe(1);
+  });
+
+  it('T-WSCR-18: a route whose data API refuses the token answers 401 and ends the session', async () => {
+    vi.spyOn(container.dataApi, 'rates').mockResolvedValueOnce({ ok: false, kind: 'unauthorized' });
+    expect((await (await rates()).GET()).status).toBe(401);
+    expect(await live()).toBe(0);
+  });
+
+  it('T-WSCR-18: the signed-out route clears the cookie of a session that is gone and opens sign-in with the address kept', async () => {
+    jar.sid = 'x'.repeat(43);
+    const { GET } = await signedOut();
+    await expect(GET(req('/api/data/signed-out?next=%2Ftransactions%3Fmonth%3D2026-08%26kind%3Dexpense'))).rejects.toThrow(
+      'NEXT_REDIRECT /sign-in?next=%2Ftransactions%3Fmonth%3D2026-08%26kind%3Dexpense',
+    );
+    expect(jar.set).toEqual([{ name: '__Host-sid', value: '', maxAge: 0 }]);
+  });
+
+  it('T-WSCR-18: the signed-out route leaves a live session alone and goes back to the address (no sign-out by a link)', async () => {
+    const { GET } = await signedOut();
+    await expect(GET(req('/api/data/signed-out?next=%2Freview'))).rejects.toThrow('NEXT_REDIRECT /review');
+    expect(jar.set).toEqual([]);
+    expect(await live()).toBe(1);
+  });
+
+  it('T-WSCR-18: the signed-out route keeps only an address of a money screen', async () => {
+    jar.sid = undefined;
+    const { GET } = await signedOut();
+    for (const next of ['https://evil.example/x', '//evil.example', '/sign-in', '/overview/../x', '']) {
+      await expect(GET(req(`/api/data/signed-out?next=${encodeURIComponent(next)}`)), next).rejects.toThrow(/^NEXT_REDIRECT \/sign-in$/);
+    }
+  });
+
+  it('T-WSCR-18: a browser read answered 401 sends the person to sign-in through the signed-out route, address kept', async () => {
+    const { getJson, DataError, browserNavigation } = await import('@/queries/data');
+    const go = vi.spyOn(browserNavigation, 'go').mockImplementation(() => {});
+    window.history.replaceState(null, '', '/transactions?month=2026-08&kind=expense');
+    vi.stubGlobal('fetch', async () => Response.json({ error: { code: 'unauthorized' } }, { status: 401 }));
+    await expect(getJson('/api/data/rates')).rejects.toBeInstanceOf(DataError);
+    expect(go).toHaveBeenCalledWith('/api/data/signed-out?next=%2Ftransactions%3Fmonth%3D2026-08%26kind%3Dexpense');
+    // Any other refusal stays on the screen.
+    go.mockClear();
+    vi.stubGlobal('fetch', async () => Response.json({ error: { code: 'consent' } }, { status: 403 }));
+    await expect(getJson('/api/data/rates')).rejects.toBeInstanceOf(DataError);
+    expect(go).not.toHaveBeenCalled();
   });
 });
 
@@ -340,7 +417,8 @@ describe('T-WSCR-18: the data hooks use the routes', () => {
   it('T-WSCR-18: a refused answer is a DataError with its status and code; only failures worth repeating are retried', async () => {
     stubFetch();
     jar.sid = undefined;
-    const { useRates, DataError, retryable } = await import('@/queries/data');
+    const { useRates, DataError, retryable, browserNavigation } = await import('@/queries/data');
+    vi.spyOn(browserNavigation, 'go').mockImplementation(() => {});
     const { result } = renderHook(() => useRates(), { wrapper: wrapper() });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(DataError);

@@ -26,7 +26,7 @@ import { MemoryAccountStore } from './memory/account-store';
 import { MemoryBreachChecker } from './memory/breach-checker';
 import { MemoryClock, SystemClock } from './memory/clock';
 import { MemoryCounter } from './memory/counter';
-import { FailingDataApi, fixtureSeed, MemoryDataApi, PersonDataApis } from './memory/data-api';
+import { FailingDataApi, fixtureSeed, MemoryDataApi, PersonDataApis, RefusingDataApi } from './memory/data-api';
 import { MemoryIdentityProvider } from './memory/identity-provider';
 import { MemoryLogger } from './memory/logger';
 import { MemoryParameterStore } from './memory/parameter-store';
@@ -183,8 +183,10 @@ export const E2E_PEOPLE = [
   'overview-bad',
   'overview-failed',
   'overview-retry',
+  'overview-signed-out',
   'transactions-paging',
   'transactions-sort',
+  'transactions-signed-out',
   // e2e/shell.spec.ts and e2e/headers.spec.ts (PR 1's specs, given a person each under D-157).
   'shell-rail',
   'shell-account',
@@ -244,9 +246,17 @@ export const E2E_PEOPLE = [
 
 type E2EName = (typeof E2E_PEOPLE)[number];
 
-/** STAGE=test people whose data is not the fixtures as is: none at all (the empty states), a data API that fails (AC-8), or one whose first erase fails (SF-168). */
-type E2EData = 'empty' | 'failing' | 'erase-fails-once';
+/**
+ * STAGE=test people whose data is not the fixtures as is: none at all (the empty states), a data API that fails (AC-8),
+ * one whose first erase fails (SF-168), or one that refuses the token at once or after two reads (signed out, SF-164,
+ * SF-165).
+ */
+type E2EData = 'empty' | 'failing' | 'erase-fails-once' | 'refused' | 'refused-after-2';
 const E2E_DATA: Partial<Record<E2EName, E2EData>> = {
+  // Its data API refuses its token, so the overview's prefetch signs it out (SF-164).
+  'overview-signed-out': 'refused',
+  // Its data API serves the shell count and the prefetch, then refuses, so a browser read is a 401 (SF-165).
+  'transactions-signed-out': 'refused-after-2',
   'review-empty': 'empty',
   'review-failed': 'failing',
   'rates-empty': 'empty',
@@ -277,7 +287,14 @@ function seedTestPerson(c: Container) {
   // The money screens read the fixtures (sample plus hostile rows) through memory data APIs that count the person's
   // requests like the real one (5 a minute under STAGE=test), so the 429 page can be reached (SF-161, SF-172). Each
   // person has a copy of their own, so one browser test's review choice, rate or import never shows in another's (SF-166).
-  const apis = new PersonDataApis(new MemoryDataApi(c.clock));
+  // A person who signed up in a browser test (e2e/auth.spec.ts) has a memory token no seed knows: they get an empty
+  // data set of their own, as on a real stage, so their money screens are not signed out (SF-164 fix round). Not
+  // counted against the limit, since their sign-up flows open the overview several times a minute.
+  const apis = new PersonDataApis(new MemoryDataApi(c.clock), (token) => {
+    const api = new MemoryDataApi(c.clock);
+    api.allowToken(token);
+    return api;
+  });
   c.dataApi = apis;
   const seed = fixtureSeed();
   seedPerson(c, apis, seed, TEST_PERSON);
@@ -301,6 +318,11 @@ function seedPerson(
   const accessToken = token({ sub, exp: Math.floor((now + SESSION_ABSOLUTE_MS) / 1000), token_use: 'access' });
   if (data === 'failing') {
     apis.add(accessToken, new FailingDataApi());
+  } else if (data === 'refused' || data === 'refused-after-2') {
+    const dataApi = new MemoryDataApi(c.clock, { limits: c, logger: c.logger });
+    dataApi.seed(seed);
+    dataApi.allowToken(accessToken);
+    apis.add(accessToken, new RefusingDataApi(dataApi, data === 'refused' ? 0 : 2));
   } else {
     const dataApi = new MemoryDataApi(c.clock, { limits: c, logger: c.logger, eraseFailures: ERASE_FAILURES[data ?? 'fixtures'] ?? 0 });
     if (data !== 'empty') dataApi.seed(seed);

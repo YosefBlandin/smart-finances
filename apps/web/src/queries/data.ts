@@ -13,6 +13,7 @@ import {
   type TotalsReply,
   type TransactionFilters,
   type TransactionsPage,
+  signedOutPath,
 } from './keys';
 
 // The data hooks (D-127, D-130): TanStack Query over the same-origin JSON routes /api/data/*, which add the person's
@@ -33,7 +34,18 @@ export class DataError extends Error {
   }
 }
 
-/** GET a same-origin JSON route. A network failure is a DataError with status 0. */
+/** The browser's page change, a seam for tests (jsdom has no navigation). */
+export const browserNavigation = {
+  go(url: string): void {
+    window.location.assign(url);
+  },
+};
+
+/**
+ * GET a same-origin JSON route. A network failure is a DataError with status 0. A 401 (signed out: no live session, or
+ * the data API refused the token after its one refresh) also sends the person to sign-in with this page's address kept,
+ * through the signed-out route, which clears the ended session's cookie (architecture "Screen states", "Data access").
+ */
 export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   let res: Response;
   try {
@@ -50,6 +62,7 @@ export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T>
   } catch {
     // Not our JSON (a proxy's page): the status says enough.
   }
+  if (res.status === 401) browserNavigation.go(signedOutPath(window.location.pathname + window.location.search));
   const wait = Number(res.headers.get('retry-after'));
   throw new DataError(res.status, code, Number.isFinite(wait) && wait > 0 ? wait : undefined);
 }

@@ -6,7 +6,7 @@ import { dataKeys } from '@/queries/keys';
 import { monthOf, totalsRange } from '@/screens/overview/model';
 import { Rates } from '@/screens/rates/Rates';
 import styles from '@/screens/rates/Rates.module.css';
-import { redirectIfLimited } from '../../api/data/respond';
+import { redirectIfStopped } from '../../api/data/respond';
 import { requireMoneyAccess } from '../../guarded';
 import { saveRate } from './actions';
 
@@ -34,7 +34,7 @@ export default async function RatesPage() {
   const reads = createDataReads(container);
   const range = totalsRange(undefined, monthOf(container.clock.now()));
   const [rates, totals] = await Promise.all([reads.getRates(access.session), reads.getTotals(access.session, range)]);
-  for (const result of [rates, totals]) if (!result.ok) redirectIfLimited(result);
+  for (const result of [rates, totals]) if (!result.ok) await redirectIfStopped(result, '/rates');
   const client = new QueryClient();
   if (rates.ok) client.setQueryData(dataKeys.rates(), rates.data);
   if (totals.ok) client.setQueryData(dataKeys.totals(range), totals.data);

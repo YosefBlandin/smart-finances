@@ -3,7 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { dataKeys } from '@/queries/keys';
 import { Review } from '@/screens/review/Review';
 import styles from '@/screens/review/Review.module.css';
-import { redirectIfLimited } from '../../api/data/respond';
+import { redirectIfStopped } from '../../api/data/respond';
 import { requireMoneyAccess } from '../../guarded';
 import { chooseReview } from './actions';
 import { readReview } from './read';
@@ -29,7 +29,7 @@ export default async function ReviewPage() {
   if (!access.ok) return intro;
 
   const review = await readReview(access.session.accessToken);
-  if (!review.ok) redirectIfLimited(review);
+  if (!review.ok) await redirectIfStopped(review, '/review');
   const client = new QueryClient();
   if (review.ok) client.setQueryData(dataKeys.review(), review.data);
   return (

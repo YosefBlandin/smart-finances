@@ -47,3 +47,11 @@ export const dataKeys = {
   imports: () => ['data', 'imports'] as const,
   import: (id: string) => ['data', 'imports', id] as const,
 };
+
+/**
+ * Where a signed-out person goes (architecture "Screen states": to sign-in, path kept): GET /api/data/signed-out clears
+ * the cookie of a session that is gone and opens /sign-in?next=<address>. address is a path with its search values.
+ */
+export function signedOutPath(address: string): string {
+  return `/api/data/signed-out?next=${encodeURIComponent(address)}`;
+}

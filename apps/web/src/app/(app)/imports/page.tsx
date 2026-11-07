@@ -5,7 +5,7 @@ import { createDataReads } from '@/application/data/reads';
 import { dataKeys } from '@/queries/keys';
 import { Imports } from '@/screens/imports/Imports';
 import styles from '@/screens/imports/Imports.module.css';
-import { redirectIfLimited } from '../../api/data/respond';
+import { redirectIfStopped } from '../../api/data/respond';
 import { requireMoneyAccess } from '../../guarded';
 import { requestImport } from './actions';
 
@@ -30,7 +30,7 @@ export default async function ImportsPage() {
   if (!access.ok) return intro;
 
   const imports = await createDataReads(getContainer()).listImports(access.session, {});
-  if (!imports.ok) redirectIfLimited(imports);
+  if (!imports.ok) await redirectIfStopped(imports, '/imports');
   const client = new QueryClient();
   if (imports.ok) client.setQueryData(dataKeys.imports(), imports.data);
   return (

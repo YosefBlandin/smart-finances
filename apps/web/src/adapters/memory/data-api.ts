@@ -309,18 +309,60 @@ export class FailingDataApi implements DataApi {
 }
 
 /**
+ * STAGE=test: a data API that serves its first `served` calls through inner, then refuses the token as the real one does
+ * once its one refresh fails (architecture "Data access": 401, one refresh, then signed out). With served 0 it refuses
+ * every call. For the signed-out browser tests (SF-164, SF-165).
+ */
+export class RefusingDataApi implements DataApi {
+  private calls = 0;
+  constructor(
+    private readonly inner: DataApi,
+    private readonly served: number,
+  ) {}
+  private pass<A extends unknown[], R>(call: (...args: A) => Promise<R>) {
+    return async (...args: A): Promise<R | DataApiFailure> => {
+      if (this.calls >= this.served) return { ok: false, kind: 'unauthorized' };
+      this.calls += 1;
+      return call(...args);
+    };
+  }
+  listTransactions: DataApi['listTransactions'] = this.pass((t, i) => this.inner.listTransactions(t, i));
+  totals: DataApi['totals'] = this.pass((t, i) => this.inner.totals(t, i));
+  rates: DataApi['rates'] = this.pass((t, i) => this.inner.rates(t, i));
+  putRate: DataApi['putRate'] = this.pass((t, i) => this.inner.putRate(t, i));
+  review: DataApi['review'] = this.pass((t, i) => this.inner.review(t, i));
+  putReview: DataApi['putReview'] = this.pass((t, i) => this.inner.putReview(t, i));
+  listImports: DataApi['listImports'] = this.pass((t, i) => this.inner.listImports(t, i));
+  getImport: DataApi['getImport'] = this.pass((t, i) => this.inner.getImport(t, i));
+  requestImport: DataApi['requestImport'] = this.pass((t, i) => this.inner.requestImport(t, i));
+  exportCsv: DataApi['exportCsv'] = this.pass((t, i) => this.inner.exportCsv(t, i));
+  erase: DataApi['erase'] = this.pass((t, i) => this.inner.erase(t, i));
+}
+
+/**
  * STAGE=test: one data API per person, picked by the access token, so a browser test that changes data (a review
- * choice, a rate, an import) changes only its own person's copy of the fixtures and never another test's (SF-166). An
- * unknown token goes to the fallback, which answers unauthorized as before.
+ * choice, a rate, an import) changes only its own person's copy of the fixtures and never another test's (SF-166).
  */
 export class PersonDataApis implements DataApi {
   private readonly byToken = new Map<string, DataApi>();
-  constructor(private readonly fallback: DataApi) {}
+  /**
+   * fallback answers an unknown token. newcomer, when given, instead makes an unknown token a data API of its own on
+   * first use (a person who signed up in a browser test: no data yet, as on a real stage).
+   */
+  constructor(
+    private readonly fallback: DataApi,
+    private readonly newcomer?: (token: string) => DataApi,
+  ) {}
   add(token: string, api: DataApi) {
     this.byToken.set(token, api);
   }
   private pick(token: string): DataApi {
-    return this.byToken.get(token) ?? this.fallback;
+    const known = this.byToken.get(token);
+    if (known) return known;
+    if (!this.newcomer) return this.fallback;
+    const api = this.newcomer(token);
+    this.byToken.set(token, api);
+    return api;
   }
   listTransactions: DataApi['listTransactions'] = (token, input) => this.pick(token).listTransactions(token, input);
   totals: DataApi['totals'] = (token, input) => this.pick(token).totals(token, input);

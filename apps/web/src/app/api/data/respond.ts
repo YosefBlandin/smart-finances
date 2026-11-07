@@ -2,8 +2,10 @@ import { ERROR_CODES } from '@smart-finances/contracts/routes';
 import { redirect } from 'next/navigation';
 import { getContainer } from '@/adapters/container';
 import { createDataReads, type DataReads } from '@/application/data/reads';
-import type { Session } from '@/application/session';
+import { createSessions, type Session } from '@/application/session';
 import type { DataApiFailure, DataApiResult } from '@/ports/data-api';
+import { signedOutPath } from '@/queries/keys';
+import { readSessionCookie } from '../../cookies';
 import { requireMoneyAccess } from '../../guarded';
 
 // Shared by the JSON read routes /api/data/* (D-127; architecture.md "Data access (web server)"). Each route checks the
@@ -11,6 +13,8 @@ import { requireMoneyAccess } from '../../guarded';
 // session, and answers its data as JSON, or { error: { code } } with a status the browser hooks act on: 401 signed out,
 // 403 no consent or account being deleted, 404 not found, 409 conflict (a code the contracts list for 409, else conflict), 429 past the person limit with Retry-After
 // (AC-17), 400 an input the contracts refuse, 502 a data API failure (retry), 503 an unexpected one. Never cached.
+// A token the data API refuses (401 after its one refresh, architecture "Data access") ends this session here too, so
+// the person is signed out whichever adapter answered; the browser then goes to sign-in with its address kept.
 
 export const NO_STORE = { 'Cache-Control': 'private, no-store' };
 
@@ -55,6 +59,7 @@ export async function dataRoute<T>(
       return errorResponse(403, access.reason === 'consent' ? 'consent' : 'forbidden');
     }
     const result = await read(createDataReads(getContainer()), access.session);
+    if (!result.ok && result.kind === 'unauthorized') await endThisSession();
     return result.ok ? ok(result.data) : failure(result);
   } catch {
     return errorResponse(503, 'unavailable');
@@ -72,6 +77,11 @@ export function searchValues<K extends string>(request: Request, names: readonly
   return out;
 }
 
+/** Signs out the session of this request (its row goes, its refresh token is revoked); nothing without one. */
+async function endThisSession(): Promise<void> {
+  await createSessions(getContainer()).endSession(await readSessionCookie());
+}
+
 /**
  * For server renders that read through the use cases (the money pages' prefetch): a read past the person limit goes to
  * the limit page with the wait (AC-17); every other answer passes through for the page to show.
@@ -79,4 +89,19 @@ export function searchValues<K extends string>(request: Request, names: readonly
 export function redirectIfLimited<T>(result: DataApiResult<T>): DataApiResult<T> {
   if (!result.ok && result.kind === 'limited') redirect(`/too-many?wait=${result.retryAfter ?? 60}`);
   return result;
+}
+
+/**
+ * For server renders that read through the use cases (the money pages' prefetch): a read past the person limit goes to
+ * the limit page with the wait (AC-17); a token the data API refuses ends the session and goes to sign-in with the
+ * page's address kept (architecture "Screen states": to sign-in, path kept), through GET /api/data/signed-out, which
+ * clears the cookie (the middleware sends /sign-in back to the overview while it is set). Every other answer passes
+ * through for the page to show. address is the page's own path and search, as the person asked for it.
+ */
+export async function redirectIfStopped<T>(result: DataApiResult<T>, address: string): Promise<DataApiResult<T>> {
+  if (!result.ok && result.kind === 'unauthorized') {
+    await endThisSession();
+    redirect(signedOutPath(address));
+  }
+  return redirectIfLimited(result);
 }
