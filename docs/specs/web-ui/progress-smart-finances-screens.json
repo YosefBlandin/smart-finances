@@ -1,7 +1,7 @@
 {
   "spec": "web-ui",
   "repo": "smart-finances-screens",
-  "brief": "pr-smart-finances-screens.md@locked-v8",
+  "brief": "pr-smart-finances-screens.md@locked-v9",
   "tool": "Claude Code desktop (owner machine); tasks by executor subagents in the web-screens worktree",
   "model": "claude-opus-5-5 (executors), claude-sonnet reviewers",
   "baseline": {
@@ -190,6 +190,29 @@
         "Conformance-review fix round (2026-11-06): SF-172 RUM half done in 65e16e3; no stop point.",
         "conformance re-review (fresh context, 2026-11-06): no blocker or major; minor findings fixed by the planning session: 2cc200f a refused identity pool (500) no longer reaches the page as an unhandled rejection: first credentials fetched before the client starts (refusal: monitoring off), a refused renewal disables the client and returns the last credentials. Before the fix the new test showed 2 unhandled rejections 'RUM credentials: GetId 500'; after: rum.test.ts 8 passed."
       ]
+    },
+    {
+      "id": "SF-173",
+      "status": "done, awaiting the owner's acceptance of D-190 and the qa Lighthouse run",
+      "commit": "2a082cd (seeded person lighthouse), adf765c (React Aria on first use, fonts not preloaded), d8324dc (no qa continue-on-error), e483fa3 (conformance fixes)",
+      "evidence": [
+        "Before: lighthouserc.json sent a dummy __Host-sid, so every money page measured the ended-session screen (h1 states_title); first-load script 182-223 KB gzip, over the 204,800-byte budget on /imports and /data in CI run 42374910989.",
+        "After: the money pages render their real content as the person lighthouse (LCP element per page: Kept_say, Transactions_sub, Review_sub, Imports_sub, Rates_sub, Data_muted); script 150,694-166,549 bytes on every page; CLS 0.000-0.003.",
+        "STAGE=test npm run lhci --workspace @smart-finances/web exit 1 locally: LCP medians overview 2770, transactions 2614, review 2507, imports 2764, rates 2615, data 2618 ms (script and CLS pass).",
+        "Local-to-CI calibration on base 2ccea1a (same build CI measured): local LCP medians imports 3364 and data 3220 ms, against CI run 42374910989 imports 2580 and data 2723 ms (CI 0.5-0.8 s faster); the other four pages were 2710-2915 ms locally and under 2500 in CI. With the smaller 497 ms offset the branch's worst page is about 2270 ms in CI. Proof is the first qa run after the merge.",
+        "npm test exit 0 (vitest 46 files, 649 tests; node suites pass, including ci.test.mjs T-WEB-17 and lhci.test.mjs); web lint and tsc exit 0; npm run e2e exit 0: 109 passed; after e483fa3 the shell, a11y, review-rates, imports and transactions specs: 70 passed.",
+        "test-storybook not run locally: Playwright's own Chromium is not installed on this machine (the e2e suite uses the installed Chrome); CI runs it."
+      ],
+      "review": "fresh-context spec-reviewer, 2026-11-07: 0 blocker; 2 major (no evidence recorded: recorded here; D-190 proposed: left for the owner in PR review); 2 minor fixed in e483fa3 (focus back to the trigger after a pointer open, with tests; a disabled select never fetches React Aria)."
+    },
+    {
+      "id": "SF-174",
+      "status": "done",
+      "commit": "3048445",
+      "evidence": [
+        "npm test --workspace infra (inside npm test) exit 0: T-WINF-8 expects framework 'Next.js - SSR' on Create and Update and no change on Delete; npm run build --workspace @smart-finances/infra exit 0. Not deployed: qa deploys with the next qa merge; staging and prod are the owner's."
+      ],
+      "review": "fresh-context spec-reviewer, 2026-11-07: no finding."
     }
   ],
   "deviations": [
@@ -329,6 +352,14 @@
       "proposal": "Event names import_refused and import_release to add to architecture Security events.",
       "decidedBy": "owner",
       "newDecision": "D-184 (locked-v9)"
+    },
+    {
+      "date": "2026-11-07",
+      "task": "SF-173",
+      "from": "D-134 script budget (204,800 bytes) and LCP 2.5 s on the real money screens, with React Aria in every first load",
+      "proposal": "React Aria loads on first use (menu, month picker, confirm modal, select are plain markup until used) and the fonts are not preloaded.",
+      "decidedBy": "pending: the owner, in the PR review",
+      "newDecision": "D-190 (proposed, locked-v9)"
     }
   ],
   "surprises": [
