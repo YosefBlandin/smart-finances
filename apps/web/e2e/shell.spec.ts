@@ -147,14 +147,22 @@ test.describe('desktop rail', () => {
   test('T-WEB-10: the rail and its account area stay in view while the page scrolls', async ({ page, context }) => {
     await signInAs(context, 'shell-scroll');
     await page.goto('/transactions');
-    // A tall page, built through the DOM (the policy allows CSSOM styles, not style attributes).
-    await page.evaluate(() => {
-      const tall = document.createElement('div');
-      tall.style.height = '4000px';
-      document.querySelector('main')!.append(tall);
-      window.scrollTo(0, document.body.scrollHeight);
-    });
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(1000);
+    // A tall page, built through the DOM (the policy allows CSSOM styles, not style attributes). Hydration removes a
+    // node it did not render, so one added before hydration ends is added again until it stays and the page scrolls.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          if (!document.querySelector('main [data-tall]')) {
+            const tall = document.createElement('div');
+            tall.dataset.tall = '';
+            tall.style.height = '4000px';
+            document.querySelector('main')!.append(tall);
+          }
+          window.scrollTo(0, document.body.scrollHeight);
+          return window.scrollY;
+        }),
+      )
+      .toBeGreaterThan(1000);
     const signOut = page.locator('[data-account]').first().getByRole('button', { name: 'Sign out' });
     await expect(signOut).toBeInViewport({ ratio: 1 });
     await expect(rail(page).getByRole('link', { name: 'Overview' })).toBeInViewport({ ratio: 1 });
