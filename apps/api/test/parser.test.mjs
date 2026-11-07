@@ -195,3 +195,32 @@ function row(id, date, source) {
   return { id, date, date_precision: 'day', kind: 'expense', amount: -100, currency: 'ARS', category: 'Groceries', merchant: '', description_raw: id, source, source_ref: `f#${id}`, country: 'AR', flags: [], import_batch: 'b' };
 }
 
+
+// ---- SF-28 review fixes ----
+test('T-IMP-7 a payments report whose period cannot be read fails instead of crashing', async () => {
+  const h = setup();
+  const report = mpReport.replaceAll('2026-05-0', '2026-5x-0');
+  const r = await h.upload('mercadopago', 'x.csv', report);
+  await h.handler(h.event(r.s3_key));
+  const rec = await h.record(r.import_id);
+  assert.deepEqual([rec.status, rec.error.code], ['failed', 'unreadable']);
+  assert.equal(h.rows().length, 0);
+});
+
+test('T-IMP-7 a file with no rows at all fails and leaves the stored rows alone', async () => {
+  const h = setup();
+  await h.handler(h.event((await h.upload('csv', 'a.csv', csv(['2026-03-01,A,-1.00,ARS,acc']))).s3_key));
+  const empty = await h.upload('csv', 'b.csv', csv([]), { at: T0 });
+  await h.handler(h.event(empty.s3_key));
+  assert.deepEqual([(await h.record(empty.import_id)).status, (await h.record(empty.import_id)).error.code], ['failed', 'no_rows']);
+  assert.equal(h.rows().length, 1);
+});
+
+test('T-IMP-7 a file that is not the size the form was asked for fails', async () => {
+  const h = setup();
+  const r = await h.upload('csv', 'a.csv', csv(['2026-03-01,A,-1.00,ARS,acc']));
+  h.store.putObject(r.s3_key, csv(['2026-03-01,A,-1.00,ARS,acc', '2026-03-02,B,-1.00,ARS,acc']));
+  await h.handler(h.event(r.s3_key));
+  assert.equal((await h.record(r.import_id)).error.code, 'size_mismatch');
+  assert.equal(h.rows().length, 0);
+});

@@ -59,7 +59,15 @@ function readFile(importers, source, buf, file) {
   const bad = issues.filter((i) => !i.info);
   if (bad.length > MAX_BAD_ROWS) throw new Refused('too_many_bad_rows', `${bad.length} rows could not be read; at most ${MAX_BAD_ROWS} may be skipped.`);
   if (result.transactions.length === 0 && bad.length > 0) throw new Refused('unknown_content', 'No row of this file could be read as this source.');
-  const { period, skipped: fileSkipped } = periodOf(source, result);
+  // An empty file would replace a period's rows with nothing; undo is the way to remove them.
+  if (result.transactions.length === 0) throw new Refused('no_rows', 'The file has no rows to import.');
+  let period;
+  let fileSkipped;
+  try {
+    ({ period, skipped: fileSkipped } = periodOf(source, result));
+  } catch {
+    throw new Refused('unreadable', 'The period this file covers could not be read from it.');
+  }
   if (MONTH_SOURCES.has(source) && result.transactions.some((t) => t.date.slice(0, 7) !== period)) {
     throw new Refused('row_outside_month', `The file has rows dated outside ${period}.`);
   }
@@ -108,6 +116,7 @@ export function createParserHandler({ store, now = () => Date.now(), importers =
     const buf = await store.getObject(key);
     if (!buf) return 'ignored';
 
+    if (buf.length !== record.size) return fail(record, 'size_mismatch', 'The file that arrived is not the size the upload form was asked for.');
     let parsed;
     try {
       parsed = readFile(importers, record.source, buf, record.file_name);
@@ -120,13 +129,21 @@ export function createParserHandler({ store, now = () => Date.now(), importers =
     const lock = await takeLock(store, sub, importId, { period: parsed.period, now: at, eventTime });
     if (lock.outcome !== 'locked') return lock.outcome;
 
+    // Read again so a concurrent duplicate's planned counts are kept, not overwritten.
+    const current = await getImport(store, sub, importId);
+    if (current?.status !== 'importing') return 'ignored';
     const withReport = {
-      ...lock.record,
+      ...current,
       skipped: parsed.skipped,
       counts: { added: 0, updated: 0, removed: 0, skipped: parsed.skipped.length },
       ...(parsed.result.check ? { checks: parsed.result.check } : {}),
     };
-    await store.put(withReport, { if: [{ attr: 'status', op: '=', value: 'importing' }] });
+    try {
+      await store.put(withReport, { if: [{ attr: 'status', op: '=', value: 'importing' }] });
+    } catch (err) {
+      if (err instanceof ConditionFailed) return 'ignored';
+      throw err;
+    }
     const commit = await commitImport(store, sub, importId, { content_hash: contentHash(record.source, buf), now: at });
     if (commit.outcome !== 'committed' && commit.outcome !== 'unchanged') return commit.outcome;
     const done = await reconcile(store, sub, importId, { now: at, load: loadFrom({ import_id: importId, result: parsed.result }) });
