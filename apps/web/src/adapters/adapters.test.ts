@@ -128,10 +128,12 @@ describe('T-WAUTH-1: settings load from the named variables', () => {
     expect(yml).not.toMatch(/AWS_REGION/);
   });
 
-  it('T-WEB-14: amplify.yml runs the unit tests without the build host AWS runtime markers, so the STAGE=test refusal stays for deployed runtimes', () => {
+  it('T-WEB-14: amplify.yml runs the unit tests without the build host AWS runtime markers or the branch settings, so STAGE=test keeps its defaults and the refusal stays for deployed runtimes', () => {
     const yml = readFileSync(new URL('../../amplify.yml', import.meta.url), 'utf8');
     const line = yml.split('\n').find((l) => l.includes('npm test --workspace @smart-finances/web'));
-    expect(line).toMatch(/env -u AWS_EXECUTION_ENV -u AWS_LAMBDA_FUNCTION_NAME npm test --workspace @smart-finances\/web/);
+    expect(line).toBeDefined();
+    const unset = [...line!.matchAll(/-u ([A-Z_]+)/g)].map((m) => m[1]);
+    for (const name of ['AWS_EXECUTION_ENV', 'AWS_LAMBDA_FUNCTION_NAME', ...CONTRACT_NAMES]) expect(unset, name).toContain(name);
   });
 });
 
