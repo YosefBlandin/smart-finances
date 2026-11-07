@@ -11,7 +11,9 @@ applications:
             - cd ../..
             - npm ci
             - npm run lint --if-present --workspace @smart-finances/web
-            - env -u AWS_EXECUTION_ENV -u AWS_LAMBDA_FUNCTION_NAME npm test --workspace @smart-finances/web
+            # The unit tests run as STAGE=test: without the build host's AWS runtime markers (the STAGE=test refusal, D-171)
+            # and without the branch's settings, which would replace the test defaults.
+            - env -u AWS_EXECUTION_ENV -u AWS_LAMBDA_FUNCTION_NAME -u STAGE -u API_URL -u USER_POOL_ID -u WEB_CLIENT_ID -u WEB_CLIENT_SECRET_ARN -u HMAC_SECRET_ARN -u SESSIONS_TABLE -u ACCOUNTS_TABLE -u UPLOAD_HOST -u WEB_ORIGIN -u SUPPORT_ADDRESS -u COMMIT_SHA npm test --workspace @smart-finances/web
             - cd apps/web
         build:
           commands:
