@@ -12,12 +12,9 @@ const A = 'person-a';
 const T0 = Date.parse('2026-11-01T12:00:00.000Z');
 const MiB = 1024 * 1024;
 
-export const httpEvent = (sub, routeKey, { body, pathParameters } = {}) => ({
-  routeKey,
-  requestContext: sub == null ? {} : { authorizer: { jwt: { claims: { sub } } } },
-  ...(body === undefined ? {} : { body: typeof body === 'string' ? body : JSON.stringify(body) }),
-  ...(pathParameters ? { pathParameters } : {}),
-});
+import { httpEvent } from './fixtures/http.mjs';
+
+export { httpEvent };
 
 function setup() {
   const store = createMemoryStore();

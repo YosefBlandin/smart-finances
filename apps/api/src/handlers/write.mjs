@@ -2,8 +2,10 @@
 // adapter: the person comes only from the verified claims, input is checked with the shared
 // contract schemas (D-39), and the core modules do the work.
 import { checkImportRequest, SOURCES } from '@smart-finances/contracts/routes';
-import { abandonReconcile, createImport, FORM_SECONDS, startRepair, startUndo } from '../store/imports.mjs';
+import { abandonReconcile, createImport, FORM_SECONDS, inEraseWindow, startRepair, startUndo } from '../store/imports.mjs';
+import { erasedKey } from '../store/keys.mjs';
 import { createRepo } from '../store/repo.mjs';
+import { monthsWithData } from '../store/totals.mjs';
 import { ulid as defaultUlid } from '../store/ulid.mjs';
 import { HttpError, checked, fail, personOf, reply } from './http.mjs';
 
@@ -64,14 +66,35 @@ async function repairPeriod(deps, sub, event) {
   return started(deps, sub, await startRepair(deps.store, sub, source, period, { now: deps.now(), ulid: deps.ulid }));
 }
 
+// Refused from erased_at until quiet_until (D-30).
+async function refuseWhileErasing(deps, sub) {
+  const marker = await deps.store.get(erasedKey(sub), { consistent: true });
+  if (inEraseWindow(marker, deps.now())) throw new HttpError('conflict', 'your data is being deleted; try again later');
+}
+
+// POST /totals/rebuild: the owner's fix for a batch that reached the rollup's on-failure queue.
+async function rebuildTotals(deps, sub) {
+  await refuseWhileErasing(deps, sub);
+  const months = await monthsWithData(deps.store, sub);
+  await deps.store.invokeAsync(deps.rollupFunction, { sub, months: 'all' });
+  return reply(202, { months: months.length });
+}
+
 const ROUTE_HANDLERS = {
   'POST /imports': requestImport,
   'POST /imports/{id}/undo': undoImport,
   'POST /periods/{source}/{period}/repair': repairPeriod,
+  'POST /totals/rebuild': rebuildTotals,
 };
 
-export function createWriteHandler({ store, now = () => Date.now(), ulid = defaultUlid, parserFunction = process.env.PARSER_FUNCTION } = {}) {
-  const deps = { now, ulid, parserFunction };
+export function createWriteHandler({
+  store,
+  now = () => Date.now(),
+  ulid = defaultUlid,
+  parserFunction = process.env.PARSER_FUNCTION,
+  rollupFunction = process.env.ROLLUP_FUNCTION,
+} = {}) {
+  const deps = { now, ulid, parserFunction, rollupFunction };
   return async (event) => {
     try {
       const sub = personOf(event);

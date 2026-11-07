@@ -50,3 +50,17 @@ export async function recomputeMonth(store, sub, month, { now = Date.now() } = {
   }
   return { written: true, row_count: rows.length };
 }
+
+// Every month that has a row or a stored total (rebuild, architecture.md "HTTP routes").
+export async function monthsWithData(store, sub) {
+  const pk = personPk(sub);
+  const [rows, sums] = await Promise.all([
+    store.query({ pk, prefix: PREFIX.TXN, consistent: true }),
+    store.query({ pk, prefix: PREFIX.SUM, consistent: true }),
+  ]);
+  const months = new Set([
+    ...rows.items.map((i) => i.sk.slice(PREFIX.TXN.length, PREFIX.TXN.length + 7)),
+    ...sums.items.map((i) => i.sk.slice(PREFIX.SUM.length)),
+  ]);
+  return [...months].sort();
+}
