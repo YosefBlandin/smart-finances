@@ -78,6 +78,8 @@ test('T-API-3 GET /imports pages hold 50 items, with an opaque cursor', async ()
   assert.equal(new Set([...first.body.items, ...second.body.items].map((i) => i.import_id)).size, 53);
   const bad = await w.get(A, 'GET /imports', { queryStringParameters: { cursor: 'nonsense' } });
   assert.deepEqual([bad.status, bad.body.error.code], [400, 'bad_request']);
+  const long = await w.get(A, 'GET /imports', { queryStringParameters: { cursor: 'a'.repeat(2049) } });
+  assert.deepEqual([long.status, long.body.error.code], [400, 'bad_request'], 'the contract caps a cursor at 2048');
 });
 
 test('T-API-3 GET /imports/{id} returns the record, its skipped rows and error text, or not_found', async () => {

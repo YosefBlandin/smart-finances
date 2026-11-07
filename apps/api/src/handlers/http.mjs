@@ -1,5 +1,7 @@
 // What every HTTP handler shares: who is asking, and how answers and errors look on the wire.
 
+import { ROUTES } from '@smart-finances/contracts/routes';
+
 export const STATUS = {
   unauthorized: 401,
   bad_request: 400,
@@ -37,4 +39,11 @@ export const reply = (status, body) => ({
 export function fail(err) {
   if (err instanceof HttpError) return reply(err.status, { error: { code: err.code, message: err.message } });
   return reply(500, { error: { code: 'internal', message: 'internal error' } });
+}
+
+// Checks a request against the shared contract's schema for its route (D-39).
+export function checked(route, value) {
+  const parsed = ROUTES[route].request.safeParse(value);
+  if (!parsed.success) throw new HttpError('bad_request', parsed.error.issues[0]?.message ?? 'invalid request');
+  return parsed.data;
 }

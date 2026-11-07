@@ -1,11 +1,13 @@
 // api-write: the routes that change data (architecture.md Components "Handlers"). A thin
 // adapter: the person comes only from the verified claims, input is checked with the shared
 // contract schemas (D-39), and the core modules do the work.
-import { ROUTES, checkImportRequest, SOURCES } from '@smart-finances/contracts/routes';
+import { checkImportRequest, SOURCES } from '@smart-finances/contracts/routes';
 import { abandonReconcile, createImport, FORM_SECONDS, startRepair, startUndo } from '../store/imports.mjs';
 import { createRepo } from '../store/repo.mjs';
 import { ulid as defaultUlid } from '../store/ulid.mjs';
-import { HttpError, fail, personOf, reply } from './http.mjs';
+import { HttpError, checked, fail, personOf, reply } from './http.mjs';
+
+export { checked };
 
 export function jsonBody(event) {
   if (event.body === undefined || event.body === null || event.body === '') return undefined;
@@ -17,11 +19,6 @@ export function jsonBody(event) {
   }
 }
 
-export function checked(route, value) {
-  const parsed = ROUTES[route].request.safeParse(value);
-  if (!parsed.success) throw new HttpError('bad_request', parsed.error.issues[0]?.message ?? 'invalid request');
-  return parsed.data;
-}
 
 // POST /imports (D-15): an import record and a presigned form for exactly its object key.
 async function requestImport(deps, sub, event) {

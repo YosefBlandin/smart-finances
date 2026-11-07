@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { getImport, lockLive } from '../store/imports.mjs';
 import { personPk, PREFIX } from '../store/keys.mjs';
 import { createRepo } from '../store/repo.mjs';
-import { HttpError, fail, personOf, reply } from './http.mjs';
+import { HttpError, checked, fail, personOf, reply } from './http.mjs';
 
 export const IMPORTS_PAGE = 50;
 const ID = /^[0-9A-Za-z]{1,64}$/;
@@ -65,7 +65,7 @@ const pointerFor = (map, record) => (record.period ? map.get(`${PREFIX.PER}${rec
 
 // GET /imports: newest first, 50 a page.
 async function listImports(deps, sub, event) {
-  const cursor = event.queryStringParameters?.cursor;
+  const { cursor } = checked('GET /imports', event.queryStringParameters ?? {});
   const offset = decodeCursor(cursor, 'GET /imports', {});
   const [{ items }, map] = await Promise.all([
     deps.store.query({ pk: personPk(sub), prefix: PREFIX.IMP, consistent: true }),
