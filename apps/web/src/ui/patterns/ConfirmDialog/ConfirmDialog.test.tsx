@@ -32,6 +32,8 @@ describe('T-WEB-9: ConfirmDialog (AC-7, D-146)', () => {
         Removes every transaction, file, choice and rate.
       </ConfirmDialog>,
     );
+    // The modal loads the first time the dialog opens (D-190).
+    await screen.findByRole('alertdialog');
     const dialog = screen.getByRole('alertdialog', { name: 'Delete everything' });
     const confirm = screen.getByRole('button', { name: 'Delete everything' });
     expect(dialog.contains(confirm)).toBe(true);
@@ -54,18 +56,22 @@ describe('T-WEB-9: ConfirmDialog (AC-7, D-146)', () => {
       </ConfirmDialog>,
       'es',
     );
+    // The modal loads the first time the dialog opens (D-190).
+    await screen.findByRole('alertdialog');
     expect(screen.getByRole('button', { name: 'Deshacer esta importación' }).getAttribute('data-variant')).toBe('primary');
     expect(screen.queryByLabelText(/DELETE/)).toBeNull();
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Cancelar' })));
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('T-WEB-9 while busy the confirm button spins and Cancel is disabled', () => {
+  it('T-WEB-9 while busy the confirm button spins and Cancel is disabled', async () => {
     wrap(
       <ConfirmDialog isOpen onOpenChange={() => {}} title="Delete" confirmLabel="Delete my account" destructive busy onConfirm={() => {}}>
         Body
       </ConfirmDialog>,
     );
+    // The modal loads the first time the dialog opens (D-190).
+    await screen.findByRole('alertdialog');
     expect(screen.getByRole('button', { name: 'Delete my account' }).getAttribute('aria-busy')).toBe('true');
     expect((screen.getByRole('button', { name: 'Cancel' }) as HTMLButtonElement).disabled).toBe(true);
   });

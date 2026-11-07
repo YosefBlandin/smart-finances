@@ -1,29 +1,16 @@
-// ConfirmDialog: asks before an action that cannot be undone from here. React Aria gives the modal, focus and Escape
-// (D-141). A destructive one uses the red danger Button (D-146) and can wait for a typed word such as DELETE (AC-7);
-// while the action runs the button spins and Cancel waits (D-128). The screen owns the button that opens it.
+// ConfirmDialog's modal, loaded the first time the dialog opens (D-190): React Aria gives the modal, focus and Escape
+// (D-141).
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { Dialog, Heading, Modal, ModalOverlay } from 'react-aria-components';
 import { Button } from '../../primitives/Button/Button';
 import { Field } from '../../primitives/Field/Field';
+import type { ConfirmDialogProps } from './ConfirmDialog';
 import styles from './ConfirmDialog.module.css';
 
-export type ConfirmDialogProps = {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  confirmLabel: string;
-  onConfirm: () => void;
-  destructive?: boolean;
-  /** When set, the confirm button waits until this word is typed exactly. */
-  confirmWord?: string;
-  busy?: boolean;
-  children: ReactNode;
-};
-
-export function ConfirmDialog({
+export default function ConfirmModal({
   isOpen,
   onOpenChange,
   title,

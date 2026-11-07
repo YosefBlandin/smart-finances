@@ -29,6 +29,7 @@ describe('T-WEB-9: MonthPicker (React Aria, D-141)', () => {
     const trigger = screen.getByRole('button', { name: /March 2026/ });
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
     await act(async () => fireEvent.click(trigger));
+    await screen.findByRole('dialog');
     const dialog = screen.getByRole('dialog', { name: 'Month' });
     expect(dialog.querySelectorAll('[role="group"]')).toHaveLength(2);
     expect(dialog.querySelectorAll('button')).toHaveLength(24);
@@ -38,6 +39,7 @@ describe('T-WEB-9: MonthPicker (React Aria, D-141)', () => {
   it('T-WEB-9 months without data are disabled; a month without a rate has the amber mark and its key', async () => {
     wrap(<MonthPicker months={months} value="2026-03" onChange={() => {}} />);
     await act(async () => fireEvent.click(screen.getByRole('button', { name: /March 2026/ })));
+    await screen.findByRole('dialog');
     expect((screen.getByRole('button', { name: 'Apr 2026' }) as HTMLButtonElement).disabled).toBe(true);
     const october = screen.getByRole('button', { name: 'Oct 2026' });
     expect(october.getAttribute('data-missing')).toBe('true');
@@ -49,6 +51,7 @@ describe('T-WEB-9: MonthPicker (React Aria, D-141)', () => {
     const onChange = vi.fn();
     wrap(<MonthPicker months={months} value="2026-03" onChange={onChange} />);
     await act(async () => fireEvent.click(screen.getByRole('button', { name: /March 2026/ })));
+    await screen.findByRole('dialog');
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Sep 2026' })));
     expect(onChange).toHaveBeenCalledWith('2026-09');
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -58,6 +61,7 @@ describe('T-WEB-9: MonthPicker (React Aria, D-141)', () => {
     const onChange = vi.fn();
     wrap(<MonthPicker months={months} value="2026-03" onChange={onChange} />);
     await act(async () => fireEvent.click(screen.getByRole('button', { name: /March 2026/ })));
+    await screen.findByRole('dialog');
     await act(async () => fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(onChange).not.toHaveBeenCalled();

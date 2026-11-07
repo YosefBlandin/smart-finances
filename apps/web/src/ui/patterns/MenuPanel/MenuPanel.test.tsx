@@ -28,6 +28,7 @@ describe('T-WEB-9: MenuPanel (D-43, D-44)', () => {
     expect(button.getAttribute('aria-expanded')).toBe('false');
     expect(button.querySelector('[data-icon="menu"]')).not.toBeNull();
     await act(async () => fireEvent.click(button));
+    await screen.findByRole('dialog');
     expect(button.getAttribute('aria-expanded')).toBe('true');
     expect(button.querySelector('[data-icon="close"]')).not.toBeNull();
     expect(screen.getByRole('dialog', { name: 'Menu' })).toBeTruthy();
@@ -46,9 +47,11 @@ describe('T-WEB-9: MenuPanel (D-43, D-44)', () => {
     );
     const button = screen.getByRole('button', { name: 'Overview' });
     await act(async () => fireEvent.click(button));
+    await screen.findByRole('dialog');
     await act(async () => fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     await act(async () => fireEvent.click(button));
+    await screen.findByRole('dialog');
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Imports' })));
     expect(screen.queryByRole('dialog')).toBeNull();
   });

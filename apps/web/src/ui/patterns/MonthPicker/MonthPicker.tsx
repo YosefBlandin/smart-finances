@@ -1,11 +1,11 @@
 // MonthPicker: a month pill that opens a grid, years down and twelve months across (overview "Page frame").
-// React Aria gives the popover, focus and Escape (D-141). The chosen month is aria-current="date", months without data
-// are disabled, and months without a dollar rate carry an amber mark explained by one key line.
+// React Aria gives the popover, focus and Escape (D-141); the pill is a plain button, and the grid with React Aria loads
+// on first use, so no page's first load carries it (D-190, T-WEB-17). The chosen month is aria-current="date", months
+// without data are disabled, and months without a dollar rate carry an amber mark explained by one key line.
 'use client';
 
-import { useLocale, useTranslations } from 'next-intl';
-import { useId, useState } from 'react';
-import { Button, Dialog, DialogTrigger, Popover } from 'react-aria-components';
+import { useLocale } from 'next-intl';
+import { lazy, Suspense, useRef, useState } from 'react';
 import { Icon } from '../../primitives/Icon/Icon';
 import styles from './MonthPicker.module.css';
 
@@ -18,75 +18,46 @@ export type MonthPickerProps = {
   onChange: (month: string) => void;
 };
 
-const INTL: Record<string, string> = { en: 'en-US', es: 'es-AR' };
-const at = (year: number, index: number) => new Date(Date.UTC(year, index, 1));
+export const INTL: Record<string, string> = { en: 'en-US', es: 'es-AR' };
+export const at = (year: number, index: number) => new Date(Date.UTC(year, index, 1));
+
+const load = () => import('./MonthGrid');
+const MonthGrid = lazy(load);
 
 export function MonthPicker({ months, value, onChange }: MonthPickerProps) {
-  const t = useTranslations();
   const locale = INTL[useLocale()] ?? 'en-US';
-  const id = useId();
+  const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  const info = new Map(months.map((m) => [m.month, m]));
-  const years = [...new Set(months.map((m) => Number(m.month.slice(0, 4))))].sort((a, b) => a - b);
-  const short = new Intl.DateTimeFormat(locale, { month: 'short', timeZone: 'UTC' });
+  // The grid is mounted from the first press on, and stays mounted.
+  const [used, setUsed] = useState(false);
   const long = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' });
   const [year, month] = value.split('-').map(Number);
   const current = long.format(at(year ?? 1970, (month ?? 1) - 1));
-  const keyId = `${id}-key`;
-  const anyMissing = months.some((m) => m.hasData && !m.hasRate);
 
   return (
-    <DialogTrigger isOpen={open} onOpenChange={setOpen}>
-      <Button className={styles.trigger}>
+    <>
+      <button
+        ref={trigger}
+        type="button"
+        className={styles.trigger}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onPointerEnter={() => void load()}
+        onFocus={() => void load()}
+        onClick={() => {
+          setUsed(true);
+          setOpen(true);
+        }}
+      >
         <Icon name="calendar" />
         <span className={styles.current}>{current}</span>
         <Icon name="chevronDown" />
-      </Button>
-      <Popover className={styles.popover} placement="bottom start" offset={8}>
-        <Dialog className={styles.grid} aria-label={t('shell.month')}>
-          {({ close }) => (
-            <>
-              {years.map((y) => (
-                <div key={y} className={styles.year} role="group" aria-labelledby={`${id}-${y}`}>
-                  <span id={`${id}-${y}`} className={styles.yearLabel}>
-                    {y}
-                  </span>
-                  <div className={styles.cells}>
-                    {Array.from({ length: 12 }, (_, i) => {
-                      const key = `${y}-${String(i + 1).padStart(2, '0')}`;
-                      const m = info.get(key);
-                      const missing = Boolean(m?.hasData && !m.hasRate);
-                      return (
-                        <Button
-                          key={key}
-                          className={styles.cell}
-                          isDisabled={!m?.hasData}
-                          aria-label={`${short.format(at(y, i))} ${y}`.replace('.', '')}
-                          aria-current={key === value ? 'date' : undefined}
-                          aria-describedby={missing ? keyId : undefined}
-                          data-missing={missing || undefined}
-                          onPress={() => {
-                            onChange(key);
-                            close();
-                          }}
-                        >
-                          {short.format(at(y, i)).replace('.', '')}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-              {anyMissing ? (
-                <p id={keyId} className={styles.key}>
-                  <span className={styles.dot} aria-hidden="true" />
-                  {t('shell.noRateKey')}
-                </p>
-              ) : null}
-            </>
-          )}
-        </Dialog>
-      </Popover>
-    </DialogTrigger>
+      </button>
+      {used ? (
+        <Suspense fallback={null}>
+          <MonthGrid months={months} value={value} onChange={onChange} isOpen={open} onOpenChange={setOpen} triggerRef={trigger} />
+        </Suspense>
+      ) : null}
+    </>
   );
 }

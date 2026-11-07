@@ -2,13 +2,14 @@
 // error (AC-10). The error is a red note with an icon (D-63). SelectField is the same field around a React Aria select (D-141).
 // React Aria's select always renders a hidden native select with a style attribute, which the content policy refuses in
 // server HTML (style-src has no 'unsafe-inline'; in the browser React sets it through the CSSOM, which the policy allows).
-// So the server and the hydration pass render the same field as plain markup (label, the button with its value, hint,
-// error, and a hidden input carrying the value for a form), and React Aria's select takes its place once hydrated: the
-// field shows at once, with no skeleton and no layout shift (SF-171, owner decision on the SF-165 workaround).
+// So the server renders the field as plain markup (label, the button with its value, hint, error, and a hidden input
+// carrying the value for a form), and React Aria's select takes its place on first use: a press, or a key that opens a
+// select, loads it (a pointer over the button or focus on it starts the load early), and it opens with its button focused.
+// The field shows at once, with no skeleton and no layout shift (SF-171, owner decision on the SF-165 workaround), and no
+// page's first load carries React Aria (D-190, T-WEB-17).
 'use client';
 
-import { forwardRef, useId, useSyncExternalStore, type ChangeEvent } from 'react';
-import { Button as AriaButton, ListBox, ListBoxItem, Popover, Select, SelectValue, Text, Label } from 'react-aria-components';
+import { forwardRef, lazy, Suspense, useId, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { Icon } from '../Icon/Icon';
 import styles from './Field.module.css';
 
@@ -86,21 +87,34 @@ export type SelectFieldProps<T extends string> = {
   disabled?: boolean;
 };
 
-const noSubscribe = () => () => {};
-/** False on the server and during hydration, true after it (and on any client-only render). */
-const useHydrated = () =>
-  useSyncExternalStore(
-    noSubscribe,
-    () => true,
-    () => false,
-  );
+const load = () => import('./AriaSelectField');
+const AriaSelectField = lazy(load);
+
+// Keys that open a closed React Aria select from its button (Enter and Space press the button, so they arrive as a click).
+const OPENING_KEYS = new Set(['ArrowDown', 'ArrowUp']);
 
 export function SelectField<T extends string>(props: SelectFieldProps<T>) {
-  return useHydrated() ? <AriaSelectField {...props} /> : <ServerSelectField {...props} />;
+  const [used, setUsed] = useState(false);
+  const plain = <ServerSelectField {...props} onUse={props.disabled ? undefined : () => setUsed(true)} />;
+  if (!used) return plain;
+  return (
+    <Suspense fallback={plain}>
+      <AriaSelectField {...(props as unknown as SelectFieldProps<string>)} openOnMount />
+    </Suspense>
+  );
 }
 
 /** The select as the server renders it: what React Aria's shows when closed, without its hidden native select. */
-function ServerSelectField<T extends string>({ label, options, value, name, hint, error, disabled }: SelectFieldProps<T>) {
+function ServerSelectField<T extends string>({
+  label,
+  options,
+  value,
+  name,
+  hint,
+  error,
+  disabled,
+  onUse,
+}: SelectFieldProps<T> & { onUse?: () => void }) {
   const id = useId();
   const labelId = `${id}-label`;
   const valueId = `${id}-value`;
@@ -121,6 +135,14 @@ function ServerSelectField<T extends string>({ label, options, value, name, hint
         aria-labelledby={`${labelId} ${valueId}`}
         aria-describedby={describedBy}
         disabled={disabled}
+        onPointerEnter={() => void load()}
+        onFocus={() => void load()}
+        onClick={onUse}
+        onKeyDown={(event: KeyboardEvent) => {
+          if (!OPENING_KEYS.has(event.key) || !onUse) return;
+          event.preventDefault();
+          onUse();
+        }}
       >
         <span id={valueId} className={styles.value}>
           {selected?.label ?? ''}
@@ -140,47 +162,5 @@ function ServerSelectField<T extends string>({ label, options, value, name, hint
       ) : null}
       {name ? <input type="hidden" name={name} value={value ?? ''} disabled={disabled} /> : null}
     </div>
-  );
-}
-
-function AriaSelectField<T extends string>({ label, options, value, onChange, name, hint, error, disabled }: SelectFieldProps<T>) {
-  return (
-    <Select
-      className={styles.field}
-      data-invalid={error ? true : undefined}
-      selectedKey={value ?? null}
-      onSelectionChange={(key) => {
-        if (key !== null) onChange?.(String(key) as T);
-      }}
-      name={name}
-      isInvalid={Boolean(error)}
-      isDisabled={disabled}
-    >
-      <Label className={styles.label}>{label}</Label>
-      <AriaButton className={styles.select}>
-        <SelectValue className={styles.value} />
-        <Icon name="chevronDown" />
-      </AriaButton>
-      {hint ? (
-        <Text slot="description" className={styles.hint}>
-          {hint}
-        </Text>
-      ) : null}
-      {error ? (
-        <Text slot="errorMessage" className={styles.error}>
-          <Icon name="failed" />
-          {error}
-        </Text>
-      ) : null}
-      <Popover className={styles.popover}>
-        <ListBox className={styles.listbox}>
-          {options.map((option) => (
-            <ListBoxItem key={option.id} id={option.id} className={styles.option}>
-              {option.label}
-            </ListBoxItem>
-          ))}
-        </ListBox>
-      </Popover>
-    </Select>
   );
 }
