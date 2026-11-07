@@ -1,5 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import * as apigw from 'aws-cdk-lib/aws-apigatewayv2';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
@@ -19,7 +22,8 @@ export interface ApiStackProps extends cdk.StackProps {
 
 /**
  * HTTP API for one stage. GET /health is public; every data route binds `authorizer`, which
- * trusts only this stage's user pool and its two clients. Data routes arrive in later PRs.
+ * trusts only this stage's user pool and its two clients. The import routes run on api-read and
+ * api-write; an S3 Object Created event under uploads/ runs the parser (architecture "API stack").
  * The API publishes its address as api-url for the web stack.
  */
 export class ApiStack extends cdk.Stack {
@@ -82,10 +86,79 @@ export class ApiStack extends cdk.Stack {
       integration: new HttpLambdaIntegration('HealthIntegration', health),
     });
 
+    this.addImportFunctions();
+
     new cdk.CfnOutput(this, 'ApiUrl', { value: this.httpApi.apiEndpoint });
     new ssm.StringParameter(this, 'ApiUrlParam', {
       parameterName: `/smart-finances/${props.stage}/api-url`,
       stringValue: this.httpApi.apiEndpoint,
+    });
+  }
+
+  /** api-read, api-write and parser, each with only the table, bucket and invoke rights it uses. */
+  private addImportFunctions() {
+    const tableArn = this.formatArn({ service: 'dynamodb', resource: 'table', resourceName: this.data.tableName });
+    const uploadsArn = `arn:${this.partition}:s3:::${this.data.bucketName}/uploads/*`;
+    const allow = (fn: cdk.aws_lambda.IFunction, actions: string[], resources: string[]) =>
+      fn.addToRolePolicy(new iam.PolicyStatement({ actions, resources }));
+    const tableRead = ['dynamodb:GetItem', 'dynamodb:Query'];
+    const tableWrite = [...tableRead, 'dynamodb:PutItem', 'dynamodb:ConditionCheckItem'];
+
+    // Five minutes, below the ten-minute period lock. Async retries stay at 2, no on-failure destination.
+    const parser = makeFunction(this, {
+      name: 'parser',
+      entry: 'apps/api/src/handlers/parser.mjs',
+      memoryMb: 1024,
+      timeoutSeconds: 300,
+      environment: { TABLE_NAME: this.data.tableName, BUCKET_NAME: this.data.bucketName },
+    });
+    parser.configureAsyncInvoke({ retryAttempts: 2 });
+    allow(parser, [...tableWrite, 'dynamodb:DeleteItem'], [tableArn]);
+    allow(parser, ['s3:GetObject', 's3:DeleteObject'], [uploadsArn]);
+
+    const read = makeFunction(this, {
+      name: 'api-read',
+      entry: 'apps/api/src/handlers/read.mjs',
+      memoryMb: 256,
+      timeoutSeconds: 10,
+      environment: { TABLE_NAME: this.data.tableName },
+    });
+    allow(read, tableRead, [tableArn]);
+
+    // A presigned upload form acts with its signer's rights, so api-write holds s3:PutObject.
+    const write = makeFunction(this, {
+      name: 'api-write',
+      entry: 'apps/api/src/handlers/write.mjs',
+      memoryMb: 256,
+      timeoutSeconds: 10,
+      environment: { TABLE_NAME: this.data.tableName, BUCKET_NAME: this.data.bucketName, PARSER_FUNCTION: parser.functionName },
+    });
+    allow(write, tableWrite, [tableArn]);
+    allow(write, ['s3:PutObject'], [uploadsArn]);
+    allow(write, ['lambda:InvokeFunction'], [parser.functionArn]);
+
+    const routes: [apigw.HttpMethod, string, cdk.aws_lambda.IFunction][] = [
+      [apigw.HttpMethod.GET, '/imports', read],
+      [apigw.HttpMethod.GET, '/imports/{id}', read],
+      [apigw.HttpMethod.POST, '/imports', write],
+      [apigw.HttpMethod.POST, '/imports/{id}/undo', write],
+      [apigw.HttpMethod.POST, '/periods/{source}/{period}/repair', write],
+    ];
+    const integrations = new Map<cdk.aws_lambda.IFunction, HttpLambdaIntegration>([
+      [read, new HttpLambdaIntegration('ReadIntegration', read)],
+      [write, new HttpLambdaIntegration('WriteIntegration', write)],
+    ]);
+    for (const [method, path, fn] of routes) {
+      this.httpApi.addRoutes({ path, methods: [method], integration: integrations.get(fn)!, authorizer: this.authorizer });
+    }
+
+    new events.Rule(this, 'UploadCreated', {
+      eventPattern: {
+        source: ['aws.s3'],
+        detailType: ['Object Created'],
+        detail: { bucket: { name: [this.data.bucketName] }, object: { key: [{ prefix: 'uploads/' }] } },
+      },
+      targets: [new targets.LambdaFunction(parser)],
     });
   }
 }

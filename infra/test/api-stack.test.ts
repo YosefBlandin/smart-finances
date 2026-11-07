@@ -21,6 +21,7 @@ const CR_SINGLETON = 'AWS679f53fac002430cb0da5b7982bd2287';
 type Resource = { Type: string; Properties: Record<string, any>; DependsOn?: string[] };
 const resources = (stack: cdk.Stack) => Template.fromStack(stack).toJSON().Resources as Record<string, Resource>;
 const ofType = (all: Record<string, Resource>, type: string) => Object.entries(all).filter(([, r]) => r.Type === type);
+const IMPORT_ROUTES = ['GET /imports', 'GET /imports/{id}', 'POST /imports', 'POST /imports/{id}/undo', 'POST /periods/{source}/{period}/repair'];
 
 test('T-INF-7 GET /health has no authorizer, there is no default route, throttling is 50 and 100 (D-81), functions are named per stage', () => {
   for (const stage of STAGES) {
@@ -28,9 +29,10 @@ test('T-INF-7 GET /health has no authorizer, there is no default route, throttli
     const all = resources(api);
 
     const routes = ofType(all, 'AWS::ApiGatewayV2::Route').map(([, r]) => r.Properties);
-    assert.deepEqual(routes.map((r) => r.RouteKey), ['GET /health'], 'only the health route, no $default');
-    assert.ok([undefined, 'NONE'].includes(routes[0].AuthorizationType), 'health has no authorizer');
-    assert.equal(routes[0].AuthorizerId, undefined);
+    assert.deepEqual(routes.map((r) => r.RouteKey).sort(), [...IMPORT_ROUTES, 'GET /health'].sort(), 'health and the import routes, no $default');
+    const healthRoute = routes.find((r) => r.RouteKey === 'GET /health')!;
+    assert.ok([undefined, 'NONE'].includes(healthRoute.AuthorizationType), 'health has no authorizer');
+    assert.equal(healthRoute.AuthorizerId, undefined);
 
     const [[, httpApi]] = ofType(all, 'AWS::ApiGatewayV2::Api');
     assert.equal(httpApi.Properties.Name, `smart-finances-${stage}`);
@@ -40,8 +42,8 @@ test('T-INF-7 GET /health has no authorizer, there is no default route, throttli
     assert.deepEqual(apiStage.Properties.DefaultRouteSettings, { ThrottlingRateLimit: 50, ThrottlingBurstLimit: 100 });
 
     const functions = ofType(all, 'AWS::Lambda::Function').filter(([id]) => !id.startsWith(CR_SINGLETON)).map(([, r]) => r.Properties);
-    assert.deepEqual(functions.map((f) => f.FunctionName), [`smart-finances-${stage}-health`]);
-    const [health] = functions;
+    assert.deepEqual(functions.map((f) => f.FunctionName).sort(), ['api-read', 'api-write', 'health', 'parser'].map((n) => `smart-finances-${stage}-${n}`));
+    const health = functions.find((f) => f.FunctionName === `smart-finances-${stage}-health`)!;
     assert.equal(health.Runtime, 'nodejs22.x');
     assert.equal(health.MemorySize, 128);
     assert.equal(health.Timeout, 5);
@@ -54,8 +56,8 @@ test('T-INF-7 GET /health has no authorizer, there is no default route, throttli
 
   // The reservedConcurrency switch still works.
   const reserved = addStage(new cdk.App({ context: { ...context, reservedConcurrency: '5' } }), 'dev', env);
-  const [[, fn]] = ofType(resources(reserved.api), 'AWS::Lambda::Function').filter(([id]) => !id.startsWith(CR_SINGLETON));
-  assert.equal(fn.Properties.ReservedConcurrentExecutions, 5);
+  const ours = ofType(resources(reserved.api), 'AWS::Lambda::Function').filter(([id]) => !id.startsWith(CR_SINGLETON));
+  assert.ok(ours.length > 0 && ours.every(([, fn]) => fn.Properties.ReservedConcurrentExecutions === 5));
 });
 
 test('T-INF-7 the JWT authorizer trusts the stage pool as issuer and both its clients as audience', () => {
@@ -277,4 +279,101 @@ test('T-WINF-12 the API stage writes a JSON access log (status, route key, reque
       assert.ok(!settings.Format.includes(`$context.${banned}`), `${stage}: no $context.${banned}`);
     }
   }
+});
+
+// ---- SF-31: the import functions ----
+type Statement = { Action: string | string[]; Resource: unknown; Condition?: unknown };
+function statementsOf(all: Record<string, Resource>, roleId: string): Statement[] {
+  return ofType(all, 'AWS::IAM::Policy')
+    .filter(([, p]) => (p.Properties.Roles ?? []).some((r: any) => r.Ref === roleId))
+    .flatMap(([, p]) => p.Properties.PolicyDocument.Statement);
+}
+const actionsOf = (statements: Statement[]) => statements.flatMap((s) => (Array.isArray(s.Action) ? s.Action : [s.Action])).sort();
+function fnNamed(all: Record<string, Resource>, name: string) {
+  const found = ofType(all, 'AWS::Lambda::Function').find(([, f]) => f.Properties.FunctionName === name);
+  assert.ok(found, name);
+  return { id: found![0], props: found![1].Properties, roleId: found![1].Properties.Role['Fn::GetAtt'][0] as string };
+}
+const integrationTarget = (all: Record<string, Resource>, route: Resource) => {
+  const integration = all[String(route.Properties.Target['Fn::Join'][1][1].Ref)];
+  return integration.Properties.IntegrationUri['Fn::GetAtt'][0];
+};
+
+test('T-INF-9 every import route binds the JWT authorizer and reaches its function', () => {
+  const { api } = addStage(new cdk.App({ context }), 'qa', env);
+  const all = resources(api);
+  const [[authorizerId, authorizer]] = ofType(all, 'AWS::ApiGatewayV2::Authorizer');
+  assert.equal(authorizer.Properties.AuthorizerType, 'JWT');
+  const read = fnNamed(all, 'smart-finances-qa-api-read');
+  const write = fnNamed(all, 'smart-finances-qa-api-write');
+  const expected: Record<string, string> = {
+    'GET /imports': read.id,
+    'GET /imports/{id}': read.id,
+    'POST /imports': write.id,
+    'POST /imports/{id}/undo': write.id,
+    'POST /periods/{source}/{period}/repair': write.id,
+  };
+  for (const [key, fnId] of Object.entries(expected)) {
+    const [, route] = ofType(all, 'AWS::ApiGatewayV2::Route').find(([, r]) => r.Properties.RouteKey === key)!;
+    assert.equal(route.Properties.AuthorizationType, 'JWT', key);
+    assert.equal(route.Properties.AuthorizerId.Ref, authorizerId, key);
+    assert.equal(integrationTarget(all, route), fnId, key);
+  }
+});
+
+test('T-INF-9 sizes, environment and retries of the import functions', () => {
+  const { api } = addStage(new cdk.App({ context }), 'qa', env);
+  const all = resources(api);
+  const read = fnNamed(all, 'smart-finances-qa-api-read').props;
+  const write = fnNamed(all, 'smart-finances-qa-api-write').props;
+  const parser = fnNamed(all, 'smart-finances-qa-parser');
+  assert.deepEqual([read.MemorySize, read.Timeout, write.MemorySize, write.Timeout, parser.props.MemorySize, parser.props.Timeout], [256, 10, 256, 10, 1024, 300]);
+  assert.deepEqual(Object.keys(read.Environment.Variables).sort(), ['STAGE', 'TABLE_NAME']);
+  assert.deepEqual(Object.keys(write.Environment.Variables).sort(), ['BUCKET_NAME', 'PARSER_FUNCTION', 'STAGE', 'TABLE_NAME']);
+  assert.deepEqual(write.Environment.Variables.PARSER_FUNCTION, { Ref: parser.id });
+  assert.deepEqual(Object.keys(parser.props.Environment.Variables).sort(), ['BUCKET_NAME', 'STAGE', 'TABLE_NAME']);
+  const [[, invokeConfig]] = ofType(all, 'AWS::Lambda::EventInvokeConfig');
+  assert.equal(invokeConfig.Properties.MaximumRetryAttempts, 2);
+  assert.equal(invokeConfig.Properties.FunctionName.Ref, parser.id);
+  assert.equal(invokeConfig.Properties.DestinationConfig, undefined, 'no on-failure destination');
+});
+
+test('T-INF-9 an EventBridge rule sends Object Created under uploads/ in the stage bucket to the parser', () => {
+  const { api } = addStage(new cdk.App({ context }), 'qa', env);
+  const all = resources(api);
+  const parser = fnNamed(all, 'smart-finances-qa-parser');
+  const rules = ofType(all, 'AWS::Events::Rule');
+  assert.equal(rules.length, 1);
+  const [, rule] = rules[0];
+  const bucketName = parser.props.Environment.Variables.BUCKET_NAME;
+  assert.equal(bucketName['Fn::GetAtt'][0], ofType(all, 'Custom::AWS')[0][0], 'the bucket name read from SSM');
+  assert.deepEqual(rule.Properties.EventPattern, {
+    source: ['aws.s3'],
+    'detail-type': ['Object Created'],
+    detail: { bucket: { name: [bucketName] }, object: { key: [{ prefix: 'uploads/' }] } },
+  });
+  assert.deepEqual(rule.Properties.Targets.map((t: any) => t.Arn['Fn::GetAtt'][0]), [parser.id]);
+  const permissions = ofType(all, 'AWS::Lambda::Permission').filter(([, p]) => p.Properties.Principal === 'events.amazonaws.com');
+  assert.equal(permissions.length, 1);
+  assert.equal(permissions[0][1].Properties.FunctionName['Fn::GetAtt'][0], parser.id);
+});
+
+test('T-INF-9 grants: read only reads the table; write puts uploads and invokes only the parser; the parser reads and deletes uploads', () => {
+  const { api } = addStage(new cdk.App({ context }), 'qa', env);
+  const all = resources(api);
+  const read = statementsOf(all, fnNamed(all, 'smart-finances-qa-api-read').roleId);
+  const write = statementsOf(all, fnNamed(all, 'smart-finances-qa-api-write').roleId);
+  const parser = fnNamed(all, 'smart-finances-qa-parser');
+  const parse = statementsOf(all, parser.roleId);
+  const logs = (s: Statement[]) => s.filter((x) => !actionsOf([x]).every((a) => a.startsWith('logs:')));
+  assert.deepEqual(actionsOf(logs(read)), ['dynamodb:GetItem', 'dynamodb:Query']);
+  assert.deepEqual(actionsOf(logs(write)), ['dynamodb:ConditionCheckItem', 'dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:Query', 'lambda:InvokeFunction', 's3:PutObject']);
+  assert.deepEqual(actionsOf(logs(parse)), ['dynamodb:ConditionCheckItem', 'dynamodb:DeleteItem', 'dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:Query', 's3:DeleteObject', 's3:GetObject']);
+  const resourceOf = (statements: Statement[], action: string) => JSON.stringify(statements.find((s) => actionsOf([s]).includes(action))!.Resource);
+  assert.match(resourceOf(write, 's3:PutObject'), /\/uploads\/\*/);
+  assert.match(resourceOf(parse, 's3:GetObject'), /\/uploads\/\*/);
+  assert.match(resourceOf(parse, 's3:DeleteObject'), /\/uploads\/\*/);
+  assert.ok(resourceOf(write, 'lambda:InvokeFunction').includes(parser.id), 'invoke only the parser');
+  assert.match(resourceOf(read, 'dynamodb:Query'), /:table\//);
+  assert.doesNotMatch(resourceOf(read, 'dynamodb:Query'), /index/);
 });
