@@ -319,6 +319,15 @@ describe('T-WSCR-18: signed out goes to sign-in with the path kept', () => {
     }
   });
 
+  it('T-WSCR-18: an address whose search values carry an escape (a category with &) keeps its screen, not a bare /sign-in', async () => {
+    const { signedOutPath } = await import('@/queries/keys');
+    expect(signedOutPath('/transactions?category=Fees+%26+admin')).toBe('/api/data/signed-out?next=%2Ftransactions');
+    expect(signedOutPath('/transactions?month=2026-08')).toBe('/api/data/signed-out?next=%2Ftransactions%3Fmonth%3D2026-08');
+    jar.sid = undefined;
+    const { GET } = await signedOut();
+    await expect(GET(req(signedOutPath('/transactions?category=Fees+%26+admin')))).rejects.toThrow(/^NEXT_REDIRECT \/sign-in\?next=%2Ftransactions$/);
+  });
+
   it('T-WSCR-18: a browser read answered 401 sends the person to sign-in through the signed-out route, address kept', async () => {
     const { getJson, DataError, browserNavigation } = await import('@/queries/data');
     const go = vi.spyOn(browserNavigation, 'go').mockImplementation(() => {});

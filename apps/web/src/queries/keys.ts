@@ -51,7 +51,9 @@ export const dataKeys = {
 /**
  * Where a signed-out person goes (architecture "Screen states": to sign-in, path kept): GET /api/data/signed-out clears
  * the cookie of a session that is gone and opens /sign-in?next=<address>. address is a path with its search values.
+ * safeNext refuses any escape, so search values that carry one (a category with &) are dropped and the screen is kept.
  */
 export function signedOutPath(address: string): string {
-  return `/api/data/signed-out?next=${encodeURIComponent(address)}`;
+  const kept = address.includes('%') ? (address.split('?')[0] ?? address) : address;
+  return `/api/data/signed-out?next=${encodeURIComponent(kept)}`;
 }
