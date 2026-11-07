@@ -14,6 +14,12 @@ const ATTEMPTS = 5;
 
 const iso = (ms) => new Date(ms).toISOString();
 
+// A lost condition, or DynamoDB cancelling two overlapping transactions on one item: read
+// again and decide again.
+const retryable = (err) => err instanceof ConditionFailed
+  || (err?.name === 'TransactionCanceledException' && (err.CancellationReasons ?? []).some((r) => r?.Code === 'TransactionConflict'))
+  || err?.name === 'TransactionConflictException';
+
 // One record per upload, undo or repair. period stays '' until the parser knows it (D-39).
 export async function createImport(store, sub, { source, file_name, size, now = Date.now(), ulid = defaultUlid }) {
   const import_id = ulid(now);
@@ -56,15 +62,24 @@ export const revIs = (pointer) => (pointer.rev ? [{ attr: 'rev', op: '=', value:
 
 export const lockLive = (pointer, now) => Boolean(pointer.lock_import && pointer.lock_until && pointer.lock_until > iso(now));
 
-// Ends a record as failed, only while it still has the status that was read.
-async function failRecord(store, record, now, code, message) {
+// Ends a record as failed, only while it still has the status that was read; when it holds its
+// period's lock, the lock goes in the same transaction. Returns undefined when the record
+// changed meanwhile, so the caller reads it again.
+async function failRecord(store, sub, record, now, code, message) {
   const failed = { ...record, status: 'failed', finished_at: iso(now), error: { code, message } };
-  try {
-    await store.put(failed, { if: [{ attr: 'status', op: '=', value: record.status }] });
-  } catch (err) {
-    if (!(err instanceof ConditionFailed)) throw err;
+  const ops = [{ put: failed, if: [{ attr: 'status', op: '=', value: record.status }] }];
+  const pointer = record.period ? await getPointer(store, sub, record.source, record.period) : undefined;
+  if (pointer?.lock_import === record.import_id) {
+    const { lock_import: _lock, lock_until: _until, ...rest } = pointer;
+    ops.push({ put: { ...rest, rev: (pointer.rev ?? 0) + 1 }, if: [...revIs(pointer), { attr: 'lock_import', op: '=', value: record.import_id }] });
   }
-  return failed;
+  try {
+    await store.transact(ops);
+    return failed;
+  } catch (err) {
+    if (!retryable(err)) throw err;
+    return undefined;
+  }
 }
 
 // The parser takes the period lock for a file import ("States and exits", requested and
@@ -77,19 +92,21 @@ export async function takeLock(store, sub, importId, { period, now = Date.now(),
     const record = await getImport(store, sub, importId);
     if (!record) return { outcome: 'missing' };
     if (FINAL.has(record.status)) return { outcome: 'ignored', record };
-    if (record.status === 'requested' && iso(eventTime) > record.expires_at) {
-      return { outcome: 'failed', record: await failRecord(store, record, now, 'form_expired', 'The file arrived after its upload form expired.') };
-    }
-    if (record.status === 'importing' && record.period && record.period !== period) {
-      return { outcome: 'failed', record: await failRecord(store, record, now, 'period_changed', 'The file no longer covers the period it was locked for.') };
-    }
-    if (inEraseWindow(await store.get(erasedKey(sub), { consistent: true }), now)) {
-      return { outcome: 'failed', record: await failRecord(store, record, now, 'erasing', 'All data is being deleted; upload the file again later.') };
+    let refusal;
+    if (record.status === 'requested' && iso(eventTime) >= record.expires_at) refusal = ['form_expired', 'The file arrived after its upload form expired.'];
+    else if (record.status === 'importing' && record.period && record.period !== period) refusal = ['period_changed', 'The file no longer covers the period it was locked for.'];
+    else if (inEraseWindow(await store.get(erasedKey(sub), { consistent: true }), now)) refusal = ['erasing', 'All data is being deleted; upload the file again later.'];
+    if (refusal) {
+      const failed = await failRecord(store, sub, record, now, ...refusal);
+      if (failed) return { outcome: 'failed', record: failed };
+      continue;
     }
     const pointer = pointerOf(await getPointer(store, sub, record.source, period), sub, record.source, period);
     if (lockLive(pointer, now) && pointer.lock_import !== importId) {
       if (record.status === 'importing') return { outcome: 'ignored', record };
-      return { outcome: 'failed', record: await failRecord(store, record, now, 'period_busy', 'Another import of this period is running; try again in a few minutes.') };
+      const failed = await failRecord(store, sub, record, now, 'period_busy', 'Another import of this period is running; try again in a few minutes.');
+      if (failed) return { outcome: 'failed', record: failed };
+      continue;
     }
     const importing = { ...record, status: 'importing', period };
     const locked = { ...pointer, lock_import: importId, lock_until: iso(now + LOCK_MS), rev: (pointer.rev ?? 0) + 1 };
@@ -101,7 +118,7 @@ export async function takeLock(store, sub, importId, { period, now = Date.now(),
       ]);
       return { outcome: 'locked', record: importing, pointer: locked };
     } catch (err) {
-      if (!(err instanceof ConditionFailed)) throw err;
+      if (!retryable(err)) throw err;
       // Someone else wrote first: read again and decide again.
     }
   }
@@ -170,7 +187,7 @@ export async function commitImport(store, sub, importId, { content_hash, now = D
       await store.transact([{ put: committed, if: statusIs }, { put: moved, if: holds(pointer, importId) }]);
       return { outcome: 'committed', record: committed, pointer: moved };
     } catch (err) {
-      if (!(err instanceof ConditionFailed)) throw err;
+      if (!retryable(err)) throw err;
     }
   }
   throw new Error('commitImport: too much contention');

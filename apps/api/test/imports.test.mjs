@@ -323,3 +323,63 @@ test('T-REC-7 reconcile of a month period reads only that month; a log period re
   assert.deepEqual(await h.stored('csv', 'log'), ['c1']);
   assert.deepEqual(await h.stored('mercadopago', '2026-04'), ['apr']);
 });
+
+// ---- SF-25 review fixes ----
+test('T-REC-1 ULIDs sort by time, stay in order within one millisecond and when the clock goes back', () => {
+  const ulid = createUlid();
+  const a = ulid(T0);
+  const b = ulid(T0);
+  const c = ulid(T0 - 5);
+  const d = ulid(T0 + 1);
+  assert.match(a, /^[0-9A-HJKMNP-TV-Z]{26}$/);
+  assert.ok(a < b && b < c && c < d, [a, b, c, d].join(' '));
+  assert.equal(a.slice(0, 10), b.slice(0, 10));
+  const full = createUlid({ random: () => Array(16).fill(31) });
+  full(T0);
+  assert.throws(() => full(T0), /overflow/);
+});
+
+test('T-REC-1 an erase that starts between the read and the lock write still refuses the lock', async () => {
+  const { store, make } = await setup();
+  const r = await make();
+  const realTransact = store.transact.bind(store);
+  let once = true;
+  store.transact = async (ops) => {
+    if (once) {
+      once = false;
+      await store.put({ ...erasedKey(A), erased_at: new Date(T0).toISOString() });
+    }
+    return realTransact(ops);
+  };
+  const out = await takeLock(store, A, r.import_id, { period: '2026-05', now: T0 + MIN });
+  assert.equal(out.outcome, 'failed');
+  assert.equal((await getImport(store, A, r.import_id)).error.code, 'erasing');
+  assert.equal(await getPointer(store, A, 'mercadopago', '2026-05'), undefined);
+});
+
+test('T-REC-1 a failed import that held its lock releases it, and an event at exactly expires_at fails', async () => {
+  const { store, make } = await setup();
+  const r = await make();
+  await takeLock(store, A, r.import_id, { period: '2026-05', now: T0 });
+  assert.equal((await takeLock(store, A, r.import_id, { period: '2026-06', now: T0 + MIN })).outcome, 'failed');
+  assert.equal((await getPointer(store, A, 'mercadopago', '2026-05')).lock_import, undefined);
+  const next = await make();
+  assert.equal((await takeLock(store, A, next.import_id, { period: '2026-05', now: T0 + 2 * MIN })).outcome, 'locked');
+  const edge = await make();
+  assert.equal((await takeLock(store, A, edge.import_id, { period: '2026-07', now: T0 + 15 * MIN, eventTime: T0 + 15 * MIN })).outcome, 'failed');
+});
+
+test('T-REC-1 a transaction cancelled for a conflict is read again, not thrown', async () => {
+  const { store, make } = await setup();
+  const r = await make();
+  const realTransact = store.transact.bind(store);
+  let once = true;
+  store.transact = async (ops) => {
+    if (once) {
+      once = false;
+      throw Object.assign(new Error('cancelled'), { name: 'TransactionCanceledException', CancellationReasons: [{ Code: 'None' }, { Code: 'TransactionConflict' }] });
+    }
+    return realTransact(ops);
+  };
+  assert.equal((await takeLock(store, A, r.import_id, { period: '2026-05', now: T0 })).outcome, 'locked');
+});
