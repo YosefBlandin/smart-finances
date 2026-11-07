@@ -46,8 +46,20 @@ test('T-WEB-17: lighthouserc.json runs phone settings against next start with ST
   // Several runs per page, judged on each metric's median, so one noisy run neither passes nor fails the budget.
   assert.ok(collect.numberOfRuns >= 3);
   assert.equal(readConfig().ci.assert.aggregationMethod, 'median');
-  // The money pages need a session cookie to pass the middleware; any value does until PR 3.
-  assert.match(s.extraHeaders?.Cookie ?? '', /__Host-sid=/);
+});
+
+// The session of the STAGE=test `lighthouse` person (E2E_PEOPLE in src/adapters/container.ts): signed in, consented,
+// over the fixtures, with reads the 5-a-minute limit does not count. Any other value renders the session-ended screen,
+// and the budgets would measure that instead of the money screens.
+test('T-WEB-17: Lighthouse opens the money pages as the seeded lighthouse person, so they render their real content', () => {
+  const source = readFileSync(join(web, 'src', 'adapters', 'container.ts'), 'utf8');
+  const people = /export const E2E_PEOPLE = \[([\s\S]*?)\] as const;/.exec(source)?.[1] ?? '';
+  assert.match(people, /^\s*'lighthouse',$/m, 'lighthouse is a STAGE=test person');
+  assert.match(source, /^\s*lighthouse: 'uncounted',$/m, "the lighthouse person's reads are not counted");
+  // e2ePerson(name).sessionId: e2e-<name>-not-secret- padded with zeros to 43 characters.
+  assert.match(source, /sessionId: `e2e-\$\{name\}-not-secret-`\.padEnd\(43, '0'\)/);
+  const sessionId = 'e2e-lighthouse-not-secret-'.padEnd(43, '0');
+  assert.equal(readConfig().ci.collect.settings.extraHeaders?.Cookie, `__Host-sid=${sessionId}`);
 });
 
 test('T-WEB-17: the budgets are LCP 2.5 s, CLS 0.1 and 200 KB of first-load JavaScript, each failing the run', () => {

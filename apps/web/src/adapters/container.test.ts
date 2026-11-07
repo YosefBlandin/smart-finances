@@ -1,6 +1,7 @@
 import { readdirSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createContainer, getContainer, PORT_NAMES } from './container';
+import { createHash } from 'node:crypto';
+import { createContainer, e2ePerson, getContainer, PORT_NAMES } from './container';
 import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
@@ -128,6 +129,32 @@ describe('T-WEB-14: the container', () => {
       expect(() => createContainer(), marker).toThrow(/STAGE=test is refused in a deployed runtime/);
       expect(() => getContainer(), marker).toThrow(/STAGE=test is refused in a deployed runtime/);
     }
+  });
+});
+
+// T-WEB-17: Lighthouse CI opens each money page 5 times as the seeded `lighthouse` person, so its reads must not reach
+// the 5-a-minute STAGE=test limit (the 429 page is not what it measures), while the other people's reads still count.
+describe('T-WEB-17: the Lighthouse person of the STAGE=test container', () => {
+  const tokenOf = async (name: Parameters<typeof e2ePerson>[0]) => {
+    const c = getContainer();
+    const row = await c.sessionStore.get(createHash('sha256').update(e2ePerson(name).sessionId).digest('hex'));
+    if (!row) throw new Error(`no session for ${name}`);
+    return { c, row };
+  };
+
+  it('T-WEB-17: has a signed-in session with consent, and 30 reads are all served', async () => {
+    vi.stubEnv('STAGE', 'test');
+    const { c, row } = await tokenOf('lighthouse');
+    expect(row.sub).toBe(e2ePerson('lighthouse').sub);
+    expect((await c.accountStore.getAccount(row.sub))?.consent).toBeTruthy();
+    for (let i = 0; i < 30; i += 1) expect((await c.dataApi.rates(row.accessToken, {})).ok, `read ${i + 1}`).toBe(true);
+  });
+
+  it("T-WEB-17: another person's reads still count, so the sixth read in a minute is limited", async () => {
+    vi.stubEnv('STAGE', 'test');
+    const { c, row } = await tokenOf('overview-good');
+    for (let i = 0; i < 5; i += 1) expect((await c.dataApi.rates(row.accessToken, {})).ok).toBe(true);
+    expect(await c.dataApi.rates(row.accessToken, {})).toMatchObject({ ok: false, kind: 'limited' });
   });
 });
 
