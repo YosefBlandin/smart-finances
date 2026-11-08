@@ -2,8 +2,12 @@
 // comes only from the verified claims, and every reply has the shape of the shared contract
 // (D-39): optional fields are left out, never null.
 import { createHash } from 'node:crypto';
-import { getImport, lockLive } from '../store/imports.mjs';
-import { personPk, PREFIX } from '../store/keys.mjs';
+import { getImport, inEraseWindow, lockLive } from '../store/imports.mjs';
+import { erasedKey, personPk, PREFIX } from '../store/keys.mjs';
+import { listRates, readTotals } from '../store/rates.mjs';
+import { toCsv } from '../ingest/schema.mjs';
+import { allRows, selectRows, shownRow, shownRows } from '../store/query.mjs';
+import { reviewList } from '../store/review.mjs';
 import { createRepo } from '../store/repo.mjs';
 import { HttpError, checked, fail, personOf, reply } from './http.mjs';
 
@@ -88,9 +92,63 @@ async function readImport(deps, sub, event) {
   return reply(200, importRecord(record, pointerFor(map, record), deps.now()));
 }
 
+// One page of a filtered, sorted list, with a cursor bound to the query that made it.
+function paged(items, route, query, limit) {
+  const { cursor, ...rest } = query;
+  const offset = decodeCursor(cursor, route, rest);
+  const page = items.slice(offset, offset + limit);
+  const next = offset + limit < items.length ? encodeCursor(offset + limit, route, rest) : undefined;
+  return { items: page, ...(next ? { cursor: next } : {}) };
+}
+
+// GET /transactions (D-26): the asked months' rows, review choices applied, then filtered.
+async function listTransactions(deps, sub, event) {
+  const query = checked('GET /transactions', event.queryStringParameters ?? {});
+  const rows = selectRows(await shownRows(deps.store, sub, query.from, query.to), query);
+  return reply(200, paged(rows, 'GET /transactions', query, query.limit));
+}
+
+// GET /totals: stored month totals; refused from erased_at until quiet_until (D-30).
+async function totals(deps, sub, event) {
+  const query = checked('GET /totals', event.queryStringParameters ?? {});
+  const marker = await deps.store.get(erasedKey(sub), { consistent: true });
+  if (inEraseWindow(marker, deps.now())) throw new HttpError('conflict', 'your data is being deleted; try again later');
+  return reply(200, await readTotals(deps.store, sub, query));
+}
+
+// GET /rates
+async function rates(deps, sub) {
+  return reply(200, { items: await listRates(deps.store, sub) });
+}
+
+// GET /review
+async function review(deps, sub) {
+  return reply(200, { items: await reviewList(deps.store, sub) });
+}
+
+// toCsv already guards the free-text columns; the export guards every column but amount (Values).
+const FORMULA_START = /^[=+\-@\t\r]/;
+const guarded = (value) => (typeof value === 'string' && FORMULA_START.test(value) ? `'${value}` : value);
+const EXPORT_GUARDED = ['id', 'date', 'date_precision', 'kind', 'currency', 'source', 'country', 'import_batch'];
+
+// GET /export (AC-17): every row, review choices applied, in the schema's columns.
+async function exportCsv(deps, sub) {
+  const rows = (await allRows(deps.store, sub)).map(({ row, choice }) => {
+    const { review, ...shown } = shownRow(row, choice);
+    for (const field of EXPORT_GUARDED) shown[field] = guarded(shown[field]);
+    return shown;
+  });
+  return { statusCode: 200, headers: { 'content-type': 'text/csv; charset=utf-8' }, body: toCsv(rows) };
+}
+
 const ROUTE_HANDLERS = {
   'GET /imports': listImports,
   'GET /imports/{id}': readImport,
+  'GET /transactions': listTransactions,
+  'GET /totals': totals,
+  'GET /rates': rates,
+  'GET /review': review,
+  'GET /export': exportCsv,
 };
 
 export function createReadHandler({ store, now = () => Date.now(), routes = {} } = {}) {

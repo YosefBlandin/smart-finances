@@ -1,107 +1,307 @@
 {
   "spec": "data-architecture",
   "repo": "smart-finances",
-  "brief": "",
-  "tool": "",
-  "model": "",
+  "brief": "pr-smart-finances-reads.md@locked-v4",
+  "tool": "Claude Code (desktop app)",
+  "model": "claude-opus-5-5",
   "baseline": {
-    "tests": "",
-    "lint": "",
-    "typecheck": ""
+    "tests": "api+contracts 120/120; web 643/643 (one combined run 642/643: T-WEB-9 ENOENT on a temp fixture another test writes, pre-existing race; rerun green); infra 45/45",
+    "lint": "web lint pass",
+    "typecheck": "infra tsc --noEmit pass"
   },
   "tasks": [
     {
       "id": "SF-40",
-      "status": "todo",
+      "status": "done",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        {
+          "command": "npm ci; npm test; npm run build --workspace @smart-finances/infra; npm run lint --workspace @smart-finances/web",
+          "result": "ci 0; api+contracts 120/120, web 642/643 then 643/643 alone (race), infra 45/45; tsc 0; lint 0"
+        }
+      ],
       "review": ""
     },
     {
       "id": "SF-41",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "c2223a6",
+      "evidence": [
+        {
+          "command": "cd infra && node --require ts-node/register --test test/data-stack.test.ts (before)",
+          "result": "fail 2 (T-INF-2 stream, T-INF-10)"
+        },
+        {
+          "command": "cd infra && node --require ts-node/register --test test/data-stack.test.ts",
+          "result": "pass 8 fail 0 (T-INF-2 to T-INF-5, T-INF-10)"
+        }
+      ],
+      "review": "pass (spec-reviewer, sonnet): no findings"
     },
     {
       "id": "SF-42",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "75fb48c, 2ff5536",
+      "evidence": [
+        {
+          "command": "node --test apps/api/test/totals.test.mjs (before)",
+          "result": "fail: Cannot find module src/store/totals.mjs"
+        },
+        {
+          "command": "node --test apps/api/test/totals.test.mjs",
+          "result": "pass 5 fail 0 (T-ROL-1, T-ROL-2)"
+        },
+        {
+          "command": "node --test apps/api/test/totals.test.mjs",
+          "result": "pass 6 fail 0"
+        }
+      ],
+      "review": "pass (spec-reviewer, sonnet); 2 minor test gaps (consistent reads, TransactionConflict thrown) fixed in 2ff5536"
     },
     {
       "id": "SF-43",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "466e9aa, 6d0168c",
+      "evidence": [
+        {
+          "command": "node --test apps/api/test/rollup.test.mjs (before)",
+          "result": "fail: Cannot find module src/handlers/rollup.mjs"
+        },
+        {
+          "command": "node --test apps/api/test/rollup.test.mjs",
+          "result": "pass 4 fail 0 (T-ROL-3, T-ROL-4)"
+        },
+        {
+          "command": "npm test --workspace @smart-finances/api",
+          "result": "pass 119 fail 0"
+        },
+        {
+          "command": "node --test apps/api/test/rollup.test.mjs",
+          "result": "pass 5 fail 0"
+        }
+      ],
+      "review": "pass (spec-reviewer, sonnet); minor: malformed-record test added in 6d0168c; minor: files beyond the task's list (store/totals.mjs monthsWithData, test/fixtures/http.mjs, write-imports.test.mjs) recorded as a surprise; rebuild refused in the erase window judged to fit D-30"
     },
     {
       "id": "SF-44",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "96987c8",
+      "evidence": [
+        {
+          "command": "node --test apps/api/test/query.test.mjs (before)",
+          "result": "fail 3 (no such route)"
+        },
+        {
+          "command": "node --test apps/api/test/query.test.mjs",
+          "result": "pass 3 fail 0 (T-API-4, T-API-5)"
+        }
+      ],
       "review": ""
     },
     {
       "id": "SF-45",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "7028c63, b29a535",
+      "evidence": [
+        {
+          "command": "node --test apps/api/test/rates.test.mjs (before)",
+          "result": "pass 1 fail 4 (routes missing; only the rounding unit passed)"
+        },
+        {
+          "command": "node --test apps/api/test/rates.test.mjs",
+          "result": "pass 5 fail 0 (T-API-6, T-API-7)"
+        },
+        {
+          "command": "node --test apps/api/test/rates.test.mjs",
+          "result": "pass 5 fail 0"
+        }
+      ],
+      "review": "pass (spec-reviewer, sonnet); minor: PUT /rates erase-window refusal not in architecture text (recorded as surprise); minor: no upper bound on ars_per_usd -> refused at 1e9 or more in b29a535"
     },
     {
       "id": "SF-46",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "39fa29f, 5c80508, 841e315",
+      "evidence": [
+        {
+          "command": "node --test apps/api/test/review.test.mjs (before)",
+          "result": "fail 4 (routes missing)"
+        },
+        {
+          "command": "node --test apps/api/test/review.test.mjs",
+          "result": "pass 4 fail 0 (T-API-8, T-API-9, T-API-10)"
+        },
+        {
+          "command": "node --test apps/api/test/review.test.mjs with the old category list",
+          "result": "fail 1: missing [Loans, Transfers, Income, Interest, Refunds, Shopping, Pets]"
+        },
+        {
+          "command": "node --test apps/api/test/review.test.mjs; npm test --workspace @smart-finances/contracts; web vitest",
+          "result": "pass 5 fail 0; contracts 11/11; web 643/643"
+        },
+        {
+          "command": "node --test apps/api/test/review.test.mjs",
+          "result": "pass 6 fail 0"
+        }
+      ],
+      "review": "findings fixed (spec-reviewer, sonnet): major: category scan skipped inline literals in excel.mjs -> every ingest file scanned; minor: concurrent partial PUT review could lose a field -> conditional on updated_at with re-read; minor: regex scan blind to computed categories (accepted; csv uses CATEGORIES.at(-1)); minor: 39fa29f moved the SF-45 1e9 check above putRate (b29a535 had applied it below the write by a zero-context patch)"
     },
     {
       "id": "SF-47",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "55099a3",
+      "evidence": [
+        {
+          "command": "node --test apps/api/test/export.test.mjs (before)",
+          "result": "fail 2 (no such route)"
+        },
+        {
+          "command": "node --test apps/api/test/export.test.mjs; npm test --workspace @smart-finances/api",
+          "result": "pass 2 fail 0 (T-API-11); api 135/135"
+        }
+      ],
       "review": ""
     },
     {
       "id": "SF-48",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "8e7b27e, 6b59c71",
+      "evidence": [
+        {
+          "command": "node --test apps/api/test/erase.test.mjs (before the code existed)",
+          "result": "fail: Cannot find module src/handlers/delete.mjs (by construction; then 4/5 with repair answering not_found in the window, fixed)"
+        },
+        {
+          "command": "node --test apps/api/test/erase.test.mjs; npm test --workspace @smart-finances/api",
+          "result": "pass 5 fail 0 (T-ERA-1 to T-ERA-3); api 141/141"
+        },
+        {
+          "command": "node --test apps/api/test/erase.test.mjs without the fix",
+          "result": "pass 5 fail 3 (the three race tests)"
+        },
+        {
+          "command": "node --test apps/api/test/erase.test.mjs; npm test --workspace @smart-finances/api",
+          "result": "pass 8 fail 0; api 147/147"
+        }
+      ],
+      "review": "findings fixed (spec-reviewer, sonnet): major: resuming an unfinished erase skipped the running-work check -> checked, marker kept, conflict; major: POST /imports record had no erase check, so a form could outlive an erase -> createImport is a transaction with eraseCheck (imports.mjs, outside the task's Files); minor: put-back race gave 500 -> conflict; minor: contention rethrow -> conflict"
     },
     {
       "id": "SF-49",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "cc03ba8, cec6950",
+      "evidence": [
+        {
+          "command": "node --test apps/api/test/isolation.test.mjs with personOf mutated to map person-b to person-a",
+          "result": "fail 1 (the leak is caught)"
+        },
+        {
+          "command": "node --test apps/api/test/isolation.test.mjs",
+          "result": "pass 3 fail 0 (T-AUTH-3)"
+        },
+        {
+          "command": "node --test apps/api/test/isolation.test.mjs",
+          "result": "pass 3 fail 0"
+        }
+      ],
+      "review": "pass (spec-reviewer, sonnet); 2 minor loose status checks (repair, B's delete-all) made exact in cec6950"
     },
     {
       "id": "SF-50",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "ef65d89",
+      "evidence": [
+        {
+          "command": "cd infra && node --require ts-node/register --test test/api-stack.test.ts (tests first)",
+          "result": "fail: TS2339 tableStreamArn missing on ApiStack.data"
+        },
+        {
+          "command": "cd infra && node --require ts-node/register --test test/api-stack.test.ts",
+          "result": "pass 14 fail 0 (T-INF-7, T-INF-8, T-INF-9, T-INF-11, T-INF-12, T-INF-13, T-WINF-6, T-WINF-12)"
+        },
+        {
+          "command": "mutation: extra dynamodb:GetItem on \"*\" in the rollup role",
+          "result": "T-INF-8 fails, as it should"
+        },
+        {
+          "command": "cd infra && npm test; npx tsc --noEmit -p .",
+          "result": "pass 49 fail 0; tsc 0"
+        }
+      ],
+      "review": "pass (spec-reviewer, sonnet): no blocker or major; grants, filters, Values, tests and deploy order checked. 1 minor outside SF-50 Files: infra/lib/alarms-stack.ts STAGE_FUNCTIONS ('Functions the data PRs add join this list') lacks api-read, api-write, api-delete, parser and rollup, so their errors and throttles raise no alarm; left as a follow-up (surprise)"
     },
     {
       "id": "SF-51",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
+      "status": "done",
+      "commit": "51e5ef8",
+      "evidence": [
+        {
+          "command": "node --test apps/api/test/api-call.test.mjs (tests first)",
+          "result": "fail: ERR_MODULE_NOT_FOUND scripts/api-call.mjs"
+        },
+        {
+          "command": "node --test apps/api/test/api-call.test.mjs",
+          "result": "pass 6 fail 0"
+        }
+      ],
       "review": ""
     },
     {
       "id": "SF-52",
-      "status": "todo",
+      "status": "in_review",
       "commit": "",
-      "evidence": [],
-      "review": ""
+      "evidence": [
+        {
+          "command": "npm test (after merging origin/qa)",
+          "result": "exit 0: api+contracts 164/164, web 649/649 + lint, infra 49/49"
+        },
+        {
+          "command": "npm run build --workspace @smart-finances/infra; cd infra && npx cdk synth -c stage=qa (no AWS credentials)",
+          "result": "exit 0; exit 0"
+        },
+        {
+          "command": "node --test apps/api/test/erase.test.mjs before the fix",
+          "result": "fail: late undo reconcile in the window ended done (expected failed); refused-erase rollup test fails with totals.mjs at HEAD~1"
+        },
+        {
+          "command": "npm test --workspace @smart-finances/api",
+          "result": "pass 155 fail 0"
+        },
+        {
+          "command": "main-session PR review fixes (4fbe1cb): node --test apps/api/test/api-call.test.mjs and review.test.mjs before the fix",
+          "result": "4 api-call tests fail (prod allowed, no --yes); contention test fails (erase message); T-WINF-6 fails (literal value)"
+        },
+        {
+          "command": "node --test apps/api/test/*.test.mjs packages/contracts/test/*.test.mjs; npm test --workspace @smart-finances/infra; infra tsc",
+          "result": "pass 169 fail 0; pass 49 fail 0; tsc ok"
+        }
+      ],
+      "review": "conformance (spec-reviewer, sonnet): no blocker. major fixed in 84fce84: reconcile lock renewal had no erase check (imports.mjs), a late undo/repair could put rows back after delete-all; minor fixed in 84fce84: rollup skipped when a refused erase's marker was briefly present, now re-reads and recomputes; minor left as HUMAN step: rows imported before the stream existed have no totals until POST /totals/rebuild (release.md is spec-owned, not edited)"
     }
   ],
-  "deviations": [],
-  "surprises": []
+  "deviations": [
+    {
+      "date": "2026-11-07",
+      "task": "SF-46",
+      "from": "D-39 (categories come from the contracts list)",
+      "proposal": "The importers emit 7 categories missing from @smart-finances/contracts CATEGORIES: Interest and Refunds (mercadopago.mjs categoryFor), Shopping (mercadopago.mjs), Income, Loans and Transfers (notion.mjs), Pets (excel.mjs SHEET_CATEGORIES). The SF-46 test \"fails when an importer emits a category not in it\" therefore fails. Recommended: add the 7 to packages/contracts/src/categories.mjs before Uncategorized (which stays last), then add the test. Changing the importers instead would change the local import output (AC-20).",
+      "decidedBy": "owner, 2026-11-07 (chat: \"Extend the list\")",
+      "newDecision": "D-44"
+    }
+  ],
+  "surprises": [
+    "SF-40: web tests that walk src/ (T-WEB-9, T-WSCR-14) race with tests that write and delete temp fixtures there (zz_fixture.ts, zz_dep.ts). Pre-existing; not in this PR's files.",
+    "SF-43: POST /totals/rebuild is also refused with conflict in the erase window (D-30 lists totals among refused work); test/fixtures/http.mjs added as a shared test helper (outside the task's Files, test-only).",
+    "SF-45: PUT /rates/{month} is refused with conflict in the erase window (its put carries the erase check), so a late rate cannot outlive delete-all. missing_rates is filled in both views (months with pesos and no rate), as the web reads it from the native view. In the usd view, currencies other than ARS and USD stay out (no rate exists for them).",
+    "SF-46: PUT review is one transaction with the erase check and a check that the row exists, so a choice cannot outlive delete-all.",
+    "SF-47: toCsv guards only free-text columns, so the export also guards id, date, date_precision, kind, currency, source, country and import_batch (Values: every field except amount); allRows added to store/query.mjs and reused by review.mjs (files beyond SF-47's list).",
+    "SF-48: the erase writes ERASED before checking for live locks and open forms, and puts the marker back if it must refuse, so a lock taken between the check and the mark cannot happen. Files beyond SF-48's list: keys.mjs (uploadPrefix), write.mjs (POST /imports, undo and repair check the window first; closes PR 2 conformance minor 2), store.test.mjs (T-KEY-1 pins the new export). api-delete needs PutItem for the ERASED marker and GetItem, beyond architecture's 'table read and delete'.",
+    "infra/test/stacks.test.ts (T-INF-6, outside SF-50 Files) pins the API's SSM names; the planned sixth value table-stream-arn changed it by one line.",
+    "Grants beyond the architecture text: api-delete holds dynamodb:PutItem (it puts and checks the erase marker); the stream source adds sqs:SendMessage, GetQueueAttributes and GetQueueUrl on the failure queue to the rollup role.",
+    "Follow-up (SF-50 review): infra/lib/alarms-stack.ts STAGE_FUNCTIONS does not list the five data functions, though its comment says the data PRs add them; no spec task covers it. Proposal: add them in a follow-up, about 10 alarms, about 1 USD a month.",
+    "Accepted residual (conformance minor 2): a rollup whose erase check fails while a refused erase's marker is still present skips its month; the window is the refused erase's busy query. It stays a skip, not an error, so an erase's own deletions never reach the failure queue; the next change to the month or POST /totals/rebuild fixes it.",
+    "Conformance minor 3: rows imported on a stage before its stream existed (qa, from PR 2) have no month totals until POST /totals/rebuild per person; release.md has no such step yet. Proposal: add it after the first deploy of PR 3.",
+    "Known limits (main-session review): api-delete's 25 s timeout on a very large partition (resumable: repeat DELETE /data); GET /export and GET /review read every row into one response (10 s, 256 MB, 6 MB response limit)."
+  ],
+  "pr": "https://github.com/YosefBlandin/smart-finances/pull/28 (draft)"
 }

@@ -1,9 +1,16 @@
 import * as cdk from 'aws-cdk-lib';
 import * as apigw from 'aws-cdk-lib/aws-apigatewayv2';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as cwActions from 'aws-cdk-lib/aws-cloudwatch-actions';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { DynamoEventSource, SqsDlq } from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
@@ -22,15 +29,16 @@ export interface ApiStackProps extends cdk.StackProps {
 
 /**
  * HTTP API for one stage. GET /health is public; every data route binds `authorizer`, which
- * trusts only this stage's user pool and its two clients. The import routes run on api-read and
- * api-write; an S3 Object Created event under uploads/ runs the parser (architecture "API stack").
- * The API publishes its address as api-url for the web stack.
+ * trusts only this stage's user pool and its two clients. Reads run on api-read, changes on
+ * api-write, delete-all on api-delete; an S3 Object Created event under uploads/ runs the parser,
+ * and the table stream runs the rollup (architecture "API stack"). The API publishes its address
+ * as api-url and the delete function's name as delete-function-name for the web stack.
  */
 export class ApiStack extends cdk.Stack {
   readonly stage: string;
   readonly webOrigins: string[];
   /** The data stack's values, read from SSM on every deploy (D-33; no CloudFormation imports). */
-  readonly data: { tableName: string; bucketName: string; userPoolId: string; userPoolClientId: string; webClientId: string };
+  readonly data: { tableName: string; tableStreamArn: string; bucketName: string; userPoolId: string; userPoolClientId: string; webClientId: string };
   readonly httpApi: apigw.HttpApi;
   readonly authorizer: HttpJwtAuthorizer;
 
@@ -39,9 +47,10 @@ export class ApiStack extends cdk.Stack {
     this.stage = props.stage;
     this.webOrigins = props.webOrigins;
 
-    const values = readStageValues(this, props.stage, ['table-name', 'bucket-name', 'user-pool-id', 'user-pool-client-id', 'web-client-id']);
+    const values = readStageValues(this, props.stage, ['table-name', 'table-stream-arn', 'bucket-name', 'user-pool-id', 'user-pool-client-id', 'web-client-id']);
     this.data = {
       tableName: values['table-name'],
+      tableStreamArn: values['table-stream-arn'],
       bucketName: values['bucket-name'],
       userPoolId: values['user-pool-id'],
       userPoolClientId: values['user-pool-client-id'],
@@ -86,7 +95,7 @@ export class ApiStack extends cdk.Stack {
       integration: new HttpLambdaIntegration('HealthIntegration', health),
     });
 
-    this.addImportFunctions();
+    this.addDataFunctions();
 
     new cdk.CfnOutput(this, 'ApiUrl', { value: this.httpApi.apiEndpoint });
     new ssm.StringParameter(this, 'ApiUrlParam', {
@@ -95,8 +104,8 @@ export class ApiStack extends cdk.Stack {
     });
   }
 
-  /** api-read, api-write and parser, each with only the table, bucket and invoke rights it uses. */
-  private addImportFunctions() {
+  /** api-read, api-write, api-delete, parser and rollup, each with only the table, bucket, stream and invoke rights it uses. */
+  private addDataFunctions() {
     const tableArn = this.formatArn({ service: 'dynamodb', resource: 'table', resourceName: this.data.tableName });
     const uploadsArn = `arn:${this.partition}:s3:::${this.data.bucketName}/uploads/*`;
     const allow = (fn: cdk.aws_lambda.IFunction, actions: string[], resources: string[]) =>
@@ -133,20 +142,56 @@ export class ApiStack extends cdk.Stack {
       timeoutSeconds: 10,
       environment: { TABLE_NAME: this.data.tableName, BUCKET_NAME: this.data.bucketName, PARSER_FUNCTION: parser.functionName },
     });
+    const rollup = this.addRollup(tableArn);
+    write.addEnvironment('ROLLUP_FUNCTION', rollup.functionName);
     allow(write, tableWrite, [tableArn]);
     allow(write, ['s3:PutObject'], [uploadsArn]);
-    allow(write, ['lambda:InvokeFunction'], [parser.functionArn]);
+    allow(write, ['lambda:InvokeFunction'], [parser.functionArn, rollup.functionArn]);
 
-    const routes: [apigw.HttpMethod, string, cdk.aws_lambda.IFunction][] = [
-      [apigw.HttpMethod.GET, '/imports', read],
-      [apigw.HttpMethod.GET, '/imports/{id}', read],
-      [apigw.HttpMethod.POST, '/imports', write],
-      [apigw.HttpMethod.POST, '/imports/{id}/undo', write],
-      [apigw.HttpMethod.POST, '/periods/{source}/{period}/repair', write],
+    // Delete-all, from DELETE /data or a direct invoke of { sub } by the web stack's job (D-40).
+    // It puts and checks the erase marker, so it also holds PutItem.
+    const erase = makeFunction(this, {
+      name: 'api-delete',
+      entry: 'apps/api/src/handlers/delete.mjs',
+      memoryMb: 256,
+      timeoutSeconds: 25,
+      environment: { TABLE_NAME: this.data.tableName, BUCKET_NAME: this.data.bucketName },
+    });
+    allow(erase, [...tableRead, 'dynamodb:PutItem', 'dynamodb:DeleteItem'], [tableArn]);
+    erase.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:ListBucket'],
+      resources: [`arn:${this.partition}:s3:::${this.data.bucketName}`],
+      conditions: { StringLike: { 's3:prefix': 'uploads/*' } },
+    }));
+    allow(erase, ['s3:DeleteObject'], [uploadsArn]);
+    new ssm.StringParameter(this, 'DeleteFunctionNameParam', {
+      parameterName: `/smart-finances/${this.stage}/delete-function-name`,
+      stringValue: erase.functionName,
+    });
+
+    const GET = apigw.HttpMethod.GET;
+    const POST = apigw.HttpMethod.POST;
+    const PUT = apigw.HttpMethod.PUT;
+    const routes: [apigw.HttpMethod, string, lambda.IFunction][] = [
+      [GET, '/imports', read],
+      [GET, '/imports/{id}', read],
+      [GET, '/transactions', read],
+      [GET, '/totals', read],
+      [GET, '/review', read],
+      [GET, '/rates', read],
+      [GET, '/export', read],
+      [POST, '/imports', write],
+      [POST, '/imports/{id}/undo', write],
+      [POST, '/periods/{source}/{period}/repair', write],
+      [PUT, '/transactions/{id}/review', write],
+      [PUT, '/rates/{month}', write],
+      [POST, '/totals/rebuild', write],
+      [apigw.HttpMethod.DELETE, '/data', erase],
     ];
-    const integrations = new Map<cdk.aws_lambda.IFunction, HttpLambdaIntegration>([
+    const integrations = new Map<lambda.IFunction, HttpLambdaIntegration>([
       [read, new HttpLambdaIntegration('ReadIntegration', read)],
       [write, new HttpLambdaIntegration('WriteIntegration', write)],
+      [erase, new HttpLambdaIntegration('DeleteIntegration', erase)],
     ]);
     for (const [method, path, fn] of routes) {
       this.httpApi.addRoutes({ path, methods: [method], integration: integrations.get(fn)!, authorizer: this.authorizer });
@@ -160,5 +205,48 @@ export class ApiStack extends cdk.Stack {
       },
       targets: [new targets.LambdaFunction(parser)],
     });
+  }
+
+  /**
+   * The rollup: the table's keys-only stream, filtered to row and review-choice keys, recomputes
+   * each touched month. A batch that still fails after bisecting and 3 retries goes to a 14-day
+   * queue; any message there alarms a topic the owner subscribes an email to (architecture "Rollup").
+   */
+  private addRollup(tableArn: string): lambda.IFunction {
+    const rollup = makeFunction(this, {
+      name: 'rollup',
+      entry: 'apps/api/src/handlers/rollup.mjs',
+      memoryMb: 512,
+      timeoutSeconds: 60,
+      environment: { TABLE_NAME: this.data.tableName },
+    });
+    rollup.addToRolePolicy(new iam.PolicyStatement({ actions: ['dynamodb:Query', 'dynamodb:PutItem', 'dynamodb:ConditionCheckItem'], resources: [tableArn] }));
+
+    const failures = new sqs.Queue(this, 'RollupFailures', { retentionPeriod: cdk.Duration.days(14) });
+    // The stream source grants the stream reads, and dynamodb:ListStreams on "*" (D-34).
+    const table = dynamodb.Table.fromTableAttributes(this, 'Table', { tableName: this.data.tableName, tableStreamArn: this.data.tableStreamArn });
+    const keyStartsWith = (prefix: string) => ({ dynamodb: { Keys: { sk: { S: lambda.FilterRule.beginsWith(prefix) } } } });
+    rollup.addEventSource(new DynamoEventSource(table, {
+      startingPosition: lambda.StartingPosition.TRIM_HORIZON,
+      filters: [lambda.FilterCriteria.filter(keyStartsWith('TXN#')), lambda.FilterCriteria.filter(keyStartsWith('OVR#'))],
+      batchSize: 100,
+      parallelizationFactor: 1,
+      bisectBatchOnError: true,
+      retryAttempts: 3,
+      maxRecordAge: cdk.Duration.hours(1),
+      onFailure: new SqsDlq(failures),
+    }));
+
+    const topic = new sns.Topic(this, 'RollupFailuresTopic', { topicName: `smart-finances-${this.stage}-rollup-failures` });
+    const alarm = new cloudwatch.Alarm(this, 'RollupFailuresAlarm', {
+      alarmDescription: 'A rollup batch reached the on-failure queue; run POST /totals/rebuild after fixing the cause.',
+      metric: failures.metricApproximateNumberOfMessagesVisible({ statistic: cloudwatch.Stats.MAXIMUM, period: cdk.Duration.minutes(1) }),
+      threshold: 0,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      evaluationPeriods: 1,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
+    alarm.addAlarmAction(new cwActions.SnsAction(topic));
+    return rollup;
   }
 }

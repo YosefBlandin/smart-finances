@@ -45,6 +45,9 @@ export class DataStack extends cdk.Stack {
       pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
       // AWS-owned key now; customer-managed keys come in Epic 6.
       encryption: dynamodb.TableEncryption.DEFAULT,
+      // Keys only: the rollup re-reads each touched month, so it needs no item images (D-14). Adding a
+      // stream updates the table in place.
+      stream: dynamodb.StreamViewType.KEYS_ONLY,
       deletionProtection: keep,
       removalPolicy,
     });
@@ -152,6 +155,11 @@ export class DataStack extends cdk.Stack {
     new ssm.StringParameter(this, 'TableNameParam', {
       parameterName: `${prefix}/table-name`,
       stringValue: this.table.tableName,
+    });
+    // The API stack reads it to attach the rollup's stream source (D-33).
+    new ssm.StringParameter(this, 'TableStreamArnParam', {
+      parameterName: `${prefix}/table-stream-arn`,
+      stringValue: this.table.tableStreamArn!,
     });
     new ssm.StringParameter(this, 'BucketNameParam', {
       parameterName: `${prefix}/bucket-name`,

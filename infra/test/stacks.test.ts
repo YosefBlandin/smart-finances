@@ -49,7 +49,7 @@ test('T-INF-6 each stage has a data and an api stack; the api stack depends on t
       .filter((r) => r.Type === 'Custom::AWS');
     assert.equal(readers.length, 1);
     const names = JSON.parse(readers[0].Properties.Create).parameters.Names;
-    assert.deepEqual(names, ['table-name', 'bucket-name', 'user-pool-id', 'user-pool-client-id', 'web-client-id']
+    assert.deepEqual(names, ['table-name', 'table-stream-arn', 'bucket-name', 'user-pool-id', 'user-pool-client-id', 'web-client-id']
       .map((name) => `/smart-finances/${stage}/${name}`)
       .sort());
   }

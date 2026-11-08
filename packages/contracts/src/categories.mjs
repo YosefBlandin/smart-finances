@@ -19,5 +19,13 @@ export const CATEGORIES = [
   'Debt payments',
   'Fees & admin',
   'Cash',
+  // Set by the importers themselves rather than by a rule (D-44).
+  'Shopping',
+  'Pets',
+  'Income',
+  'Interest',
+  'Refunds',
+  'Loans',
+  'Transfers',
   'Uncategorized',
 ];
