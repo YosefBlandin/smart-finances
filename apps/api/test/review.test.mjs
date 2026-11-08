@@ -175,3 +175,27 @@ test('T-API-9 an approval and a category change on a payments report row survive
   assert.equal(again.review.approved, true);
   assert.deepEqual(again.review.reasons, []);
 });
+
+// Every category an importer can set, read from the importers' own sources, must be in the shared
+// list the web shows and PUT review accepts (D-39, D-44).
+test('T-API-10 every category an importer can emit is in the contracts list', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { CATEGORIES } = await import('@smart-finances/contracts/categories');
+  const src = (name) => readFileSync(new URL(`../src/ingest/${name}`, import.meta.url), 'utf8');
+  const quoted = (text, re) => [...text.matchAll(re)].map((m) => m[1]);
+  const between = (text, start, end) => text.slice(text.indexOf(start), text.indexOf(end, text.indexOf(start)));
+  const emitted = new Set([
+    ...quoted(src('categories.mjs'), /\],?\s*'([^']+)'\]/g),
+    ...quoted(src('categories.mjs'), /\/[a-z]*, '([^']+)'\]/g),
+    ...quoted(src('notion.mjs'), /category: '([^']+)'/g),
+    ...quoted(src('mercadopago.mjs'), /category: '([^']+)'/g),
+    ...quoted(between(src('mercadopago.mjs'), 'function categoryFor', '\n}\n'), /return '([^']+)'/g),
+    ...quoted(between(src('excel.mjs'), 'const SHEET_CATEGORIES = {', '};'), /:\s*'([^']+)'/g),
+    ...quoted(src('excel.mjs'), /\?\? '([^']+)'/g),
+  ]);
+  assert.ok(emitted.size >= 20, `found ${emitted.size} categories in the importers`);
+  for (const name of ['Interest', 'Refunds', 'Shopping', 'Income', 'Loans', 'Transfers', 'Pets', 'Uncategorized', 'Groceries']) assert.ok(emitted.has(name), `the scan finds ${name}`);
+  const missing = [...emitted].filter((c) => !CATEGORIES.includes(c));
+  assert.deepEqual(missing, []);
+  assert.equal(CATEGORIES.at(-1), 'Uncategorized', 'the fallback stays last');
+});
