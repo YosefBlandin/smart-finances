@@ -77,7 +77,7 @@ status: executing
 | T-WEB-14 | D-138, D-186 | SF-108 | unit | G-merge | container.ts returns the memory adapters under STAGE=test, one per port. |
 | T-WEB-15 | AC-10, D-129, D-136 | SF-109 | int | G-merge | Every part has stories in both languages and schemes; the Storybook a11y and interaction tests pass. |
 | T-WEB-16 | D-127, D-130 | SF-110 | unit | G-merge | prefetch() dehydrates a query that the client provider reads without a request. |
-| T-WEB-17 | D-134, D-185, D-188, D-190 | SF-113, SF-173 | int | G-merge | Lighthouse on phone settings, as the seeded person lighthouse on every money screen, meets LCP 2.5 s, CLS 0.1 and 200 KB of script per route, and stops the deploy on every stage; no browser bundle carries zod or a first-load React Aria. |
+| T-WEB-17 | D-134, D-185, D-188, D-190, D-191 | SF-113, SF-173 | int | G-merge | Lighthouse on phone settings, as the seeded person lighthouse on every money screen, meets LCP 2.5 s, CLS 0.1 and 200 KB of script per route when run by hand (`npm run lhci`); since D-191 it is not a deploy step; no browser bundle carries zod or a first-load React Aria. |
 | T-WINF-15 | D-135 | SF-130 | unit | G-merge | Synth: the RUM monitor and guest pool exist; the guest role may only put RUM events to that monitor. |
 | T-WAUTH-19 | D-167, D-171 | SF-154 | unit | G-merge | Outside STAGE=test the container builds every PR 3 port from a real adapter with no AWS call; DataApi and ParameterStore fail closed; STAGE=test is refused in an AWS runtime. |
 | T-WAUTH-18 | AC-1, AC-12, D-73 | SF-147 | unit | G-merge | The Cognito adapter sends the secret hash and language metadata; the memory fake accepts only its fixed codes. |

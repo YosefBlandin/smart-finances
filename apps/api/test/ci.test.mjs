@@ -31,14 +31,7 @@ test('T-CI-1 deploy.yml runs npm test before credentials and deploys data, api, 
   assert.equal(lines.filter((line) => /cdk deploy/.test(line)).length, 4, 'exactly the four stage stacks are deployed');
 });
 
-test('T-WEB-17 the Lighthouse budgets block the deploy on every stage, qa included, before AWS credentials exist', () => {
-  const step = lineOf(/- name: Lighthouse CI budgets/);
-  const credentials = lineOf(/uses: aws-actions\/configure-aws-credentials@/);
-  assert.ok(step < credentials, 'the budgets run before credentials');
-  const block = lines.slice(step, credentials).join('\n');
-  // The qa allowance of 2026-11-07 is gone now that the run measures the real money screens.
-  assert.doesNotMatch(block, /continue-on-error/);
-  assert.match(block, /STAGE: test/);
-  assert.match(block, /run: npm run lhci --workspace @smart-finances\/web/);
+test('T-WEB-17 the Lighthouse budgets are out of the deploy (D-191); npm run lhci stays for runs by hand', () => {
+  assert.doesNotMatch(workflow, /npm run lhci/);
   assert.doesNotMatch(workflow, /continue-on-error/, 'no step of the deploy may fail quietly');
 });
