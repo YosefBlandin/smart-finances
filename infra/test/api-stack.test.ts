@@ -271,8 +271,8 @@ test('T-WINF-6 the API serves many people: both clients in the audience, throttl
     const apiUrl = params.find((p) => p.Name.endsWith('/api-url'))!;
     assert.ok(JSON.stringify(apiUrl.Value).includes(apiId), 'the value is the HTTP API endpoint');
     const deleteName = params.find((p) => p.Name.endsWith('/delete-function-name'))!;
-    assert.equal(deleteName.Value, `smart-finances-${stage}-api-delete`, 'the name the web stack invokes');
-    assert.equal(fnNamed(all, deleteName.Value).props.FunctionName, deleteName.Value);
+    // The function's own name, by reference, so the two cannot drift; it is the name the web stack invokes.
+    assert.deepEqual(deleteName.Value, { Ref: fnNamed(all, `smart-finances-${stage}-api-delete`).id });
 
     const buckets = ofType(resources(data), 'AWS::S3::Bucket');
     assert.equal(buckets.length, 1);

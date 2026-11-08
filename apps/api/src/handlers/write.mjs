@@ -106,19 +106,21 @@ async function setRate(deps, sub, event) {
   return reply(200, out);
 }
 
+// Code and message per putReview error; busy is plain contention, still a conflict on the wire.
 const REVIEW_ERRORS = {
-  not_found: 'no such transaction',
-  source_file_only: 'only payments report rows take a review choice; fix this row in its source file and upload it again',
-  conflict: 'your data is being deleted; try again later',
+  not_found: ['not_found', 'no such transaction'],
+  source_file_only: ['source_file_only', 'only payments report rows take a review choice; fix this row in its source file and upload it again'],
+  conflict: ['conflict', 'your data is being deleted; try again later'],
+  busy: ['conflict', 'this transaction was changed at the same moment; try again'],
 };
 
 // PUT /transactions/{id}/review (D-8): payments report rows only.
 async function chooseReview(deps, sub, event) {
   const id = event.pathParameters?.id;
-  if (typeof id !== 'string' || !ID.test(id)) throw new HttpError('not_found', REVIEW_ERRORS.not_found);
+  if (typeof id !== 'string' || !ID.test(id)) throw new HttpError(...REVIEW_ERRORS.not_found);
   const body = checked('PUT /transactions/{id}/review', jsonBody(event));
   const out = await putReview(deps.store, sub, id, body, { now: deps.now() });
-  if (out.error) throw new HttpError(out.error, REVIEW_ERRORS[out.error]);
+  if (out.error) throw new HttpError(...REVIEW_ERRORS[out.error]);
   return reply(200, out);
 }
 

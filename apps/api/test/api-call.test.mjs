@@ -32,7 +32,7 @@ test('T-OPS-1 every route maps to its function: GET to api-read, DELETE to api-d
   for (const key of Object.keys(ROUTES)) {
     const [method, template] = key.split(' ');
     const path = template.replace(/\{[a-z]+\}/g, (p) => sample[p]);
-    const { functionName, event } = buildCall({ stage: 'qa', sub: SUB, method, path });
+    const { functionName, event } = buildCall({ stage: 'qa', sub: SUB, method, path, yes: true });
     assert.equal(event.routeKey, key, path);
     assert.equal(functionName, `smart-finances-qa-${want(key)}`, key);
   }
@@ -48,16 +48,32 @@ test('T-OPS-1 refuses an unknown route, a bad stage, a missing sub and a body th
   assert.throws(() => buildCall({ stage: 'qa', sub: SUB, method: 'PATCH', path: '/rates/2026-05' }), /no route PATCH/);
   assert.throws(() => buildCall({ stage: 'qa', sub: SUB, method: 'GET', path: '/imports/a/b' }), /no route/);
   assert.throws(() => buildCall({ stage: 'test', sub: SUB, method: 'GET', path: '/rates' }), /stage/);
+  assert.throws(() => buildCall({ stage: 'dev', sub: SUB, method: 'GET', path: '/rates' }), /stage/);
   assert.throws(() => buildCall({ stage: 'qa', sub: '', method: 'GET', path: '/rates' }), /--as/);
   assert.throws(() => buildCall({ stage: 'qa', sub: SUB, method: 'PUT', path: '/rates/2026-05', body: '{nope' }), /JSON/);
 });
 
+test('T-OPS-1 never reaches prod: a forged claim there would skip sign-in for anyone allowed to invoke', () => {
+  for (const method of ['GET', 'PUT', 'DELETE']) {
+    assert.throws(() => buildCall({ stage: 'prod', sub: SUB, method, path: method === 'PUT' ? '/rates/2026-05' : method === 'GET' ? '/rates' : '/data', body: method === 'GET' ? undefined : '{}', yes: true }), /--stage must be one of qa, staging/);
+  }
+  assert.throws(() => parseArgs(['--stage', 'prod', '--as', SUB, 'GET', '/rates']), /--stage must be one of qa, staging/);
+});
+
+test('T-OPS-1 DELETE /data needs --yes', () => {
+  const del = { stage: 'staging', sub: SUB, method: 'DELETE', path: '/data', body: '{"confirm":"DELETE"}' };
+  assert.throws(() => buildCall(del), /--yes/);
+  assert.equal(buildCall({ ...del, yes: true }).functionName, 'smart-finances-staging-api-delete');
+  assert.throws(() => parseArgs(['--stage', 'staging', '--as', SUB, 'DELETE', '/data', '{"confirm":"DELETE"}']), /--yes/);
+  assert.equal(parseArgs(['--stage', 'staging', '--as', SUB, '--yes', 'DELETE', '/data', '{"confirm":"DELETE"}']).yes, true);
+});
+
 test('T-OPS-1 parses the command line', () => {
   assert.deepEqual(parseArgs(['--stage', 'staging', '--as', SUB, 'PUT', '/rates/2026-05', '{"ars_per_usd":1000}']), {
-    stage: 'staging', sub: SUB, method: 'PUT', path: '/rates/2026-05', body: '{"ars_per_usd":1000}', upload: undefined,
+    stage: 'staging', sub: SUB, method: 'PUT', path: '/rates/2026-05', body: '{"ars_per_usd":1000}', upload: undefined, yes: false,
   });
   assert.deepEqual(parseArgs(['--as', SUB, '--stage', 'qa', '--upload', 'data/synthetic/transactions.csv']), {
-    stage: 'qa', sub: SUB, method: 'POST', path: '/imports', body: undefined, upload: 'data/synthetic/transactions.csv',
+    stage: 'qa', sub: SUB, method: 'POST', path: '/imports', body: undefined, upload: 'data/synthetic/transactions.csv', yes: false,
   });
   assert.throws(() => parseArgs(['--stage', 'qa', 'GET', '/rates']), /usage/);
   assert.throws(() => parseArgs(['--stage', 'qa', '--as', SUB, '--bogus', 'GET', '/rates']), /usage/);

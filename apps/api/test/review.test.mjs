@@ -221,3 +221,24 @@ test('T-API-10 a choice written between the read and the write is re-read, so a 
   assert.equal(res.status, 200);
   assert.deepEqual([res.body.review.category_override, res.body.review.approved], ['Groceries', true]);
 });
+
+test('T-API-10 a choice that keeps changing under every try answers conflict with a try-again message, not the erase one', async () => {
+  const w = world();
+  const mp = row('2026-05-01', { flags: ['needs_review'] });
+  await w.put(A, mp);
+  await w.choose(A, mp.id, { date: mp.date, category: 'Dining out' });
+  // Another writer lands after every read of the choice.
+  const realGet = w.store.get.bind(w.store);
+  let writes = 0;
+  w.store.get = async (key, opts) => {
+    const value = await realGet(key, opts);
+    if (key.sk.startsWith('OVR#')) await w.store.put({ ...value, updated_at: `later-${(writes += 1)}` });
+    return value;
+  };
+  w.tick(MIN);
+  const res = await w.choose(A, mp.id, { date: mp.date, approved: true });
+  assert.deepEqual([res.status, res.body.error.code], [409, 'conflict']);
+  assert.doesNotMatch(res.body.error.message, /deleted/);
+  assert.match(res.body.error.message, /try again/);
+  assert.equal(writes, 3, 'three tries');
+});

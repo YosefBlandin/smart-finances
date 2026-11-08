@@ -166,7 +166,7 @@ export class ApiStack extends cdk.Stack {
     allow(erase, ['s3:DeleteObject'], [uploadsArn]);
     new ssm.StringParameter(this, 'DeleteFunctionNameParam', {
       parameterName: `/smart-finances/${this.stage}/delete-function-name`,
-      stringValue: `smart-finances-${this.stage}-api-delete`,
+      stringValue: erase.functionName,
     });
 
     const GET = apigw.HttpMethod.GET;

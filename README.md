@@ -28,7 +28,7 @@ The web app is hosted on Amplify Hosting ([ADR 0008](docs/adr/0008-web-framework
 
 ## Release checks
 
-`scripts/api-call.mjs` calls one data route of a deployed stage as a given person, for the checks in [the data release steps](docs/specs/data-architecture/release.md). It builds the event the API's JWT authorizer would pass on, with that person's id (the `sub` claim) in it, and invokes the function that serves the route (`smart-finances-<stage>-api-read`, `-api-write` or `-api-delete`) with your own AWS profile. No sign-in is involved, so use it only with the stage's test users. It prints the status and the reply body.
+`scripts/api-call.mjs` calls one data route of a deployed stage as a given person, for the checks in [the data release steps](docs/specs/data-architecture/release.md). It builds the event the API's JWT authorizer would pass on, with that person's id (the `sub` claim) in it, and invokes the function that serves the route (`smart-finances-<stage>-api-read`, `-api-write` or `-api-delete`) with your own AWS profile. No sign-in is involved, so use it only with the stage's test users. It runs on qa and staging only, never prod, and `DELETE /data` also needs `--yes`. It prints the status and the reply body.
 
 ```bash
 AWS_PROFILE=<profile> node scripts/api-call.mjs --stage staging --as <sub> GET '/transactions?from=2026-01&to=2026-12'
@@ -37,3 +37,10 @@ AWS_PROFILE=<profile> node scripts/api-call.mjs --stage staging --as <sub> --upl
 ```
 
 `--upload` asks `POST /imports` for an upload form (source `csv` unless the JSON names another), posts the file to it, and prints the import id to follow with `GET /imports/{id}`.
+
+After the first deploy that adds the table's change stream (data PR 3), run a rebuild once for each person who imported data before it. Rows written before the stream existed have no month totals until then. Then check that `GET /totals` lists their months:
+
+```bash
+AWS_PROFILE=<profile> node scripts/api-call.mjs --stage qa --as <sub> POST /totals/rebuild
+AWS_PROFILE=<profile> node scripts/api-call.mjs --stage qa --as <sub> GET '/totals?from=2026-01&to=2026-12'
+```

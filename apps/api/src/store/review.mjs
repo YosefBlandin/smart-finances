@@ -16,7 +16,8 @@ export async function reviewList(store, sub) {
   return items;
 }
 
-// PUT /transactions/{id}/review. Outcomes: { review } | { error: not_found | source_file_only | conflict }.
+// PUT /transactions/{id}/review. Outcomes: { review } | { error: not_found | source_file_only | conflict | busy }:
+// conflict is the erase window, busy is a choice that changed under every one of the tries.
 // Fields left out keep their stored value.
 export async function putReview(store, sub, id, { date, category, approved }, { now = Date.now() } = {}) {
   const rowKey = txnKey(sub, date, id);
@@ -46,5 +47,5 @@ export async function putReview(store, sub, id, { date, category, approved }, { 
       if (err.index === 1) return { error: 'not_found' };
     }
   }
-  return { error: 'conflict' };
+  return { error: 'busy' };
 }
