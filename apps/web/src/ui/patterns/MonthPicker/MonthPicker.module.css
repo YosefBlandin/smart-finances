@@ -19,13 +19,19 @@
   color: var(--muted);
 }
 
-.trigger[data-hovered],
-.trigger[data-pressed],
+/* The trigger is a plain button (D-190): hover only where a pointer can hover, the ring only for keyboard focus. */
+@media (hover: hover) {
+  .trigger:hover {
+    background: var(--sunken);
+  }
+}
+
+.trigger:active,
 .trigger[aria-expanded='true'] {
   background: var(--sunken);
 }
 
-.trigger[data-focus-visible] {
+.trigger:focus-visible {
   outline: 2px solid var(--income);
   outline-offset: 2px;
 }

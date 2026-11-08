@@ -242,16 +242,18 @@ export const E2E_PEOPLE = [
   'limit-first',
   'limit-second',
   'limit-es',
+  // apps/web/lighthouserc.json (D-188, T-WEB-17): Lighthouse CI opens every money page 5 times with this person's __Host-sid.
+  'lighthouse',
 ] as const;
 
 type E2EName = (typeof E2E_PEOPLE)[number];
 
 /**
  * STAGE=test people whose data is not the fixtures as is: none at all (the empty states), a data API that fails (AC-8),
- * one whose first erase fails (SF-168), or one that refuses the token at once or after two reads (signed out, SF-164,
- * SF-165).
+ * one whose first erase fails (SF-168), one that refuses the token at once or after two reads (signed out, SF-164,
+ * SF-165), or the fixtures with reads the limit does not count (Lighthouse, T-WEB-17).
  */
-type E2EData = 'empty' | 'failing' | 'erase-fails-once' | 'refused' | 'refused-after-2';
+type E2EData = 'empty' | 'failing' | 'erase-fails-once' | 'refused' | 'refused-after-2' | 'uncounted';
 const E2E_DATA: Partial<Record<E2EName, E2EData>> = {
   // Its data API refuses its token, so the overview's prefetch signs it out (SF-164).
   'overview-signed-out': 'refused',
@@ -267,6 +269,9 @@ const E2E_DATA: Partial<Record<E2EName, E2EData>> = {
   'delete-account-retry': 'erase-fails-once',
   // The same, so the deletion is left unfinished and a reload shows Finish deleting (SF-169).
   'delete-account-reload': 'erase-fails-once',
+  // The fixtures with reads not counted against the limit: Lighthouse makes 30 page loads in a few minutes, and the
+  // 429 page is not what it measures (D-188, T-WEB-17).
+  lighthouse: 'uncounted',
 };
 
 /**
@@ -324,7 +329,8 @@ function seedPerson(
     dataApi.allowToken(accessToken);
     apis.add(accessToken, new RefusingDataApi(dataApi, data === 'refused' ? 0 : 2));
   } else {
-    const dataApi = new MemoryDataApi(c.clock, { limits: c, logger: c.logger, eraseFailures: ERASE_FAILURES[data ?? 'fixtures'] ?? 0 });
+    const limits = data === 'uncounted' ? undefined : c;
+    const dataApi = new MemoryDataApi(c.clock, { limits, logger: c.logger, eraseFailures: ERASE_FAILURES[data ?? 'fixtures'] ?? 0 });
     if (data !== 'empty') dataApi.seed(seed);
     dataApi.allowToken(accessToken);
     apis.add(accessToken, dataApi);

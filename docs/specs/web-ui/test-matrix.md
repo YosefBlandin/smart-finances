@@ -21,7 +21,7 @@ status: executing
 | T-WEB-6 | D-23, D-30, D-83 | SF-106 | unit | G-merge | Amount formats per D-23 and D-30; lang from the cookie, else Accept-Language. |
 | T-WEB-7 | AC-16, AC-9, D-108 | SF-107 | unit | G-merge | Every response carries the contract headers with a fresh nonce; redirects use cookie presence only. |
 | T-WEB-8 | AC-9, AC-16 | SF-107 | e2e | G-merge | In a browser, an inline script without the nonce does not run. |
-| T-WEB-9 | AC-8, AC-10, D-63, D-141, D-143, D-146 | SF-109 | unit | G-merge | Field errors are tied by aria-describedby; Button shows busy; error notes and the danger Button use red, others never. |
+| T-WEB-9 | AC-8, AC-10, D-63, D-141, D-143, D-146, D-176, D-190 | SF-109 | unit | G-merge | Field errors are tied by aria-describedby; Button shows busy; error notes and the danger Button use red, others never; SelectField renders on the server with no style attribute; menu, month picker, select and confirm dialog open their React Aria part on first use. |
 | T-WEB-10 | AC-10, D-24, D-43, D-44 | SF-111 | e2e | G-merge | The rail and the top bar under 960px follow the decisions; focus moves to the main heading after navigation. |
 | T-WEB-11 | AC-4 | SF-111 | e2e | G-merge | Switching language keeps the address and sets html lang. |
 | T-WEB-12 | AC-8, AC-15 | SF-112 | e2e | G-merge | 403 and 404 show the same not-found screen; the idle sign-out notice shows on sign-in. |
@@ -32,7 +32,7 @@ status: executing
 | T-WINF-5 | AC-4, AC-12 | SF-123 | unit | G-merge | Code emails come out in es or en from the client metadata. |
 | T-WINF-6 | AC-17, D-81 | SF-124 | unit | G-merge | Synth: audience lists both clients, throttle 50 and 100, no API CORS, no bucket CORS in the data stack. |
 | T-WINF-7 | AC-15, D-72, D-87, D-111 | SF-125 | unit | G-merge | Synth: both tables, TTL on sessions, accounts retained with PITR on staging and prod; compute role grants exactly as listed. |
-| T-WINF-8 | D-102, D-110, D-111 | SF-126 | unit | G-merge | Synth: the app and branch updates, a merging variables call, PassRole on two roles only, onDelete clears them. |
+| T-WINF-8 | D-102, D-110, D-111, D-189 | SF-126, SF-174 | unit | G-merge | Synth: the app and branch updates (the branch framework Next.js - SSR on every stage), a merging variables call, PassRole on two roles only, onDelete clears them. |
 | T-WINF-9 | AC-5, D-88 | SF-127 | unit | G-merge | Synth: the bucket rule allows POST from the branch address. |
 | T-WINF-10 | AC-12, D-106 | SF-128 | unit | G-merge | Housekeeping removes unconfirmed users older than 24 hours only. |
 | T-WINF-11 | AC-18, D-104, D-107 | SF-128 | unit | G-merge | Housekeeping finishes a stuck deletion step by step, skips the erase when no delete function exists, and calls /api/health. |
@@ -56,32 +56,32 @@ status: executing
 | T-WAUTH-15 | AC-16 | SF-151 | unit | G-merge | Sign-out is a post that removes the row and revokes the refresh token. |
 | T-WAUTH-16 | AC-14, D-103 | SF-152 | e2e | G-merge | Privacy, terms and lost-authenticator pages render in both languages with one version id. |
 | T-WAUTH-17 | AC-1, AC-12, AC-13, AC-17, AC-19, AC-20, D-169 | SF-153 | e2e | G-merge | On the fake sign-in service, sign-up to sign-out and a limit refusal work in both languages, with no content-policy violation. |
-| T-WSCR-1 | AC-6, AC-15, D-133 | SF-161 | unit | G-merge | The data API adapter sends the bearer token, parses replies with the contracts, maps statuses and times out at 5 seconds. |
+| T-WSCR-1 | AC-6, AC-15, D-133, D-174 | SF-161 | unit | G-merge | The data API adapter sends the bearer token, parses replies with the contracts, maps statuses and times out at 5 seconds, export and erase at 25. |
 | T-WSCR-2 | AC-2, D-85 | SF-162 | unit | G-merge | Typical month uses 3 to 6 earlier rated months and none below 3. |
 | T-WSCR-3 | AC-11 | SF-162 | unit | G-merge | A month spending more than it earned is the bad case with the overspend amount. |
-| T-WSCR-4 | AC-2, AC-8, D-101 | SF-164 | e2e | G-merge | The overview opens with the kept headline; one failed section leaves the others shown. |
+| T-WSCR-4 | AC-2, AC-8, D-101, D-177, D-183 | SF-164 | e2e | G-merge | The overview opens with the kept headline; one failed section leaves the others shown. |
 | T-WSCR-5 | AC-11, D-63 | SF-164 | e2e | G-merge | In 2026-03, exactly one money figure is red. |
-| T-WSCR-6 | AC-6 | SF-165 | e2e | G-merge | Each filter, sort and page change makes a request; free text never enters the address. |
+| T-WSCR-6 | AC-6, D-175 | SF-165 | e2e | G-merge | Each filter, sort and page change makes a request and keeps the address in step without a page load; free text never enters the address. |
 | T-WSCR-7 | AC-8 | SF-166 | e2e | G-merge | Review and rates show their empty, failed and source states. |
-| T-WSCR-8 | AC-17, D-114 | SF-167 | unit | G-merge | Five parallel import requests reserve exactly one slot; caps release at the final status. |
+| T-WSCR-8 | AC-17, D-114, D-178, D-179, D-184 | SF-167 | unit | G-merge | Five parallel import requests reserve exactly one slot under a placeholder with the declared size; a refused or failed request and a 2-minute stale placeholder give back the slot and the day's count; caps release at the final status; no reservation for an account being deleted; events carry no import id. |
 | T-WSCR-9 | AC-5 | SF-167 | e2e | G-merge | An import shows its status to the end and lists skipped rows with reasons. |
 | T-WSCR-10 | AC-7 | SF-168 | e2e | G-merge | Erase needs DELETE, says 35 days, shows counts, and offers Finish erasing after a failure. |
-| T-WSCR-11 | AC-18, D-104 | SF-169 | unit | G-merge | A deletion that fails at any step can be finished by the same session. |
-| T-WSCR-12 | AC-18 | SF-169 | e2e | G-merge | Delete account needs a full re-sign-in and ends on the signed-out page with counts. |
+| T-WSCR-11 | AC-18, D-104, D-174, D-179, D-180, D-181 | SF-169 | unit | G-merge | A deletion that fails at any step can be finished by a live session of the person; one erase try per finish; no start while an import runs; the goodbye cookie is signed and holds only the counts. |
+| T-WSCR-12 | AC-18, D-179 | SF-169 | e2e | G-merge | Delete account needs a full re-sign-in and ends on the signed-out page with counts; after a reload a deleting account sees Finish deleting. |
 | T-WSCR-13 | AC-9 | SF-170 | e2e | G-merge | Hostile synthetic rows show as text on every screen; no element, request or dialog comes from them. |
 | T-WSCR-14 | AC-9 | SF-170 | unit | G-merge | No raw HTML insertion or markdown renderer exists in apps/web/src. |
 | T-WSCR-15 | AC-10, D-22 | SF-171 | e2e | G-merge | axe finds no violation on any screen in both languages and themes. |
 | T-WSCR-16 | AC-10, AC-4 | SF-171 | e2e | G-merge | Every action is reachable by keyboard with visible focus; a language switch keeps the screen. |
 | T-WSCR-17 | AC-17 | SF-172 | e2e | G-merge | Past the person limit (120 a minute; 5 under STAGE=test) the 429 page shows; a second person is still served. |
 | T-WEB-13 | D-132, D-138, D-140 | SF-104 | unit | G-merge | Lint fails on a domain file importing an adapter and on an a11y violation; Prettier check passes. |
-| T-WEB-14 | D-138 | SF-108 | unit | G-merge | container.ts returns the memory adapters under STAGE=test, one per port. |
+| T-WEB-14 | D-138, D-186 | SF-108 | unit | G-merge | container.ts returns the memory adapters under STAGE=test, one per port. |
 | T-WEB-15 | AC-10, D-129, D-136 | SF-109 | int | G-merge | Every part has stories in both languages and schemes; the Storybook a11y and interaction tests pass. |
 | T-WEB-16 | D-127, D-130 | SF-110 | unit | G-merge | prefetch() dehydrates a query that the client provider reads without a request. |
-| T-WEB-17 | D-134 | SF-113 | int | G-merge | Lighthouse on phone settings meets LCP 2.5 s, CLS 0.1 and 200 KB first-load JavaScript per route. |
+| T-WEB-17 | D-134, D-185, D-188, D-190 | SF-113, SF-173 | int | G-merge | Lighthouse on phone settings, as the seeded person lighthouse on every money screen, meets LCP 2.5 s, CLS 0.1 and 200 KB of script per route, and stops the deploy on every stage; no browser bundle carries zod or a first-load React Aria. |
 | T-WINF-15 | D-135 | SF-130 | unit | G-merge | Synth: the RUM monitor and guest pool exist; the guest role may only put RUM events to that monitor. |
 | T-WAUTH-19 | D-167, D-171 | SF-154 | unit | G-merge | Outside STAGE=test the container builds every PR 3 port from a real adapter with no AWS call; DataApi and ParameterStore fail closed; STAGE=test is refused in an AWS runtime. |
 | T-WAUTH-18 | AC-1, AC-12, D-73 | SF-147 | unit | G-merge | The Cognito adapter sends the secret hash and language metadata; the memory fake accepts only its fixed codes. |
-| T-WSCR-18 | AC-6, D-127 | SF-163 | unit | G-merge | Every /api/data route refuses without session and consent and returns contract-shaped JSON. |
+| T-WSCR-18 | AC-6, D-127, D-182 | SF-163 | unit | G-merge | Every /api/data route refuses without session and consent and returns contract-shaped JSON; a refused token ends the session, and /api/data/signed-out clears only a gone session's cookie and opens sign-in with the address kept. |
 | T-WSCR-19 | D-131 | SF-166 | e2e | G-merge | A review choice shows at once; a refused one rolls back with a plain message. |
 | T-WSCR-20 | D-135 | SF-172 | unit | G-merge | RUM starts with no cookies, page ids without search values, no person id, and is off under STAGE=test. |
 

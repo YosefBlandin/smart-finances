@@ -1,13 +1,16 @@
 // MenuPanel: the top bar's menu under 960px (D-43, D-44). A 44px button names the current screen and carries the amber
 // review count; it opens a panel over the page, under the bar, without moving the page, and shows a close mark while open.
-// React Aria gives the popover, focus and Escape (D-141). The content gets a close function for when a link is chosen.
+// React Aria gives the popover, focus and Escape (D-141); the button is a plain one, and React Aria's popover loads on
+// first use, so no page's first load carries it (D-190, T-WEB-17). The content gets a close function for when a link is chosen.
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useState, type ReactNode, type RefObject } from 'react';
-import { Button, Dialog, DialogTrigger, Popover } from 'react-aria-components';
+import { lazy, Suspense, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Icon } from '../../primitives/Icon/Icon';
 import styles from './MenuPanel.module.css';
+
+const load = () => import('./MenuPopover');
+const MenuPopover = lazy(load);
 
 export type MenuPanelProps = {
   /** The current screen's name. */
@@ -23,10 +26,27 @@ export type MenuPanelProps = {
 
 export function MenuPanel({ label, count, countLabel, anchorRef, children }: MenuPanelProps) {
   const t = useTranslations();
+  const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
+  // The popover is mounted from the first press on, and stays mounted.
+  const [used, setUsed] = useState(false);
   return (
-    <DialogTrigger isOpen={open} onOpenChange={setOpen}>
-      <Button className={styles.trigger}>
+    <>
+      <button
+        ref={trigger}
+        type="button"
+        className={styles.trigger}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onPointerEnter={() => void load()}
+        onFocus={() => void load()}
+        onClick={() => {
+          // Safari and Firefox do not focus a button on click; React Aria gives focus back to it on close.
+          trigger.current?.focus();
+          setUsed(true);
+          setOpen(true);
+        }}
+      >
         <span>{label}</span>
         {count ? (
           <span className={styles.count} data-count="">
@@ -35,12 +55,14 @@ export function MenuPanel({ label, count, countLabel, anchorRef, children }: Men
           </span>
         ) : null}
         <Icon name={open ? 'close' : 'menu'} size="lg" />
-      </Button>
-      <Popover className={styles.popover} triggerRef={anchorRef} placement="bottom" offset={0} containerPadding={0}>
-        <Dialog className={styles.panel} aria-label={t('shell.menu')}>
-          {({ close }) => children(close)}
-        </Dialog>
-      </Popover>
-    </DialogTrigger>
+      </button>
+      {used ? (
+        <Suspense fallback={null}>
+          <MenuPopover isOpen={open} onOpenChange={setOpen} triggerRef={anchorRef ?? trigger} label={t('shell.menu')}>
+            {children}
+          </MenuPopover>
+        </Suspense>
+      ) : null}
+    </>
   );
 }
