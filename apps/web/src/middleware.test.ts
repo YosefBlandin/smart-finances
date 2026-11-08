@@ -160,11 +160,22 @@ describe('T-WEB-7: redirects by cookie presence only', () => {
   });
 
   it('T-WEB-7: auth routes without the cookie and open routes pass through', () => {
-    for (const p of [...AUTH, '/', '/privacy', '/terms', '/goodbye', '/api/health', '/api/lang']) {
+    for (const p of [...AUTH, '/privacy', '/terms', '/goodbye', '/api/health', '/api/lang']) {
       expect(run(p).status, p).toBe(200);
       expect(run(p).headers.get('x-middleware-next'), p).toBe('1');
     }
     for (const p of ['/privacy', '/terms', '/consent', '/api/health']) expect(run(p, '__Host-sid=x').status, p).toBe(200);
+  });
+
+  it('T-WEB-7: the bare address goes to /overview with __Host-sid and to /sign-in without it', () => {
+    for (const [cookie, to] of [[undefined, '/sign-in'], ['__Host-sid=x', '/overview']] as const) {
+      const res = run('/', cookie);
+      expect(res.status, to).toBe(307);
+      const url = new URL(res.headers.get('location') ?? '');
+      expect(url.pathname, to).toBe(to);
+      expect(url.search, to).toBe('');
+      expect(res.headers.get('content-security-policy'), to).toContain("default-src 'self'");
+    }
   });
 
   it('T-WEB-7: lookalike paths are not money or auth routes', () => {
