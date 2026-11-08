@@ -2,12 +2,17 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactElement } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import en from '../../../../messages/en.json';
 import es from '../../../../messages/es.json';
 import { ConfirmDialog } from './ConfirmDialog';
 
 afterEach(cleanup);
+// The lazily loaded part is compiled once here, so a test's first open does not wait on a cold transform
+// longer than the queries' 1 s wait on a slow runner (D-190).
+beforeAll(async () => {
+  await import('./ConfirmModal');
+}, 30_000);
 
 const wrap = (ui: ReactElement, locale: 'en' | 'es' = 'en') =>
   render(
