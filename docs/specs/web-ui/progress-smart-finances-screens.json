@@ -193,7 +193,7 @@
     },
     {
       "id": "SF-173",
-      "status": "done, awaiting the owner's acceptance of D-190 and the qa Lighthouse run",
+      "status": "done, awaiting the qa Lighthouse run",
       "commit": "2a082cd (seeded person lighthouse), adf765c (React Aria on first use, fonts not preloaded), d8324dc (no qa continue-on-error), e483fa3 (conformance fixes)",
       "evidence": [
         "Before: lighthouserc.json sent a dummy __Host-sid, so every money page measured the ended-session screen (h1 states_title); first-load script 182-223 KB gzip, over the 204,800-byte budget on /imports and /data in CI run 42374910989.",
@@ -203,7 +203,7 @@
         "npm test exit 0 (vitest 46 files, 649 tests; node suites pass, including ci.test.mjs T-WEB-17 and lhci.test.mjs); web lint and tsc exit 0; npm run e2e exit 0: 109 passed; after e483fa3 the shell, a11y, review-rates, imports and transactions specs: 70 passed.",
         "test-storybook not run locally: Playwright's own Chromium is not installed on this machine (the e2e suite uses the installed Chrome); CI runs it."
       ],
-      "review": "fresh-context spec-reviewer, 2026-11-07: 0 blocker; 2 major (no evidence recorded: recorded here; D-190 proposed: left for the owner in PR review); 2 minor fixed in e483fa3 (focus back to the trigger after a pointer open, with tests; a disabled select never fetches React Aria)."
+      "review": "fresh-context spec-reviewer, 2026-11-07: 0 blocker; 2 major (no evidence recorded: recorded here; D-190 proposed: accepted by the owner on 2026-11-07); 2 minor fixed in e483fa3 (focus back to the trigger after a pointer open, with tests; a disabled select never fetches React Aria)."
     },
     {
       "id": "SF-174",
@@ -358,8 +358,8 @@
       "task": "SF-173",
       "from": "D-134 script budget (204,800 bytes) and LCP 2.5 s on the real money screens, with React Aria in every first load",
       "proposal": "React Aria loads on first use (menu, month picker, confirm modal, select are plain markup until used) and the fonts are not preloaded.",
-      "decidedBy": "pending: the owner, in the PR review",
-      "newDecision": "D-190 (proposed, locked-v9)"
+      "decidedBy": "owner, in chat, 2026-11-07: accept D-190",
+      "newDecision": "D-190 (locked-v9)"
     }
   ],
   "surprises": [
