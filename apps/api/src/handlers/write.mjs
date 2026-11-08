@@ -30,6 +30,8 @@ async function requestImport(deps, sub, event) {
   const verdict = checkImportRequest(body ?? {});
   if (!verdict.ok) throw new HttpError(verdict.code, verdict.message);
   const { source, file_name, size } = checked('POST /imports', body);
+  // No form while erasing or quiet: its file would arrive after the erase (D-30).
+  await refuseWhileErasing(deps, sub);
   const record = await createImport(deps.store, sub, { source, file_name, size, now: deps.now(), ulid: deps.ulid });
   const upload = await deps.store.presignPost(record.s3_key, { maxBytes: SOURCES[source].maxBytes, expiresSeconds: FORM_SECONDS });
   return reply(201, { import_id: record.import_id, upload: { url: upload.url, fields: upload.fields }, expires_at: record.expires_at });
@@ -56,6 +58,7 @@ async function started(deps, sub, out) {
 async function undoImport(deps, sub, event) {
   const id = event.pathParameters?.id;
   if (typeof id !== 'string' || !ID.test(id)) throw new HttpError('not_found', 'no such import');
+  await refuseWhileErasing(deps, sub);
   return started(deps, sub, await startUndo(deps.store, sub, id, { now: deps.now(), ulid: deps.ulid }));
 }
 
@@ -65,6 +68,7 @@ async function repairPeriod(deps, sub, event) {
   if (!Object.hasOwn(SOURCES, source ?? '') || !PERIOD.test(period ?? '')) throw new HttpError('bad_request', 'unknown source or period');
   const monthly = source === 'mercadopago' || source === 'excel';
   if (monthly === (period === 'log')) throw new HttpError('bad_request', 'this source does not use that period');
+  await refuseWhileErasing(deps, sub);
   return started(deps, sub, await startRepair(deps.store, sub, source, period, { now: deps.now(), ulid: deps.ulid }));
 }
 

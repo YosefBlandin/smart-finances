@@ -43,6 +43,8 @@ export const sumKey = (sub, m) => key(sub, `${PREFIX.SUM}${month(m)}`);
 export const erasedKey = (sub) => key(sub, 'ERASED');
 
 export const uploadKey = (sub, importId) => `uploads/${part(sub, 'person')}/${part(importId, 'import id')}`;
+// Every upload of one person, for delete-all.
+export const uploadPrefix = (sub) => `uploads/${part(sub, 'person')}/`;
 
 // Sort-key bounds for a BETWEEN over whole months, both ends included. The upper bound ends in
 // ~, which sorts after every date and id character, so TXN#<to>-31#<id> is still inside.

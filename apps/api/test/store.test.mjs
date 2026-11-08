@@ -25,7 +25,7 @@ test('T-KEY-1 every key kind is built from the person and its parts, and never c
     Object.keys(BUILDERS).sort(),
     'the module exports exactly the 7 item key builders',
   );
-  assert.deepEqual(Object.keys(keys).sort(), [...Object.keys(BUILDERS), 'PREFIX', 'monthRange', 'personPk', 'uploadKey'].sort());
+  assert.deepEqual(Object.keys(keys).sort(), [...Object.keys(BUILDERS), 'PREFIX', 'monthRange', 'personPk', 'uploadKey', 'uploadPrefix'].sort());
 
   assert.equal(personPk('sub-a'), 'U#sub-a');
   assert.deepEqual(BUILDERS.txnKey('sub-a'), { pk: 'U#sub-a', sk: 'TXN#2026-03-15#0123456789abcdef' });
@@ -37,6 +37,9 @@ test('T-KEY-1 every key kind is built from the person and its parts, and never c
   assert.deepEqual(BUILDERS.sumKey('sub-a'), { pk: 'U#sub-a', sk: 'SUM#2026-03' });
   assert.deepEqual(BUILDERS.erasedKey('sub-a'), { pk: 'U#sub-a', sk: 'ERASED' });
   assert.equal(uploadKey('sub-a', '01JAAAAAAAAAAAAAAAAAAAAAAA'), 'uploads/sub-a/01JAAAAAAAAAAAAAAAAAAAAAAA');
+  assert.equal(keys.uploadPrefix('sub-a'), 'uploads/sub-a/');
+  assert.ok(uploadKey('sub-a', 'x').startsWith(keys.uploadPrefix('sub-a')));
+  assert.throws(() => keys.uploadPrefix('a/b'));
 
   for (const [name, build] of Object.entries(BUILDERS)) {
     assert.notEqual(build('sub-a').pk, build('sub-b').pk, `${name} gives each person their own pk`);
