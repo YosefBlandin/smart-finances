@@ -40,7 +40,9 @@ describe('T-WEB-17: React Aria loads on first use (D-190)', () => {
         statics.map((f) => relative(src, f)),
         name,
       ).toEqual([]);
-      const dynamic = files(src).filter((f) => readFileSync(f, 'utf8').includes(`import('./${name}')`));
+      const dynamic = files(src)
+        .filter((f) => !/\.(test|stories)\.tsx?$/.test(f))
+        .filter((f) => readFileSync(f, 'utf8').includes(`import('./${name}')`));
       expect(dynamic.length, name).toBe(1);
     }
   });

@@ -2,10 +2,15 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createRef } from 'react';
 import { renderToString } from 'react-dom/server';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Field, SelectField } from './Field';
 
 afterEach(cleanup);
+// The lazily loaded part is compiled once here, so a test's first open does not wait on a cold transform
+// longer than the queries' 1 s wait on a slow runner (D-190).
+beforeAll(async () => {
+  await import('./AriaSelectField');
+}, 30_000);
 
 describe('T-WEB-9: Field', () => {
   it('T-WEB-9 the label names the input and changes reach onChange as text', () => {
