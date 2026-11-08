@@ -21,7 +21,25 @@ const CR_SINGLETON = 'AWS679f53fac002430cb0da5b7982bd2287';
 type Resource = { Type: string; Properties: Record<string, any>; DependsOn?: string[] };
 const resources = (stack: cdk.Stack) => Template.fromStack(stack).toJSON().Resources as Record<string, Resource>;
 const ofType = (all: Record<string, Resource>, type: string) => Object.entries(all).filter(([, r]) => r.Type === type);
-const IMPORT_ROUTES = ['GET /imports', 'GET /imports/{id}', 'POST /imports', 'POST /imports/{id}/undo', 'POST /periods/{source}/{period}/repair'];
+// Every route of Contracts "HTTP routes" and the function that serves it (architecture "API stack").
+const ALL_ROUTES: Record<string, string> = {
+  'GET /health': 'health',
+  'GET /imports': 'api-read',
+  'GET /imports/{id}': 'api-read',
+  'GET /transactions': 'api-read',
+  'GET /totals': 'api-read',
+  'GET /review': 'api-read',
+  'GET /rates': 'api-read',
+  'GET /export': 'api-read',
+  'POST /imports': 'api-write',
+  'POST /imports/{id}/undo': 'api-write',
+  'POST /periods/{source}/{period}/repair': 'api-write',
+  'PUT /transactions/{id}/review': 'api-write',
+  'PUT /rates/{month}': 'api-write',
+  'POST /totals/rebuild': 'api-write',
+  'DELETE /data': 'api-delete',
+};
+const FUNCTIONS = ['api-delete', 'api-read', 'api-write', 'health', 'parser', 'rollup'];
 
 test('T-INF-7 GET /health has no authorizer, there is no default route, throttling is 50 and 100 (D-81), functions are named per stage', () => {
   for (const stage of STAGES) {
@@ -29,7 +47,7 @@ test('T-INF-7 GET /health has no authorizer, there is no default route, throttli
     const all = resources(api);
 
     const routes = ofType(all, 'AWS::ApiGatewayV2::Route').map(([, r]) => r.Properties);
-    assert.deepEqual(routes.map((r) => r.RouteKey).sort(), [...IMPORT_ROUTES, 'GET /health'].sort(), 'health and the import routes, no $default');
+    assert.deepEqual(routes.map((r) => r.RouteKey).sort(), Object.keys(ALL_ROUTES).sort(), 'the 15 routes, no $default');
     const healthRoute = routes.find((r) => r.RouteKey === 'GET /health')!;
     assert.ok([undefined, 'NONE'].includes(healthRoute.AuthorizationType), 'health has no authorizer');
     assert.equal(healthRoute.AuthorizerId, undefined);
@@ -42,7 +60,7 @@ test('T-INF-7 GET /health has no authorizer, there is no default route, throttli
     assert.deepEqual(apiStage.Properties.DefaultRouteSettings, { ThrottlingRateLimit: 50, ThrottlingBurstLimit: 100 });
 
     const functions = ofType(all, 'AWS::Lambda::Function').filter(([id]) => !id.startsWith(CR_SINGLETON)).map(([, r]) => r.Properties);
-    assert.deepEqual(functions.map((f) => f.FunctionName).sort(), ['api-read', 'api-write', 'health', 'parser'].map((n) => `smart-finances-${stage}-${n}`));
+    assert.deepEqual(functions.map((f) => f.FunctionName).sort(), FUNCTIONS.map((n) => `smart-finances-${stage}-${n}`));
     const health = functions.find((f) => f.FunctionName === `smart-finances-${stage}-health`)!;
     assert.equal(health.Runtime, 'nodejs22.x');
     assert.equal(health.MemorySize, 128);
@@ -81,8 +99,8 @@ test('T-INF-7 the JWT authorizer trusts the stage pool as issuer and both its cl
 
   const [[readerId]] = ofType(all, 'Custom::AWS');
   assert.deepEqual(authorizer.Properties.JwtConfiguration, {
-    Audience: [{ 'Fn::GetAtt': [readerId, 'Parameters.2.Value'] }, { 'Fn::GetAtt': [readerId, 'Parameters.4.Value'] }],
-    Issuer: { 'Fn::Join': ['', ['https://cognito-idp.us-east-1.amazonaws.com/', { 'Fn::GetAtt': [readerId, 'Parameters.3.Value'] }]] },
+    Audience: [{ 'Fn::GetAtt': [readerId, 'Parameters.3.Value'] }, { 'Fn::GetAtt': [readerId, 'Parameters.5.Value'] }],
+    Issuer: { 'Fn::Join': ['', ['https://cognito-idp.us-east-1.amazonaws.com/', { 'Fn::GetAtt': [readerId, 'Parameters.4.Value'] }]] },
   });
   const probeRoute = ofType(all, 'AWS::ApiGatewayV2::Route').find(([, r]) => r.Properties.RouteKey === 'GET /probe')![1];
   assert.equal(probeRoute.Properties.AuthorizationType, 'JWT');
@@ -92,13 +110,15 @@ test('T-INF-7 the JWT authorizer trusts the stage pool as issuer and both its cl
 const hasStar = (resource: unknown): boolean =>
   resource === '*' || (Array.isArray(resource) && resource.some(hasStar));
 
-test('T-INF-8 no policy on the role of a function this repo defines has a "*" resource', () => {
+test('T-INF-8 no policy on the role of a function this repo defines has a "*" resource, except dynamodb:ListStreams on the rollup role (D-34)', () => {
   for (const stage of STAGES) {
     const { api } = addStage(new cdk.App({ context }), stage, env);
     const all = resources(api);
     const ours = ofType(all, 'AWS::Lambda::Function')
       .filter(([, fn]) => String(fn.Properties.FunctionName ?? '').startsWith(`smart-finances-${stage}-`))
       .map(([, fn]) => fn.Properties.Role['Fn::GetAtt'][0] as string);
+    const rollupRole = fnNamed(all, `smart-finances-${stage}-rollup`).roleId;
+    let listStreams = 0;
     assert.ok(ours.length > 0, 'at least one function of this repo');
     assert.equal(new Set(ours).size, ours.length, 'one role per function');
 
@@ -114,9 +134,14 @@ test('T-INF-8 no policy on the role of a function this repo defines has a "*" re
       ];
       assert.ok(statements.length > 0, `${roleId} has its own policy`);
       for (const statement of statements) {
+        if (roleId === rollupRole && statement.Action === 'dynamodb:ListStreams' && statement.Resource === '*') {
+          listStreams += 1;
+          continue;
+        }
         assert.equal(hasStar(statement.Resource), false, `${roleId}: ${JSON.stringify(statement.Action)} has a "*" resource`);
       }
     }
+    assert.equal(listStreams, 1, 'the one allowed "*" is ListStreams, alone, on the rollup role');
   }
 });
 
@@ -142,12 +167,12 @@ test('T-INF-7 makeFunction bundles the pinned AWS SDK instead of using the runti
   assert.ok(bundle.length > 100_000, 'the SDK is inside the bundle');
 });
 
-const NAMES = ['bucket-name', 'table-name', 'user-pool-client-id', 'user-pool-id', 'web-client-id'];
+const NAMES = ['bucket-name', 'table-name', 'table-stream-arn', 'user-pool-client-id', 'user-pool-id', 'web-client-id'];
 const ssmArn = (stage: string, name: string) => ({
   'Fn::Join': ['', ['arn:', { Ref: 'AWS::Partition' }, `:ssm:us-east-1:111111111111:parameter/smart-finances/${stage}/${name}`]],
 });
 
-test('T-INF-13 one custom resource reads the five SSM values; no SSM template parameters; its policy names only their ARNs', () => {
+test('T-INF-13 one custom resource reads the six SSM values; no SSM template parameters; its policy names only their ARNs', () => {
   for (const stage of STAGES) {
     const { api } = addStage(new cdk.App({ context }), stage, env);
     const json = Template.fromStack(api).toJSON();
@@ -176,7 +201,7 @@ test('T-INF-13 one custom resource reads the five SSM values; no SSM template pa
     const [[, readerAgain]] = ofType(again.Resources, 'Custom::AWS');
     assert.notEqual(JSON.parse(readerAgain.Properties.Update).physicalResourceId.id, update.physicalResourceId.id);
 
-    // Its policy: ssm:GetParameters on exactly the five parameter ARNs, nothing else, no "*".
+    // Its policy: ssm:GetParameters on exactly the six parameter ARNs, nothing else, no "*".
     const policies = ofType(all, 'AWS::IAM::Policy').filter(([id]) => reader.DependsOn?.includes(id));
     assert.equal(policies.length, 1);
     const statements = policies[0][1].Properties.PolicyDocument.Statement;
@@ -197,13 +222,14 @@ test('T-INF-13 one custom resource reads the five SSM values; no SSM template pa
     const field = (token: string) => api.resolve(token)['Fn::GetAtt'];
     assert.deepEqual(field(api.data.bucketName), [readerId, 'Parameters.0.Value']);
     assert.deepEqual(field(api.data.tableName), [readerId, 'Parameters.1.Value']);
-    assert.deepEqual(field(api.data.userPoolClientId), [readerId, 'Parameters.2.Value']);
-    assert.deepEqual(field(api.data.userPoolId), [readerId, 'Parameters.3.Value']);
-    assert.deepEqual(field(api.data.webClientId), [readerId, 'Parameters.4.Value']);
+    assert.deepEqual(field(api.data.tableStreamArn), [readerId, 'Parameters.2.Value']);
+    assert.deepEqual(field(api.data.userPoolClientId), [readerId, 'Parameters.3.Value']);
+    assert.deepEqual(field(api.data.userPoolId), [readerId, 'Parameters.4.Value']);
+    assert.deepEqual(field(api.data.webClientId), [readerId, 'Parameters.5.Value']);
   }
 });
 
-test('T-WINF-6 the API serves many people: both clients in the audience, throttle 50 and 100, no API or bucket browser rule, api-url published', () => {
+test('T-WINF-6 the API serves many people: both clients in the audience, throttle 50 and 100, no API or bucket browser rule, api-url and delete-function-name published (D-40)', () => {
   for (const stage of STAGES) {
     const app = new cdk.App({ context });
     const { data, api } = addStage(app, stage, env);
@@ -239,11 +265,14 @@ test('T-WINF-6 the API serves many people: both clients in the audience, throttl
     assert.deepEqual(apiStage.Properties.DefaultRouteSettings, { ThrottlingRateLimit: 50, ThrottlingBurstLimit: 100 });
 
     const params = ofType(all, 'AWS::SSM::Parameter').map(([, r]) => r.Properties);
-    assert.equal(params.length, 1, 'one published parameter');
-    assert.equal(params[0].Name, `/smart-finances/${stage}/api-url`);
-    assert.equal(params[0].Type, 'String');
+    assert.deepEqual(params.map((p) => p.Name).sort(), [`/smart-finances/${stage}/api-url`, `/smart-finances/${stage}/delete-function-name`]);
+    assert.ok(params.every((p) => p.Type === 'String'));
     const [[apiId]] = ofType(all, 'AWS::ApiGatewayV2::Api');
-    assert.ok(JSON.stringify(params[0].Value).includes(apiId), 'the value is the HTTP API endpoint');
+    const apiUrl = params.find((p) => p.Name.endsWith('/api-url'))!;
+    assert.ok(JSON.stringify(apiUrl.Value).includes(apiId), 'the value is the HTTP API endpoint');
+    const deleteName = params.find((p) => p.Name.endsWith('/delete-function-name'))!;
+    assert.equal(deleteName.Value, `smart-finances-${stage}-api-delete`, 'the name the web stack invokes');
+    assert.equal(fnNamed(all, deleteName.Value).props.FunctionName, deleteName.Value);
 
     const buckets = ofType(resources(data), 'AWS::S3::Bucket');
     assert.equal(buckets.length, 1);
@@ -329,8 +358,9 @@ test('T-INF-9 sizes, environment and retries of the import functions', () => {
   const parser = fnNamed(all, 'smart-finances-qa-parser');
   assert.deepEqual([read.MemorySize, read.Timeout, write.MemorySize, write.Timeout, parser.props.MemorySize, parser.props.Timeout], [256, 10, 256, 10, 1024, 300]);
   assert.deepEqual(Object.keys(read.Environment.Variables).sort(), ['STAGE', 'TABLE_NAME']);
-  assert.deepEqual(Object.keys(write.Environment.Variables).sort(), ['BUCKET_NAME', 'PARSER_FUNCTION', 'STAGE', 'TABLE_NAME']);
+  assert.deepEqual(Object.keys(write.Environment.Variables).sort(), ['BUCKET_NAME', 'PARSER_FUNCTION', 'ROLLUP_FUNCTION', 'STAGE', 'TABLE_NAME']);
   assert.deepEqual(write.Environment.Variables.PARSER_FUNCTION, { Ref: parser.id });
+  assert.deepEqual(write.Environment.Variables.ROLLUP_FUNCTION, { Ref: fnNamed(all, 'smart-finances-qa-rollup').id });
   assert.deepEqual(Object.keys(parser.props.Environment.Variables).sort(), ['BUCKET_NAME', 'STAGE', 'TABLE_NAME']);
   const [[, invokeConfig]] = ofType(all, 'AWS::Lambda::EventInvokeConfig');
   assert.equal(invokeConfig.Properties.MaximumRetryAttempts, 2);
@@ -358,7 +388,7 @@ test('T-INF-9 an EventBridge rule sends Object Created under uploads/ in the sta
   assert.equal(permissions[0][1].Properties.FunctionName['Fn::GetAtt'][0], parser.id);
 });
 
-test('T-INF-9 grants: read only reads the table; write puts uploads and invokes only the parser; the parser reads and deletes uploads', () => {
+test('T-INF-9 grants: read only reads the table; write puts uploads and invokes only the parser and rollup; the parser reads and deletes uploads', () => {
   const { api } = addStage(new cdk.App({ context }), 'qa', env);
   const all = resources(api);
   const read = statementsOf(all, fnNamed(all, 'smart-finances-qa-api-read').roleId);
@@ -370,10 +400,13 @@ test('T-INF-9 grants: read only reads the table; write puts uploads and invokes 
   assert.deepEqual(actionsOf(logs(write)), ['dynamodb:ConditionCheckItem', 'dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:Query', 'lambda:InvokeFunction', 's3:PutObject']);
   assert.deepEqual(actionsOf(logs(parse)), ['dynamodb:ConditionCheckItem', 'dynamodb:DeleteItem', 'dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:Query', 's3:DeleteObject', 's3:GetObject']);
   // Every non-log statement names exactly one resource.
-  const only = (statements: Statement[], action: string) => {
+  const resourcesFor = (statements: Statement[], action: string) => {
     const found = statements.filter((s) => actionsOf([s]).includes(action));
     assert.equal(found.length, 1, action);
-    const list = Array.isArray(found[0].Resource) ? found[0].Resource : [found[0].Resource];
+    return Array.isArray(found[0].Resource) ? found[0].Resource : [found[0].Resource];
+  };
+  const only = (statements: Statement[], action: string) => {
+    const list = resourcesFor(statements, action);
     assert.equal(list.length, 1, `${action} names one resource`);
     return JSON.stringify(list[0]);
   };
@@ -386,5 +419,109 @@ test('T-INF-9 grants: read only reads the table; write puts uploads and invokes 
   for (const [statements, action] of [[write, 's3:PutObject'], [parse, 's3:GetObject'], [parse, 's3:DeleteObject']] as const) {
     assert.match(only(statements, action), /\/uploads\/\*"\]\]\}$/, `${action} on uploads/* only`);
   }
-  assert.equal(only(write, 'lambda:InvokeFunction'), JSON.stringify({ 'Fn::GetAtt': [parser.id, 'Arn'] }), 'invoke only the parser');
+  const rollup = fnNamed(all, 'smart-finances-qa-rollup');
+  assert.deepEqual(resourcesFor(write, 'lambda:InvokeFunction'), [{ 'Fn::GetAtt': [parser.id, 'Arn'] }, { 'Fn::GetAtt': [rollup.id, 'Arn'] }], 'invoke only the parser and rollup');
+});
+
+// ---- SF-50: the read, rollup and delete functions ----
+test('T-INF-11 all 15 routes exist; every one but GET /health binds the JWT authorizer; each reaches its function', () => {
+  for (const stage of STAGES) {
+    const { api } = addStage(new cdk.App({ context }), stage, env);
+    const all = resources(api);
+    const [[authorizerId]] = ofType(all, 'AWS::ApiGatewayV2::Authorizer');
+    const routes = ofType(all, 'AWS::ApiGatewayV2::Route').map(([, r]) => r);
+    assert.equal(routes.length, 15);
+    for (const route of routes) {
+      const key = route.Properties.RouteKey;
+      assert.ok(key in ALL_ROUTES, key);
+      assert.equal(integrationTarget(all, route), fnNamed(all, `smart-finances-${stage}-${ALL_ROUTES[key]}`).id, key);
+      if (key === 'GET /health') continue;
+      assert.equal(route.Properties.AuthorizationType, 'JWT', key);
+      assert.equal(route.Properties.AuthorizerId.Ref, authorizerId, key);
+    }
+  }
+});
+
+const STREAM_FILTERS = [
+  { dynamodb: { Keys: { sk: { S: [{ prefix: 'TXN#' }] } } } },
+  { dynamodb: { Keys: { sk: { S: [{ prefix: 'OVR#' }] } } } },
+];
+
+test('T-INF-12 rollup reads the table stream (TXN# and OVR# keys, batch 100, one at a time, bisect, 3 retries, 1 hour); failures go to a 14-day queue whose depth alarms a topic', () => {
+  for (const stage of STAGES) {
+    const { api } = addStage(new cdk.App({ context }), stage, env);
+    const all = resources(api);
+    const rollup = fnNamed(all, `smart-finances-${stage}-rollup`);
+    assert.deepEqual([rollup.props.MemorySize, rollup.props.Timeout], [512, 60]);
+    assert.deepEqual(Object.keys(rollup.props.Environment.Variables).sort(), ['STAGE', 'TABLE_NAME']);
+
+    const mappings = ofType(all, 'AWS::Lambda::EventSourceMapping');
+    assert.equal(mappings.length, 1);
+    const mapping = mappings[0][1].Properties;
+    const [[readerId]] = ofType(all, 'Custom::AWS');
+    assert.equal(mapping.FunctionName.Ref, rollup.id);
+    assert.deepEqual(mapping.EventSourceArn, { 'Fn::GetAtt': [readerId, 'Parameters.2.Value'] }, 'the stream ARN read from SSM');
+    assert.equal(mapping.StartingPosition, 'TRIM_HORIZON');
+    assert.equal(mapping.BatchSize, 100);
+    assert.equal(mapping.ParallelizationFactor, 1);
+    assert.equal(mapping.BisectBatchOnFunctionError, true);
+    assert.equal(mapping.MaximumRetryAttempts, 3);
+    assert.equal(mapping.MaximumRecordAgeInSeconds, 3600);
+    assert.deepEqual(mapping.FilterCriteria.Filters.map((f: { Pattern: string }) => JSON.parse(f.Pattern)), STREAM_FILTERS);
+
+    const queues = ofType(all, 'AWS::SQS::Queue');
+    assert.equal(queues.length, 1);
+    const [[queueId, queue]] = queues;
+    assert.equal(queue.Properties.MessageRetentionPeriod, 14 * 24 * 3600);
+    assert.deepEqual(mapping.DestinationConfig, { OnFailure: { Destination: { 'Fn::GetAtt': [queueId, 'Arn'] } } });
+
+    const topics = ofType(all, 'AWS::SNS::Topic');
+    assert.equal(topics.length, 1);
+    const [[topicId, topic]] = topics;
+    assert.equal(topic.Properties.TopicName, `smart-finances-${stage}-rollup-failures`);
+    assert.deepEqual(ofType(all, 'AWS::SNS::Subscription'), [], 'the owner subscribes an email by hand');
+
+    const alarms = ofType(all, 'AWS::CloudWatch::Alarm');
+    assert.equal(alarms.length, 1);
+    const alarm = alarms[0][1].Properties;
+    assert.deepEqual(
+      [alarm.Namespace, alarm.MetricName, alarm.Statistic, alarm.Period, alarm.EvaluationPeriods, alarm.Threshold, alarm.ComparisonOperator, alarm.TreatMissingData],
+      ['AWS/SQS', 'ApproximateNumberOfMessagesVisible', 'Maximum', 60, 1, 0, 'GreaterThanThreshold', 'notBreaching'],
+    );
+    assert.deepEqual(alarm.Dimensions, [{ Name: 'QueueName', Value: { 'Fn::GetAtt': [queueId, 'QueueName'] } }]);
+    assert.deepEqual(alarm.AlarmActions, [{ Ref: topicId }]);
+  }
+});
+
+test('T-INF-8 grants: rollup reads and writes the table, reads its stream, sends failures to its queue; api-delete reads and deletes one person\'s items and uploads', () => {
+  const { api } = addStage(new cdk.App({ context }), 'qa', env);
+  const all = resources(api);
+  const [[readerId]] = ofType(all, 'Custom::AWS');
+  const noLogs = (s: Statement[]) => s.filter((x) => !actionsOf([x]).every((a) => a.startsWith('logs:')));
+  const rollup = noLogs(statementsOf(all, fnNamed(all, 'smart-finances-qa-rollup').roleId));
+  const del = fnNamed(all, 'smart-finances-qa-api-delete');
+  const erase = noLogs(statementsOf(all, del.roleId));
+  const [[queueId]] = ofType(all, 'AWS::SQS::Queue');
+  const tableArn = JSON.stringify(statementsOf(all, fnNamed(all, 'smart-finances-qa-api-read').roleId).find((s) => actionsOf([s]).includes('dynamodb:Query'))!.Resource);
+  const byResource = (statements: Statement[]) =>
+    Object.fromEntries(statements.map((s) => [JSON.stringify(s.Resource), { actions: actionsOf([s]), condition: s.Condition }]));
+
+  const r = byResource(rollup);
+  assert.deepEqual(Object.keys(r).length, rollup.length, 'one statement per resource');
+  assert.deepEqual(r[tableArn].actions, ['dynamodb:ConditionCheckItem', 'dynamodb:PutItem', 'dynamodb:Query']);
+  assert.deepEqual(r[JSON.stringify({ 'Fn::GetAtt': [readerId, 'Parameters.2.Value'] })].actions, ['dynamodb:DescribeStream', 'dynamodb:GetRecords', 'dynamodb:GetShardIterator']);
+  assert.deepEqual(r['"*"'].actions, ['dynamodb:ListStreams']);
+  assert.deepEqual(r[JSON.stringify({ 'Fn::GetAtt': [queueId, 'Arn'] })].actions, ['sqs:GetQueueAttributes', 'sqs:GetQueueUrl', 'sqs:SendMessage']);
+  assert.equal(rollup.length, 4);
+
+  assert.deepEqual([del.props.MemorySize, del.props.Timeout], [256, 25]);
+  assert.deepEqual(Object.keys(del.props.Environment.Variables).sort(), ['BUCKET_NAME', 'STAGE', 'TABLE_NAME']);
+  const d = byResource(erase);
+  assert.equal(erase.length, 3);
+  assert.deepEqual(d[tableArn].actions, ['dynamodb:DeleteItem', 'dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:Query']);
+  const bucketName = del.props.Environment.Variables.BUCKET_NAME;
+  const bucketArn = JSON.stringify({ 'Fn::Join': ['', ['arn:', { Ref: 'AWS::Partition' }, ':s3:::', bucketName]] });
+  const uploadsArn = JSON.stringify({ 'Fn::Join': ['', ['arn:', { Ref: 'AWS::Partition' }, ':s3:::', bucketName, '/uploads/*']] });
+  assert.deepEqual(d[bucketArn], { actions: ['s3:ListBucket'], condition: { StringLike: { 's3:prefix': 'uploads/*' } } });
+  assert.deepEqual(d[uploadsArn], { actions: ['s3:DeleteObject'], condition: undefined });
 });
