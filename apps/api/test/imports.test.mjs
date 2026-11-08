@@ -86,14 +86,18 @@ test('T-REC-1 a file that arrives after the form expired fails', async () => {
 
 test('T-REC-1 the erase window refuses the lock until quiet_until has passed', async () => {
   const { store, make } = await setup();
-  await store.put({ ...erasedKey(A), erased_at: new Date(T0).toISOString() });
+  // Records made before the erase marked the person; their locks are refused after it.
   const during = await make();
+  const quiet = await make({ now: T0 + 60 * MIN - 1 });
+  await store.put({ ...erasedKey(A), erased_at: new Date(T0).toISOString() });
   assert.equal((await takeLock(store, A, during.import_id, { period: '2026-05', now: T0 + MIN })).outcome, 'failed');
   assert.equal((await getImport(store, A, during.import_id)).error.code, 'erasing');
+  // No new record at all inside the window (D-30).
+  await assert.rejects(make({ now: T0 + MIN }), { name: 'Erasing' });
 
   await store.put({ ...erasedKey(A), erased_at: new Date(T0).toISOString(), quiet_until: new Date(T0 + 70 * MIN).toISOString() });
-  const quiet = await make({ now: T0 + 60 * MIN });
-  assert.equal((await takeLock(store, A, quiet.import_id, { period: '2026-05', now: T0 + 61 * MIN })).outcome, 'failed');
+  assert.equal((await takeLock(store, A, quiet.import_id, { period: '2026-05', now: T0 + 61 * MIN - 1 })).outcome, 'failed');
+  await assert.rejects(make({ now: T0 + 70 * MIN }), { name: 'Erasing' });
 
   const after = await make({ now: T0 + 71 * MIN });
   assert.equal((await takeLock(store, A, after.import_id, { period: '2026-05', now: T0 + 72 * MIN })).outcome, 'locked');

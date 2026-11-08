@@ -36,8 +36,22 @@ export async function createImport(store, sub, { source, file_name, size, now = 
     created_at: iso(now),
     expires_at: iso(now + FORM_SECONDS * 1000),
   };
-  await store.put(record, { if: [{ attr: 'sk', exists: false }] });
+  // With the erase check, so no form is handed out once an erase has begun (D-30).
+  try {
+    await store.transact([eraseCheck(sub, now), { put: record, if: [{ attr: 'sk', exists: false }] }]);
+  } catch (err) {
+    if (err instanceof ConditionFailed && err.index === 0) throw new Erasing();
+    throw err;
+  }
   return record;
+}
+
+// Thrown when an erase or its quiet window refuses the write.
+export class Erasing extends Error {
+  constructor() {
+    super('all data is being deleted');
+    this.name = 'Erasing';
+  }
 }
 
 export const getImport = (store, sub, importId) => store.get(impKey(sub, importId), { consistent: true });

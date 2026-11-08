@@ -204,3 +204,53 @@ test('T-ERA-3 a crash mid-erase leaves quiet_until unset and everything refused;
   assert.equal(finished.erased_at, marker.erased_at, 'the same erase finished');
   assert.equal(finished.quiet_until, new Date(w.now() + QUIET_MS).toISOString());
 });
+
+test('T-ERA-3 resuming an unfinished erase waits for a lock taken before its mark, and keeps the marker', async () => {
+  const w = world();
+  await seed(w, A);
+  // An erase that crashed right after its mark, while an import of a period held a live lock.
+  const pointer = await w.store.get(perKey(A, 'csv', 'log'));
+  await w.store.put({ ...pointer, lock_import: 'running', lock_until: new Date(T0 + LOCK_MS).toISOString(), rev: pointer.rev + 1 });
+  await w.store.put({ ...erasedKey(A), erased_at: new Date(T0).toISOString() });
+  const items = w.partition(A).length;
+  const waiting = await w.erase(A);
+  assert.deepEqual([waiting.status, waiting.body.error.code], [409, 'conflict']);
+  assert.equal(w.partition(A).length, items, 'nothing deleted under a live lock');
+  assert.deepEqual(await w.store.get(erasedKey(A)), { ...erasedKey(A), erased_at: new Date(T0).toISOString() }, 'the marker stays');
+  w.tick(LOCK_MS + 1);
+  assert.equal((await w.erase(A)).status, 202);
+  assert.deepEqual(w.partition(A).map((i) => i.sk), ['ERASED']);
+});
+
+test('T-ERA-2 a form requested while an erase marks the person is refused by the write itself', async () => {
+  const w = world();
+  // The handler's own window check reads no marker; the erase marks the person right after.
+  const realGet = w.store.get.bind(w.store);
+  w.store.get = async (key, opts) => {
+    if (key.sk === 'ERASED') {
+      w.store.get = realGet;
+      await w.store.put({ ...erasedKey(A), erased_at: new Date(T0).toISOString() });
+      return undefined;
+    }
+    return realGet(key, opts);
+  };
+  const res = await w.writeCall(A, 'POST /imports', { body: { source: 'csv', file_name: 'demo.csv', size: 10 } });
+  assert.deepEqual([res.status, res.body.error.code], [409, 'conflict']);
+  assert.deepEqual(w.partition(A).map((i) => i.sk), ['ERASED'], 'no import record');
+});
+
+test('T-ERA-2 a refused erase whose marker another call took over answers conflict, not an error', async () => {
+  const w = world();
+  await seed(w, A);
+  await w.upload(A, ['2026-05-01,Open,-1.00,ARS,acc'], { arrive: false });
+  const realQuery = w.store.query.bind(w.store);
+  w.store.query = async (q) => {
+    w.store.query = realQuery;
+    // A second erase resumes from this one's mark before it can put the marker back.
+    await w.store.put({ ...erasedKey(A), erased_at: new Date(T0 + 1).toISOString() });
+    return realQuery(q);
+  };
+  const res = await w.erase(A);
+  assert.deepEqual([res.status, res.body.error.code], [409, 'conflict']);
+  assert.equal((await w.store.get(erasedKey(A))).erased_at, new Date(T0 + 1).toISOString(), "the other call's marker is left alone");
+});

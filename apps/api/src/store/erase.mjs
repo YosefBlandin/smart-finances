@@ -37,26 +37,35 @@ export async function eraseAll(store, sub, { now = () => Date.now(), attempt = 0
 
   let marker = before;
   if (!before || before.quiet_until) {
-    // A new erase. Mark first, then look for running work: anything that took a lock before the
-    // mark is visible now, and nothing can take one after it.
+    // A new erase. Mark first, then look for running work: anything that took a lock or opened a
+    // form before the mark is visible now, and nothing can take one after it.
     marker = { ...key, erased_at: iso(start) };
     const same = before ? [{ attr: 'quiet_until', op: '=', value: before.quiet_until }] : [{ attr: 'sk', exists: false }];
     try {
       await store.put(marker, { if: same });
     } catch (err) {
       if (!(err instanceof ConditionFailed)) throw err;
-      if (attempt >= 4) throw err;
+      if (attempt >= 4) return { conflict: 'another delete is running' };
       return eraseAll(store, sub, { now, attempt: attempt + 1 }); // another erase moved the marker; decide again
     }
-    const { items } = await store.query({ pk, consistent: true });
-    const reason = busy(items, now());
+    const reason = busy((await store.query({ pk, consistent: true })).items, now());
     if (reason) {
-      // Put the marker back as it was, only if it is still ours.
+      // Put the marker back as it was, only if it is still ours. If another call has taken it
+      // over, that call decides; this one refuses either way.
       const ours = [{ attr: 'erased_at', op: '=', value: marker.erased_at }, { attr: 'quiet_until', exists: false }];
-      if (before) await store.put(before, { if: ours });
-      else await store.remove(key, { if: ours });
+      try {
+        if (before) await store.put(before, { if: ours });
+        else await store.remove(key, { if: ours });
+      } catch (err) {
+        if (!(err instanceof ConditionFailed)) throw err;
+      }
       return { conflict: reason };
     }
+  } else {
+    // Resuming an erase that did not finish: work that began before its mark may still run. Wait
+    // for it (a lock frees itself within 10 minutes, a form within 15) and keep the marker.
+    const reason = busy((await store.query({ pk, consistent: true })).items, now());
+    if (reason) return { conflict: reason };
   }
 
   const { items } = await store.query({ pk, consistent: true });

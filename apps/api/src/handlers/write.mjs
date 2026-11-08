@@ -2,7 +2,7 @@
 // adapter: the person comes only from the verified claims, input is checked with the shared
 // contract schemas (D-39), and the core modules do the work.
 import { checkImportRequest, SOURCES } from '@smart-finances/contracts/routes';
-import { abandonReconcile, createImport, FORM_SECONDS, inEraseWindow, startRepair, startUndo } from '../store/imports.mjs';
+import { abandonReconcile, createImport, Erasing, FORM_SECONDS, inEraseWindow, startRepair, startUndo } from '../store/imports.mjs';
 import { erasedKey } from '../store/keys.mjs';
 import { createRepo } from '../store/repo.mjs';
 import { putRate } from '../store/rates.mjs';
@@ -32,7 +32,13 @@ async function requestImport(deps, sub, event) {
   const { source, file_name, size } = checked('POST /imports', body);
   // No form while erasing or quiet: its file would arrive after the erase (D-30).
   await refuseWhileErasing(deps, sub);
-  const record = await createImport(deps.store, sub, { source, file_name, size, now: deps.now(), ulid: deps.ulid });
+  let record;
+  try {
+    record = await createImport(deps.store, sub, { source, file_name, size, now: deps.now(), ulid: deps.ulid });
+  } catch (err) {
+    if (err instanceof Erasing) throw new HttpError('conflict', 'your data is being deleted; try again later');
+    throw err;
+  }
   const upload = await deps.store.presignPost(record.s3_key, { maxBytes: SOURCES[source].maxBytes, expiresSeconds: FORM_SECONDS });
   return reply(201, { import_id: record.import_id, upload: { url: upload.url, fields: upload.fields }, expires_at: record.expires_at });
 }
