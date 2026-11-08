@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ROUTES } from '@smart-finances/contracts/routes';
 import { createMemoryStore } from '../src/store/memory.mjs';
-import { erasedKey, ovrKey, perKey, rateKey, sumKey } from '../src/store/keys.mjs';
+import { erasedKey, impKey, ovrKey, perKey, rateKey, sumKey } from '../src/store/keys.mjs';
 import { createUlid } from '../src/store/ulid.mjs';
 import { LOCK_MS } from '../src/store/imports.mjs';
 import { QUIET_MS } from '../src/store/erase.mjs';
@@ -58,6 +58,7 @@ function world() {
     partition,
     objects,
     rollup,
+    parser,
     del,
     erase: (sub, body = { confirm: 'DELETE' }) => call(del, sub, 'DELETE /data', { body }),
     totals: (sub) => call(read, sub, 'GET /totals', { queryStringParameters: { from: '2026-01', to: '2026-12' } }),
@@ -253,4 +254,57 @@ test('T-ERA-2 a refused erase whose marker another call took over answers confli
   const res = await w.erase(A);
   assert.deepEqual([res.status, res.body.error.code], [409, 'conflict']);
   assert.equal((await w.store.get(erasedKey(A))).erased_at, new Date(T0 + 1).toISOString(), "the other call's marker is left alone");
+});
+
+test('T-ERA-2 a late undo reconcile whose lock expired, run once an erase has marked the person, writes no row and fails its record', async () => {
+  const w = world();
+  const first = await w.upload(A, ['2026-03-01,Old,-1.00,ARS,acc']);
+  w.tick(MIN);
+  await w.upload(A, ['2026-03-02,New,-2.00,ARS,acc']);
+  const pointer = await w.store.get(perKey(A, 'csv', 'log'));
+  const active = pointer.active_import;
+  assert.notEqual(active, first.body.import_id);
+  const undo = await w.writeCall(A, 'POST /imports/{id}/undo', { pathParameters: { id: active } });
+  assert.equal(undo.status, 202);
+  const [{ payload }] = w.store.invocations.filter((i) => i.functionName === 'parser-fn');
+  const rowsBefore = w.partition(A).filter((i) => i.sk.startsWith('TXN#')).map((i) => i.sk);
+
+  // The async invoke is delayed past the lock; an erase then marks the person and is about to list.
+  w.tick(LOCK_MS + MIN);
+  await w.store.put({ ...erasedKey(A), erased_at: new Date(w.now()).toISOString() });
+  const out = await w.parser(payload);
+  assert.equal(out.outcome, 'failed');
+  assert.deepEqual(w.partition(A).filter((i) => i.sk.startsWith('TXN#')).map((i) => i.sk), rowsBefore, 'the undone file\'s rows are not put back');
+  const after = await w.store.get(perKey(A, 'csv', 'log'));
+  assert.equal(after.lock_import, undefined, 'the lock is not renewed');
+  const record = await w.store.get(impKey(A, undo.body.import_id));
+  assert.deepEqual([record.status, record.error?.code], ['failed', 'erasing']);
+});
+
+test('T-ROL-2 a rollup that meets a running erase writes nothing without failing; one that meets a refused erase\'s marker recomputes', async () => {
+  const w = world();
+  await w.upload(A, ['2026-03-01,Shop,-1.00,ARS,acc']);
+  const month = { sub: A, months: 'all' };
+  // Running: marked, no quiet_until yet. Not an error, so the erase's own deletions never alarm.
+  await w.store.put({ ...erasedKey(A), erased_at: new Date(w.now()).toISOString() });
+  assert.deepEqual(await w.rollup(month), { months: 1 });
+  assert.equal(await w.store.get(sumKey(A, '2026-03')), undefined);
+
+  // Refused: the marker is put back (here: removed) between the failed write and the re-read.
+  const realGet = w.store.get.bind(w.store);
+  w.store.get = async (key, opts) => {
+    if (key.sk === 'ERASED') await w.store.remove(erasedKey(A));
+    return realGet(key, opts);
+  };
+  assert.deepEqual(await w.rollup(month), { months: 1 });
+  w.store.get = realGet;
+  const total = await w.store.get(sumKey(A, '2026-03'));
+  assert.equal(total.row_count, 1, 'the month is written once the marker is gone');
+
+  // Quiet window: skipped, as before.
+  await w.store.put({ ...erasedKey(A), erased_at: new Date(w.now()).toISOString(), quiet_until: new Date(w.now() + QUIET_MS).toISOString() });
+  w.tick(MIN);
+  await w.store.put({ ...total, computed_at: 0 });
+  assert.deepEqual(await w.rollup(month), { months: 1 });
+  assert.equal((await w.store.get(sumKey(A, '2026-03'))).computed_at, 0, 'nothing written in the window');
 });

@@ -241,13 +241,18 @@ export async function reconcile(store, sub, runningId, { now = Date.now(), load 
   const held = await getPointer(store, sub, source, period);
   if (!held || held.lock_import !== runningId) return { outcome: 'lost_lock' };
   // Renew the lock first, so this run has a full lock period for its writes even when it is a
-  // late retry of an undo or repair (whose lock the write handler took).
+  // late retry of an undo or repair (whose lock the write handler took). The renewal carries the
+  // erase check (Contracts "Rollup"): an erase marks before it checks for live locks, so either
+  // it sees this renewed lock and refuses, or this run sees its mark and writes no row.
   const pointer = { ...held, lock_until: iso(now + LOCK_MS), rev: (held.rev ?? 0) + 1 };
   try {
-    await store.put(pointer, { if: holds(held, runningId) });
+    await store.transact([eraseCheck(sub, now), { put: pointer, if: holds(held, runningId) }]);
   } catch (err) {
-    if (err instanceof ConditionFailed) return { outcome: 'lost_lock' };
-    throw err;
+    if (!(err instanceof ConditionFailed)) throw err;
+    if (err.index !== 0) return { outcome: 'lost_lock' };
+    // Conditional on the record as read, so it cannot recreate one the erase already removed.
+    const failed = await failRecord(store, sub, running, now, 'erasing', 'All data is being deleted; upload the file again later.');
+    return failed ? { outcome: 'failed', record: failed } : { outcome: 'lost_lock' };
   }
   const active = pointer.active_import ? await getImport(store, sub, pointer.active_import) : undefined;
   const parsed = active ? await load(active) : { transactions: [], issues: [] };
