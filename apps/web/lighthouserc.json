@@ -17,7 +17,7 @@
         "formFactor": "mobile",
         "throttlingMethod": "simulate",
         "onlyCategories": ["performance"],
-        "extraHeaders": { "Cookie": "__Host-sid=lhci-dummy-session" }
+        "extraHeaders": { "Cookie": "__Host-sid=e2e-lighthouse-not-secret-00000000000000000" }
       }
     },
     "assert": {

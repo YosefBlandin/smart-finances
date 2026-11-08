@@ -91,6 +91,7 @@ status: executing
 | pr-smart-finances.md | 2026-10-31 | 15/15 | T-WEB-1 to T-WEB-17 | vitest.config.ts JSX, ui/ShellNav.tsx, playwright.config.ts production build, .gitignore (now D-149 to D-152) | pass: 0 blocker, 0 major, 16 minor after fixes; merged as PR #8 |
 | pr-smart-finances-auth.md | 2026-11-05 | 16/16 (SF-154, SF-155 owner-added) | T-WAUTH-1 to T-WAUTH-19 | (app)/actions.ts, Shell.tsx, (app) layout, adapters/memory/clock.ts, __Host-notice cookie, adapter_unavailable (now D-164 to D-171) | pass after fixes: 0 blocker, 1 major (reset said every session ended when the global sign-out failed; fixed, D-170), 6 minor (4 fixed; 1 paperwork; 1 deferred: the wrong-code count on the pre-auth row is not atomic, bounded by the pool lockout and the address limit, needs an atomic PreAuthStore increment); merged as PR #13 |
 | pr-smart-finances-screens.md | 2026-11-06 | 13/13 | T-WSCR-1 to T-WSCR-20 | (app)/layout.tsx and overview/page.tsx (shared review read), ports/account-store.ts and adapters/dynamodb/accounts.ts (confirmImport, declared size, day count), adapters/data-api.ts (25 s for export and erase), ui/primitives Field, GET /api/data/signed-out, __Host-goodbye cookie, import_refused and import_release events (owner decisions 2026-11-05 and 2026-11-06, for the next re-lock) | pass after fixes: task reviews and two conformance rounds (parts A and B, then a re-review); 0 blocker; 5 major, all fixed (stalled import kept the slot; POST /imports before the reservation; Finish deleting lost on reload; signed-out person not sent to sign-in; bytes counted at the source maximum); minors fixed or recorded (overview places read the 200 largest expenses, owner-accepted; two refused choices on one row briefly show an unsaved value until the refetch) |
+| pr-smart-finances-screens.md (SF-173, SF-174) | 2026-11-07 | 2/2 | T-WEB-17, T-WINF-8 | none | pass after fixes: 0 blocker, 2 major (evidence not recorded: recorded; D-190 still proposed: accepted by the owner, 2026-11-07), 2 minor fixed in e483fa3 |
 
 ## Outcome
 <!-- At G-close. One line per AC: pass, fail or partial, and where it was verified, for example: - AC-1: pass, T-E2E-1 on production. Then the merge sha per repo. -->
@@ -108,6 +109,9 @@ status: executing
 | A refused data token showed could not load instead of sign-in | executor | PR 4 conformance review | 64a385e, 1c2ad4b, 1a88952 | none |
 | Imports counted the source maximum, and a failed request kept the day's count | spec-gap (D-114 silent on the stored size) | PR 4 conformance review | 9694319 | none |
 | A refused RUM identity pool reached the page as an unhandled rejection | executor | PR 4 conformance re-review | 2cc200f | none |
+| amplify.yml unit tests took the build host's AWS markers and the branch's settings names, so STAGE=test was refused | spec-gap | qa release, 2026-11-07 | amplify.yml env unset (D-186) | none |
+| Lighthouse measured the ended-session screen, not the money screens, so its budgets checked nothing real | spec-wrong (D-134 gave no session) | qa release, 2026-11-07 | qa allowance (D-187), then the seeded person (D-188, SF-173) | none |
+| The Amplify branch framework was set by hand in the console, not in code | spec-gap | qa release, 2026-11-07 | the branch resource sets it (D-189, SF-174) | none |
 
 ## Metrics
 | Metric | Value |

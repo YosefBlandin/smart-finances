@@ -289,7 +289,7 @@ test('T-WINF-8 app update: platform WEB_COMPUTE, the service and compute roles; 
   }
 });
 
-test('T-WINF-8 branch update: auto-build off and the compute role on the stage branch; delete clears the role', () => {
+test('T-WINF-8 branch update: auto-build off, the compute role and the Next.js SSR framework on the stage branch; delete clears the role', () => {
   for (const stage of STAGES) {
     const { stack, resources } = synth(stage);
     const names = stageValueNames(resources, stage);
@@ -302,12 +302,20 @@ test('T-WINF-8 branch update: auto-build off and the compute role on the stage b
     for (const key of ['Create', 'Update'] as const) {
       const call = event(branch, key, names);
       assert.equal(call.service, 'Amplify');
-      assert.deepEqual(call.parameters, { appId: '{{amplify-app-id}}', branchName: BRANCH[stage], enableAutoBuild: false, computeRoleArn: compute });
+      // D-189: with the console's "Web" framework the build refuses to deploy the server output, so every stage's
+      // branch is set to Next.js SSR by the stack (qa was set by hand on 2026-11-07).
+      assert.deepEqual(call.parameters, {
+        appId: '{{amplify-app-id}}',
+        branchName: BRANCH[stage],
+        enableAutoBuild: false,
+        computeRoleArn: compute,
+        framework: 'Next.js - SSR',
+      });
       assert.deepEqual(call.outputPaths, ['branch.branchName']);
       assert.equal(call.logApiResponseData, false);
     }
     const clear = event(branch, 'Delete', names);
-    assert.deepEqual(clear.parameters, { appId: '{{amplify-app-id}}', branchName: BRANCH[stage], computeRoleArn: '' }, 'auto-build stays off');
+    assert.deepEqual(clear.parameters, { appId: '{{amplify-app-id}}', branchName: BRANCH[stage], computeRoleArn: '' }, 'auto-build stays off, the framework stays');
     assert.equal(clear.ignoreErrorCodesMatching, 'NotFoundException');
 
     // The app is web compute before its branch takes the compute role.
