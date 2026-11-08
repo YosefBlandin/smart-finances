@@ -87,6 +87,10 @@ export function middleware(req: NextRequest): NextResponse {
   const policy = contentPolicy(nonce);
   const hasSession = req.cookies.has(SESSION_COOKIE);
 
+  // The bare address has no page: it opens the overview when there is a session cookie, else sign-in.
+  if (pathname === '/') {
+    return withHeaders(NextResponse.redirect(new URL(hasSession ? '/overview' : '/sign-in', req.url)), policy, pathname);
+  }
   if (!hasSession && under(pathname, MONEY_ROUTES)) {
     return withHeaders(NextResponse.redirect(signInTarget(req, pathname)), policy, pathname);
   }
