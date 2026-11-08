@@ -51,8 +51,8 @@ jobs:
       - name: Type check
         run: npm run build --workspace @smart-finances/infra
 
-      # Browser tests and Storybook's test runner use Playwright's Chromium (D-59, D-136); Lighthouse CI uses the
-      # runner's Chrome. These builds run on fixtures, so they get STAGE=test, not the job's stage.
+      # Browser tests and Storybook's test runner use Playwright's Chromium (D-59, D-136). Lighthouse CI is out of the
+      # deploy (D-191). These builds run on fixtures, so they get STAGE=test, not the job's stage.
       - name: Install Playwright Chromium
         run: npm exec --workspace @smart-finances/web -- playwright install --with-deps chromium
 
@@ -66,13 +66,6 @@ jobs:
         env:
           STAGE: test
         run: npm run test-storybook --workspace @smart-finances/web
-
-      # Phone settings on the fixtures (D-134), on every money screen as the seeded STAGE=test person lighthouse
-      # (D-188, T-WEB-17). A budget over its limit stops the deploy on every stage, qa included.
-      - name: Lighthouse CI budgets
-        env:
-          STAGE: test
-        run: npm run lhci --workspace @smart-finances/web
 
       - name: Configure AWS credentials (OIDC, no stored keys)
         uses: aws-actions/configure-aws-credentials@v4
