@@ -168,7 +168,10 @@ describe('T-WEB-7: redirects by cookie presence only', () => {
   });
 
   it('T-WEB-7: the bare address goes to /overview with __Host-sid and to /sign-in without it', () => {
-    for (const [cookie, to] of [[undefined, '/sign-in'], ['__Host-sid=x', '/overview']] as const) {
+    for (const [cookie, to] of [
+      [undefined, '/sign-in'],
+      ['__Host-sid=x', '/overview'],
+    ] as const) {
       const res = run('/', cookie);
       expect(res.status, to).toBe(307);
       const url = new URL(res.headers.get('location') ?? '');
