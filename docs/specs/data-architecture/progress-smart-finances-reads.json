@@ -248,10 +248,27 @@
     },
     {
       "id": "SF-52",
-      "status": "todo",
+      "status": "in_review",
       "commit": "",
-      "evidence": [],
-      "review": ""
+      "evidence": [
+        {
+          "command": "npm test (after merging origin/qa)",
+          "result": "exit 0: api+contracts 164/164, web 649/649 + lint, infra 49/49"
+        },
+        {
+          "command": "npm run build --workspace @smart-finances/infra; cd infra && npx cdk synth -c stage=qa (no AWS credentials)",
+          "result": "exit 0; exit 0"
+        },
+        {
+          "command": "node --test apps/api/test/erase.test.mjs before the fix",
+          "result": "fail: late undo reconcile in the window ended done (expected failed); refused-erase rollup test fails with totals.mjs at HEAD~1"
+        },
+        {
+          "command": "npm test --workspace @smart-finances/api",
+          "result": "pass 155 fail 0"
+        }
+      ],
+      "review": "conformance (spec-reviewer, sonnet): no blocker. major fixed in 84fce84: reconcile lock renewal had no erase check (imports.mjs), a late undo/repair could put rows back after delete-all; minor fixed in 84fce84: rollup skipped when a refused erase's marker was briefly present, now re-reads and recomputes; minor left as HUMAN step: rows imported before the stream existed have no totals until POST /totals/rebuild (release.md is spec-owned, not edited)"
     }
   ],
   "deviations": [
@@ -273,6 +290,9 @@
     "SF-48: the erase writes ERASED before checking for live locks and open forms, and puts the marker back if it must refuse, so a lock taken between the check and the mark cannot happen. Files beyond SF-48's list: keys.mjs (uploadPrefix), write.mjs (POST /imports, undo and repair check the window first; closes PR 2 conformance minor 2), store.test.mjs (T-KEY-1 pins the new export). api-delete needs PutItem for the ERASED marker and GetItem, beyond architecture's 'table read and delete'.",
     "infra/test/stacks.test.ts (T-INF-6, outside SF-50 Files) pins the API's SSM names; the planned sixth value table-stream-arn changed it by one line.",
     "Grants beyond the architecture text: api-delete holds dynamodb:PutItem (it puts and checks the erase marker); the stream source adds sqs:SendMessage, GetQueueAttributes and GetQueueUrl on the failure queue to the rollup role.",
-    "Follow-up (SF-50 review): infra/lib/alarms-stack.ts STAGE_FUNCTIONS does not list the five data functions, though its comment says the data PRs add them; no spec task covers it. Proposal: add them in a follow-up, about 10 alarms, about 1 USD a month."
-  ]
+    "Follow-up (SF-50 review): infra/lib/alarms-stack.ts STAGE_FUNCTIONS does not list the five data functions, though its comment says the data PRs add them; no spec task covers it. Proposal: add them in a follow-up, about 10 alarms, about 1 USD a month.",
+    "Accepted residual (conformance minor 2): a rollup whose erase check fails while a refused erase's marker is still present skips its month; the window is the refused erase's busy query. It stays a skip, not an error, so an erase's own deletions never reach the failure queue; the next change to the month or POST /totals/rebuild fixes it.",
+    "Conformance minor 3: rows imported on a stage before its stream existed (qa, from PR 2) have no month totals until POST /totals/rebuild per person; release.md has no such step yet. Proposal: add it after the first deploy of PR 3."
+  ],
+  "pr": "https://github.com/YosefBlandin/smart-finances/pull/28 (draft)"
 }
