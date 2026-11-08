@@ -117,7 +117,7 @@ test('T-AUTH-3 person B sees and changes none of person A\'s rows, imports, choi
 
   // Writes in B's own partition: they touch only B.
   const repair = await asB('POST /periods/{source}/{period}/repair', { pathParameters: { source: 'mercadopago', period: '2026-05' } });
-  assert.ok([202, 404].includes(repair.status));
+  assert.equal(repair.status, 404, 'B has no such period; 202 would mean it reached A');
   assert.deepEqual((await asB('POST /totals/rebuild')).body, { months: 0 });
   assert.equal((await asB('PUT /rates/{month}', { pathParameters: { month: '2026-05' }, body: { ars_per_usd: 5 } })).status, 200);
   const bForm = await asB('POST /imports', { body: { source: 'csv', file_name: 'b.csv', size: 10 } });
@@ -129,12 +129,10 @@ test('T-AUTH-3 person B sees and changes none of person A\'s rows, imports, choi
   // B's delete-all removes only B's items and files.
   w.store.putObject(bForm.body.upload.fields.key, 'x');
   const bErase = await asB('DELETE /data', { body: { confirm: 'DELETE' } });
-  assert.ok([202, 409].includes(bErase.status));
-  if (bErase.status === 409) {
-    // B's own form is still open; once it expires the erase runs.
-    const late = createDeleteHandler({ store: w.store, now: () => T0 + 16 * 60_000 });
-    assert.equal((await late(httpEvent(B, 'DELETE /data', { body: { confirm: 'DELETE' } }))).statusCode, 202);
-  }
+  assert.deepEqual([bErase.status, bErase.body.error.code], [409, 'conflict'], "B's own form is still open");
+  // Once B's form has expired, B's erase runs.
+  const late = createDeleteHandler({ store: w.store, now: () => T0 + 16 * 60_000 });
+  assert.equal((await late(httpEvent(B, 'DELETE /data', { body: { confirm: 'DELETE' } }))).statusCode, 202);
   const after = JSON.parse(snapshot());
   assert.deepEqual(after.items.filter(([id]) => id.startsWith(`U#${B}`)).map(([, i]) => i.sk), ['ERASED']);
   assert.deepEqual(after.objects.filter((k) => k.startsWith(`uploads/${B}/`)), []);
