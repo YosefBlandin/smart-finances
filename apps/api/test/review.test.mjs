@@ -179,7 +179,7 @@ test('T-API-9 an approval and a category change on a payments report row survive
 // Every category an importer can set, read from the importers' own sources, must be in the shared
 // list the web shows and PUT review accepts (D-39, D-44).
 test('T-API-10 every category an importer can emit is in the contracts list', async () => {
-  const { readFileSync } = await import('node:fs');
+  const { readFileSync, readdirSync } = await import('node:fs');
   const { CATEGORIES } = await import('@smart-finances/contracts/categories');
   const src = (name) => readFileSync(new URL(`../src/ingest/${name}`, import.meta.url), 'utf8');
   const quoted = (text, re) => [...text.matchAll(re)].map((m) => m[1]);
@@ -187,8 +187,8 @@ test('T-API-10 every category an importer can emit is in the contracts list', as
   const emitted = new Set([
     ...quoted(src('categories.mjs'), /\],?\s*'([^']+)'\]/g),
     ...quoted(src('categories.mjs'), /\/[a-z]*, '([^']+)'\]/g),
-    ...quoted(src('notion.mjs'), /category: '([^']+)'/g),
-    ...quoted(src('mercadopago.mjs'), /category: '([^']+)'/g),
+    // Every inline category literal in every importer file.
+    ...readdirSync(new URL('../src/ingest/', import.meta.url)).filter((f) => f.endsWith('.mjs')).flatMap((f) => quoted(src(f), /category: '([^']+)'/g)),
     ...quoted(between(src('mercadopago.mjs'), 'function categoryFor', '\n}\n'), /return '([^']+)'/g),
     ...quoted(between(src('excel.mjs'), 'const SHEET_CATEGORIES = {', '};'), /:\s*'([^']+)'/g),
     ...quoted(src('excel.mjs'), /\?\? '([^']+)'/g),
@@ -198,4 +198,26 @@ test('T-API-10 every category an importer can emit is in the contracts list', as
   const missing = [...emitted].filter((c) => !CATEGORIES.includes(c));
   assert.deepEqual(missing, []);
   assert.equal(CATEGORIES.at(-1), 'Uncategorized', 'the fallback stays last');
+});
+
+test('T-API-10 a choice written between the read and the write is re-read, so a field left out keeps its value', async () => {
+  const w = world();
+  const mp = row('2026-05-01', { flags: ['needs_review'] });
+  await w.put(A, mp);
+  await w.choose(A, mp.id, { date: mp.date, category: 'Dining out' });
+  // Another write lands just after this request first reads the choice.
+  const realGet = w.store.get.bind(w.store);
+  let raced = false;
+  w.store.get = async (key, opts) => {
+    const value = await realGet(key, opts);
+    if (!raced && key.sk.startsWith('OVR#')) {
+      raced = true;
+      await w.store.put({ ...value, category: 'Groceries', updated_at: 'later' });
+    }
+    return value;
+  };
+  w.tick(MIN);
+  const res = await w.choose(A, mp.id, { date: mp.date, approved: true });
+  assert.equal(res.status, 200);
+  assert.deepEqual([res.body.review.category_override, res.body.review.approved], ['Groceries', true]);
 });
