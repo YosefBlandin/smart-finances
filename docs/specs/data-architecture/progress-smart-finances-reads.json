@@ -266,6 +266,14 @@
         {
           "command": "npm test --workspace @smart-finances/api",
           "result": "pass 155 fail 0"
+        },
+        {
+          "command": "main-session PR review fixes (4fbe1cb): node --test apps/api/test/api-call.test.mjs and review.test.mjs before the fix",
+          "result": "4 api-call tests fail (prod allowed, no --yes); contention test fails (erase message); T-WINF-6 fails (literal value)"
+        },
+        {
+          "command": "node --test apps/api/test/*.test.mjs packages/contracts/test/*.test.mjs; npm test --workspace @smart-finances/infra; infra tsc",
+          "result": "pass 169 fail 0; pass 49 fail 0; tsc ok"
         }
       ],
       "review": "conformance (spec-reviewer, sonnet): no blocker. major fixed in 84fce84: reconcile lock renewal had no erase check (imports.mjs), a late undo/repair could put rows back after delete-all; minor fixed in 84fce84: rollup skipped when a refused erase's marker was briefly present, now re-reads and recomputes; minor left as HUMAN step: rows imported before the stream existed have no totals until POST /totals/rebuild (release.md is spec-owned, not edited)"
@@ -292,7 +300,8 @@
     "Grants beyond the architecture text: api-delete holds dynamodb:PutItem (it puts and checks the erase marker); the stream source adds sqs:SendMessage, GetQueueAttributes and GetQueueUrl on the failure queue to the rollup role.",
     "Follow-up (SF-50 review): infra/lib/alarms-stack.ts STAGE_FUNCTIONS does not list the five data functions, though its comment says the data PRs add them; no spec task covers it. Proposal: add them in a follow-up, about 10 alarms, about 1 USD a month.",
     "Accepted residual (conformance minor 2): a rollup whose erase check fails while a refused erase's marker is still present skips its month; the window is the refused erase's busy query. It stays a skip, not an error, so an erase's own deletions never reach the failure queue; the next change to the month or POST /totals/rebuild fixes it.",
-    "Conformance minor 3: rows imported on a stage before its stream existed (qa, from PR 2) have no month totals until POST /totals/rebuild per person; release.md has no such step yet. Proposal: add it after the first deploy of PR 3."
+    "Conformance minor 3: rows imported on a stage before its stream existed (qa, from PR 2) have no month totals until POST /totals/rebuild per person; release.md has no such step yet. Proposal: add it after the first deploy of PR 3.",
+    "Known limits (main-session review): api-delete's 25 s timeout on a very large partition (resumable: repeat DELETE /data); GET /export and GET /review read every row into one response (10 s, 256 MB, 6 MB response limit)."
   ],
   "pr": "https://github.com/YosefBlandin/smart-finances/pull/28 (draft)"
 }
