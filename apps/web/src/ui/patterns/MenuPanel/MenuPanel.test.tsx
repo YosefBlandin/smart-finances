@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -28,6 +28,7 @@ describe('T-WEB-9: MenuPanel (D-43, D-44)', () => {
     expect(button.getAttribute('aria-expanded')).toBe('false');
     expect(button.querySelector('[data-icon="menu"]')).not.toBeNull();
     await act(async () => fireEvent.click(button));
+    await screen.findByRole('dialog');
     expect(button.getAttribute('aria-expanded')).toBe('true');
     expect(button.querySelector('[data-icon="close"]')).not.toBeNull();
     expect(screen.getByRole('dialog', { name: 'Menu' })).toBeTruthy();
@@ -46,9 +47,13 @@ describe('T-WEB-9: MenuPanel (D-43, D-44)', () => {
     );
     const button = screen.getByRole('button', { name: 'Overview' });
     await act(async () => fireEvent.click(button));
+    await screen.findByRole('dialog');
     await act(async () => fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' }));
     expect(screen.queryByRole('dialog')).toBeNull();
+    // A click does not focus the button here, as in Safari and Firefox; focus still comes back to it (D-190).
+    await waitFor(() => expect(document.activeElement).toBe(button));
     await act(async () => fireEvent.click(button));
+    await screen.findByRole('dialog');
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Imports' })));
     expect(screen.queryByRole('dialog')).toBeNull();
   });

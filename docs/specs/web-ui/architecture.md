@@ -65,7 +65,7 @@ app/             pages and layouts assemble sections; server components prefetch
 - Imports flow down only: app → screens → patterns → primitives; ui never imports screens, queries, application or adapters (lint, D-132, D-138).
 - Views render from props and are what Storybook and most unit tests use; Containers are thin and hold no markup beyond the View.
 - Variants are typed props rendered as data-* attributes (data-variant, data-size, data-tone); CSS modules select on them; tokens only; no className from callers.
-- Interactive behaviour (focus, keyboard, ARIA, popovers, dialogs, the month grid) comes from React Aria Components, styled through their data attributes (data-focused, data-selected, data-open).
+- Interactive behaviour (focus, keyboard, ARIA, popovers, dialogs, the month grid) comes from React Aria Components, styled through their data attributes (data-focused, data-selected, data-open). It loads on first use: MenuPanel and MonthPicker have a plain trigger and load their popover on the first press, SelectField is plain markup (D-176) until a press or an opening key, and ConfirmDialog loads its modal the first time it opens (D-190).
 - Each component folder holds Component.tsx, Component.module.css, Component.stories.tsx and Component.test.tsx.
 - Serves: AC-8, AC-10; D-57, D-129, D-137, D-140 to D-143.
 
@@ -99,26 +99,27 @@ app/             pages and layouts assemble sections; server components prefetch
 
 ### Data access (web server)
 - Where: apps/web/src/adapters/data-api.ts (new), apps/web/src/application/data/ (new), apps/web/src/app/api/data/ (new), apps/web/src/queries/ (new), server actions in apps/web/src/app/(app)/*/actions.ts.
-- Server reads: the data-api adapter adds the access token, times out at 5 seconds (D-101), parses every reply with the shared Zod schema (D-133), keys errors on HTTP status (401: one refresh, then signed out; 403 and 404: not found; 409, 429 and 5xx: failed state with retry) and counts the request against the person's limit.
+- Server reads: the data-api adapter adds the access token, times out at 5 seconds, export and erase at 25 seconds (D-101, D-174), parses every reply with the shared Zod schema (D-133), keys errors on HTTP status (401: one refresh, then the session ends and the person goes to sign-in through /api/data/signed-out, D-182; 403 and 404: not found; 409, 429 and 5xx: failed state with retry) and counts the request against the person's limit.
 - Browser reads: /api/data/* JSON routes (one per data read: transactions, totals, rates, review, imports, import) check the session and consent, call a read use case and return the parsed JSON; TanStack Query hooks in queries/ use them, with infinite queries for cursor paging and a stale time of 30 seconds (D-127, D-130).
 - Changes: server actions (review choice, rate, import request, erase, delete account), each through guarded() (D-125); review and rate mutations are optimistic and roll back on error, then invalidate totals (D-131); the others wait for the answer.
-- Imports: the action reserves a cap slot and checks the pause switch (D-114), asks POST /imports and returns the presigned form; the browser sends the file with fetch and FormData; the import query polls until a final status.
-- Serves: AC-5, AC-6, AC-7, AC-9, AC-15, AC-17; D-53, D-82, D-96, D-101, D-114, D-124, D-125, D-127, D-130, D-131.
+- Imports: the action checks the pause switch, reserves a cap slot under a placeholder id with the file's declared size, asks POST /imports, swaps in the API's import id with confirmImport and returns the presigned form; a refused or failed request releases the placeholder and gives back the day's count; a placeholder older than 2 minutes is released by the next request or deletion start (D-114, D-178). The browser sends the file with fetch and FormData; the import query polls until a final status, and getImport releases or corrects the slot there. No import starts during a deletion (D-179).
+- Address: filter, sort, page and month changes use window.history.replaceState (D-175). The to-review count is one read per render shared by the layout, the overview and the review screen (D-177).
+- Serves: AC-5, AC-6, AC-7, AC-9, AC-15, AC-17, AC-18; D-53, D-82, D-96, D-101, D-114, D-124, D-125, D-127, D-130, D-131, D-174, D-175, D-177 to D-179, D-182.
 
 ### Screens
 - Where: apps/web/src/app/(app)/overview, transactions, review, imports, rates, data (new).
-- Overview: totals and rates for the month and up to six before it; kept, typical month (D-20, D-85) and the bad-month case (D-26 to D-31); the waiting line; SVG charts with a table alternative (D-57); net worth hidden (D-18). Each section fails alone (D-101).
+- Overview: totals and rates for the month and up to six before it; kept, typical month (D-20, D-85) and the bad-month case (D-26 to D-31); the waiting line; SVG charts with a table alternative (D-57); net worth hidden (D-18); where you spent the most from the month's 200 largest expenses (D-183). Each section fails alone (D-101).
 - Transactions: every filter, sort and page is a request (AC-6). Review: category or approve for payments-report rows; other sources show the fix-in-source note (F-11). Imports: source, name check, upload, status, skipped rows (AC-5).
-- Your data: export; "Erase my data" with the typed word DELETE, the 35-day note and counts (AC-7); "Delete my account" after a full re-sign-in, its own warning (data, sign-in and consent removed; backups kept 35 days) and a signed-out result with counts (AC-18).
+- Your data: export; "Erase my data" with the typed word DELETE, the 35-day note and counts (AC-7); "Delete my account" after a full re-sign-in, its own warning (data, sign-in and consent removed; backups kept 35 days) and a signed-out result with counts (AC-18); one erase try per finish, any live session of the person may finish (D-174, D-180), and an account marked deleting sees Finish deleting on every money page (D-179).
 - Imported text renders only as text nodes; no raw HTML insertion, no markdown renderer (AC-9; its assistant half moves to Epic 4 with D-46).
-- Serves: AC-2, AC-5 to AC-9, AC-11, AC-18; D-18 to D-21, D-23, D-26 to D-31, D-34, D-85, D-101, D-104.
+- Serves: AC-2, AC-5 to AC-9, AC-11, AC-18; D-18 to D-21, D-23, D-26 to D-31, D-34, D-85, D-101, D-104, D-174, D-179, D-180, D-183.
 
 ### Screen states
 | Screen | Loading | Empty | Failed | Partial or blocked | No access or signed out | Next step |
 |---|---|---|---|---|---|---|
 | overview | nothing until render; skeleton on in-app navigation | no money in yet | a section's own failed note | no rate; fewer than 3 rated months (D-85) | to sign-in, path kept | import; add the rate; retry the section |
-| transactions | as overview | nothing matches | could not load | erase window | not found | widen months; retry |
-| review | as overview | nothing to review | could not load | other source: fix in the file | not found | open imports |
+| transactions | as overview | nothing matches | could not load | erase window | to sign-in, path kept (D-182) | widen months; retry |
+| review | as overview | nothing to review | could not load | other source: fix in the file | to sign-in, path kept (D-182) | open imports |
 | imports | as overview | no imports yet | upload refused (reason) | running, stalled, never arrived, skipped rows; daily cap or pause | to sign-in | repair; upload again; wait |
 | rates | as overview | no months to rate | could not save | none | to sign-in | add a rate |
 | your data | none | nothing stored | erase or delete may be unfinished | import running; erase window | to sign-in | finish erasing; finish deleting |
@@ -140,17 +141,17 @@ app/             pages and layouts assemble sections; server components prefetch
 - Serves: AC-15, AC-17; D-81, D-88, D-95.
 
 ### Shared contracts package
-- Where: packages/contracts (new) with Zod schemas for every data route, FIELDS, KINDS and CATEGORIES; smart-finances:apps/api/src/ingest/schema.mjs#FIELDS and smart-finances:apps/api/src/ingest/categories.mjs#categoryFor re-export or import from it; smart-finances:package.json gains packages/* in workspaces.
+- Where: packages/contracts (new) with Zod schemas for every data route, FIELDS, KINDS and CATEGORIES; the zod-free entry @smart-finances/contracts/sources holds the import sources and checkImportRequest for the browser (D-185); smart-finances:apps/api/src/ingest/schema.mjs#FIELDS and smart-finances:apps/api/src/ingest/categories.mjs#categoryFor re-export or import from it; smart-finances:package.json gains packages/* in workspaces.
 - Why: one source of truth for the API and the web (D-133); the schema module loads the server's hashing module (F-13), so the lists move to a browser-safe package.
 - The data PRs validate with the same schemas as they build the routes (a follow-up row in the data-architecture spec).
-- Serves: AC-6; D-124, D-133.
+- Serves: AC-6; D-124, D-133, D-185.
 
 ### Web stack
 - Where: smart-finances:infra/lib/web-stack.ts#WebStack (new), smart-finances:infra/lib/stage.ts#addStage, smart-finances:infra/lib/stage-values.ts#readStageValues.
-- Adopts the Amplify app by the amplify-app-id stage parameter (D-102). Custom resources set the app's platform to web compute and its service and compute roles, set the branch's auto-build off, its compute role and its variables (merged, D-110), and put the upload bucket's browser rule (D-88, D-93). They may pass only those two roles and clear them on delete (D-111).
+- Adopts the Amplify app by the amplify-app-id stage parameter (D-102). Custom resources set the app's platform to web compute and its service and compute roles, set the branch's auto-build off, its compute role, its framework (Next.js - SSR, D-189) and its variables (merged, D-110), and put the upload bucket's browser rule (D-88, D-93). They may pass only those two roles and clear them on delete (D-111).
 - Owns: the Amplify service role (write to /aws/amplify/<app id>, which it references and sets to one month, D-112), the compute role, the sessions table, the accounts table (retained, point-in-time recovery and deletion protection on staging and prod, D-111), the hourly housekeeping function (D-104, D-106, D-107), and the RUM app monitor with its guest identity pool, whose role may only put RUM events to that monitor (D-135). No WAF (D-120).
 - The compute role may: read the client secret and the stage parameters; read and write both tables; admin get, delete and global sign-out on this pool only (D-92, D-104). The housekeeping function may also list users on this pool and invoke the data service's delete function (D-104, D-106).
-- Serves: AC-15 to AC-19; D-72, D-87, D-88, D-89, D-91 to D-93, D-102, D-104, D-106, D-107, D-110 to D-112, D-135.
+- Serves: AC-15 to AC-19; D-72, D-87, D-88, D-89, D-91 to D-93, D-102, D-104, D-106, D-107, D-110 to D-112, D-135, D-189.
 
 ### Alarms
 - Where: smart-finances:infra/lib/alarms-stack.ts#AlarmsStack (new); apps/web/src/adapters/log.ts (new).
@@ -159,9 +160,9 @@ app/             pages and layouts assemble sections; server components prefetch
 
 ### CI and build
 - Where: smart-finances:.github/workflows/deploy.yml, smart-finances:infra/lib/github-oidc-stack.ts, apps/web/amplify.yml (new), apps/web/lighthouserc.json (new).
-- deploy.yml, before credentials: lint and format check (D-132), web unit tests, browser tests against a production build (D-151), the Storybook build with its accessibility and interaction tests (D-136), and Lighthouse CI on the fixtures (D-134). Then deploy data, API, web and alarms; start the Amplify job for the commit and poll /api/health until it reports that sha; check the headers against the contract (D-93, RK-2, RK-3).
-- The owner redeploys the OIDC stack with Amplify job rights on each stage's app and read of amplify-app-id (D-113). The poll waits at most 15 minutes; the job limit is 45 minutes. amplify.yml runs lint and the web unit tests, then writes the settings and commit id into .env.production, then builds (D-110).
-- Serves: D-59, D-93, D-132, D-134, D-136.
+- deploy.yml, before credentials: lint and format check (D-132), web unit tests, browser tests against a production build (D-151), the Storybook build with its accessibility and interaction tests (D-136), and Lighthouse CI on the fixtures, as the seeded STAGE=test person lighthouse on every money screen, stopping the deploy on any stage when over budget (D-134, D-188). Then deploy data, API, web and alarms; start the Amplify job for the commit and poll /api/health until it reports that sha; check the headers against the contract (D-93, RK-2, RK-3).
+- The owner redeploys the OIDC stack with Amplify job rights on each stage's app and read of amplify-app-id (D-113). The poll waits at most 15 minutes; the job limit is 45 minutes. amplify.yml runs lint and the web unit tests (without the AWS runtime markers and the settings names, D-186), then writes the settings and commit id into .env.production, then builds (D-110).
+- Serves: D-59, D-93, D-132, D-134, D-136, D-186, D-188.
 
 ### Docs
 - docs/adr/0008-web-framework-and-host.md (new): D-62, D-65, D-89, D-93, D-102. docs/adr/0009-sessions-and-sign-up.md (new): D-72, D-73, D-87, D-91 to D-93, D-98, D-104, D-115, D-117, D-120.
@@ -188,7 +189,7 @@ Every port is a TypeScript interface in apps/web/src/ports/; results never throw
 | PreAuthStore | create(row); get(idHash); update(idHash, patch); delete(idHash) |
 | Counter | incr(key, windowStart, ttl): Promise<number> |
 | PowStore | claim(saltHash, ttl): Promise<boolean> (true only the first time) |
-| AccountStore | getAccount(sub); putConsent(sub, consent); markDeleting(sub, now); reserveImport(sub, { day, bytes, importId }): Promise<{ ok } \| { ok: false, reason: 'daily' \| 'bytes' \| 'running' }>; releaseImport(sub, importId, finalBytes); resetStoredBytes(sub); deleteAccountRow(sub) |
+| AccountStore | getAccount(sub); putConsent(sub, consent); markDeleting(sub, now); markDeleting refuses while an import runs (reason 'running'); reserveImport(sub, { day, bytes, importId }): Promise<{ ok } \| { ok: false, reason: 'daily' \| 'bytes' \| 'running' \| 'deleting' }>; confirmImport(sub, placeholderId, importId): Promise<boolean>; releaseImport(sub, importId, finalBytes, { giveBackDay? }); resetStoredBytes(sub); deleteAccountRow(sub) |
 | BreachChecker | isBreached(password): Promise<boolean \| 'unavailable'> |
 | IdentityProvider | signUp(email, password, lang); confirm(email, code); resend(email, lang); passwordAuth(email, password) → { tokens } \| { challenge: 'MFA_SETUP' \| 'SOFTWARE_TOKEN_MFA', session }; associate(session) → { secret, session }; verifySetup(email, session, code) → { tokens }; respondCode(email, session, code) → { tokens }; forgot(email, lang); confirmForgot(email, code, password); refresh(sub, refreshToken) → tokens; revoke(refreshToken); adminGet(email) → { sub, status }; adminDelete(sub); adminGlobalSignOut(sub) |
 | DataApi | one method per route in @smart-finances/contracts (listTransactions, totals, rates, putRate, review, putReview, listImports, getImport, requestImport, exportCsv, erase), each (token, input) → { ok, data } \| { ok: false, kind: 'unauthorized' \| 'not_found' \| 'conflict' \| 'limited' \| 'failed', code?, retryAfter? } |
@@ -210,9 +211,10 @@ What each PR (pr-smart-finances*.md) provides to the later ones. A later PR impo
 | /api/auth/pow | anyone, GET | a proof-of-work challenge (D-120) |
 | /api/data/* | signed in with consent, GET | JSON reads for TanStack Query (D-127) |
 | /api/data/export | signed in with consent, GET | the CSV download |
+| /api/data/signed-out | anyone, GET | ?next=<address>: clears __Host-sid only when its session is already gone, then /sign-in?next=; a live session goes back to the address (D-182) |
 | /api/lang | anyone, POST | sets the lang cookie |
 | /api/health | anyone | { sha, stage } for the deploy check and the heartbeat |
-| /goodbye | anyone | after delete account: the counts from a 5-minute signed, HttpOnly goodbye cookie |
+| /goodbye | anyone | after delete account: the counts from the __Host-goodbye cookie (D-181) |
 | /too-many | signed in | the person limit page with the wait |
 
 Every change is a server action through guarded() (D-125), not a route.
@@ -222,9 +224,10 @@ Search values: month (yyyy-mm), view (native or usd), kind, category, sort. Free
 ### Cookies
 - __Host-sid: 32 random bytes, base64url; Secure; HttpOnly; SameSite=Lax; Path=/; no Max-Age.
 - __Host-pre: 32 random bytes; Secure; HttpOnly; SameSite=Strict; Path=/; Max-Age 900; deleted when sign-in completes.
-- CSRF: every post's Origin must equal the stage's web address from the settings; missing or null is refused (403); no GET changes state; sign-out is a post (D-115).
+- CSRF: every post's Origin must equal the stage's web address from the settings; missing or null is refused (403); no GET changes state, except that a server render or a /api/data/* route ends the session whose token the data API refused (D-182); sign-out is a post (D-115).
 - lang: en or es; SameSite=Lax; one year.
 - __Host-notice: password-changed; Secure; HttpOnly; SameSite=Lax; Path=/; Max-Age 600; set after a reset only when every session ended (D-122, D-170).
+- __Host-goodbye: the deletion's counts, done or partial, and its expiry, HMAC-SHA256 signed with the stage's HMAC secret; Secure; HttpOnly; SameSite=Lax; Path=/; Max-Age 300 (D-181).
 Nothing else is written to browser storage.
 
 ### Sessions table (DynamoDB, on demand, TTL on expires_at)
@@ -238,7 +241,7 @@ Nothing else is written to browser storage.
 Idle 30 minutes; absolute 12 hours; a new id at every sign-in.
 
 ### Accounts table (DynamoDB, on demand, no TTL)
-pk ACCT#<sub>: consent { terms_version, privacy_version, lang, accepted_at }, status (active or deleting), deleting_since?, imports_today { day, n }, running_import_id?, stored_bytes. Erase-all resets stored_bytes and keeps the row; delete account removes it last.
+pk ACCT#<sub>: consent { terms_version, privacy_version, lang, accepted_at }, status (active or deleting), deleting_since?, imports_today { day, n }, running_import_id? (the API's import id, or pending:<uuid> until confirmImport, D-178), running_import_bytes? (the declared size reserved with it), stored_bytes. Erase-all resets stored_bytes and keeps the row; delete account removes it last.
 
 ### Limits (D-96, D-114, D-120)
 | Scope | Limit | Where | On excess |
@@ -275,7 +278,7 @@ Length 12 to 128, any characters, no composition rules or expiry; breached passw
 amplify.yml writes these into apps/web/.env.production before next build; no secret value is ever a variable.
 
 ### Security events (web server log, one JSON line each)
-{ "event": "signup" | "signup_confirm" | "signin" | "signin_fail" | "mfa_setup" | "reset" | "signout" | "account_delete" | "rate_limited" | "breached_password" | "breach_check_unavailable" | "adapter_unavailable" | "health", "outcome", "sub"?, "request_id", "ts" }. Never an email, password, code, token, IP or imported text.
+{ "event": "signup" | "signup_confirm" | "signin" | "signin_fail" | "mfa_setup" | "reset" | "signout" | "account_delete" | "rate_limited" | "breached_password" | "breach_check_unavailable" | "adapter_unavailable" | "import_refused" | "import_release" | "health", "outcome", "sub"?, "request_id", "ts" }. Never an email, password, code, token, IP or imported text; import_refused and import_release carry no import id (D-184).
 
 ### Alarms (D-80, one SNS topic per stage)
 | Alarm | Source | Threshold |
@@ -348,8 +351,8 @@ amplify.yml writes these into apps/web/.env.production before next build; no sec
 | reset | posted | code sent if the email exists (same screen) | limited: wait |
 | reset confirm | code and new password | changed: everywhere signed out (D-92), sign in again | wrong code or breached password: the reason |
 | import | file chosen | final status | stalled: repair; still running after 15 minutes: say it continues |
-| erasing | DELETE typed and pressed | 202 with counts | import running: refused; timeout or 5xx: may be unfinished, Finish erasing repeats it |
-| deleting account | full re-sign-in, no running import | each D-104 step done: signed-out page with counts | a step fails: the same session can finish it; otherwise the hourly job finishes it through the delete function; 6 hours still deleting: alarm |
+| erasing | DELETE typed and pressed | 202 with counts | import running: refused; timeout (25 s, D-174) or 5xx: may be unfinished, Finish erasing repeats it |
+| deleting account | full re-sign-in, no running import (D-179) | each D-104 step done: signed-out page with counts | a step fails: any live session of the person can finish it, from Finish deleting on any money page (D-179, D-180); one erase try per finish (D-174); otherwise the hourly job finishes it through the delete function; 6 hours still deleting: alarm |
 
 ## Cross-cutting
 - **Security and permissions:** OWASP ASVS 5.0 V6, V7, V3 and V14 and the OWASP Authentication, Session Management and CSRF cheat sheets are the checklist (D-75). The browser holds only opaque cookies (AC-16). CSRF: SameSite plus an Origin check on every post. The person comes only from the session; the API checks the token's sub (AC-15). Admin rights on the pool are limited to get, delete and global sign-out for the compute role and the housekeeping function.

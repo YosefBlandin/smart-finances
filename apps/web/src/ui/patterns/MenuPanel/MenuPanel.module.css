@@ -13,12 +13,18 @@
   cursor: pointer;
 }
 
-.trigger[data-hovered],
+/* A plain button (D-190): hover only where a pointer can hover, the ring only for keyboard focus. */
+@media (hover: hover) {
+  .trigger:hover {
+    background: var(--sunken);
+  }
+}
+
 .trigger[aria-expanded='true'] {
   background: var(--sunken);
 }
 
-.trigger[data-focus-visible] {
+.trigger:focus-visible {
   outline: 2px solid var(--income);
   outline-offset: 2px;
 }

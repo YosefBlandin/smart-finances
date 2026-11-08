@@ -34,7 +34,9 @@
   text-align: left;
 }
 
-.select[data-focus-visible] {
+/* React Aria's select marks keyboard focus; the plain button before first use (D-190) uses :focus-visible. */
+.select[data-focus-visible],
+.select:not([data-rac]):focus-visible {
   outline: 2px solid var(--income);
   outline-offset: 2px;
 }
