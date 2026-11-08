@@ -2,21 +2,15 @@
 // is stored apart from its row at OVR#<date>#<id>, only for payments report rows, and applied on
 // top of the row wherever rows are read; re-importing the file leaves it in place.
 import { eraseCheck } from './imports.mjs';
-import { ovrKey, PREFIX, personPk, txnKey } from './keys.mjs';
+import { ovrKey, txnKey } from './keys.mjs';
 import { ConditionFailed } from './memory.mjs';
-import { reviewOf, shownRow } from './query.mjs';
+import { allRows, reviewOf, shownRow } from './query.mjs';
 
 // GET /review: every row with a review reason that no approval hides, oldest first.
 export async function reviewList(store, sub) {
-  const pk = personPk(sub);
-  const [rows, choices] = await Promise.all([
-    store.query({ pk, prefix: PREFIX.TXN, consistent: true }),
-    store.query({ pk, prefix: PREFIX.OVR, consistent: true }),
-  ]);
-  const bySk = new Map(choices.items.map((c) => [c.sk.slice(PREFIX.OVR.length), c]));
   const items = [];
-  for (const row of rows.items) {
-    const { review, ...shown } = shownRow(row, bySk.get(row.sk.slice(PREFIX.TXN.length)));
+  for (const { row, choice } of await allRows(store, sub)) {
+    const { review, ...shown } = shownRow(row, choice);
     if (review.reasons.length) items.push({ ...shown, reasons: review.reasons });
   }
   return items;

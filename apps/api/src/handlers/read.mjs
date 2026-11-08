@@ -5,7 +5,8 @@ import { createHash } from 'node:crypto';
 import { getImport, inEraseWindow, lockLive } from '../store/imports.mjs';
 import { erasedKey, personPk, PREFIX } from '../store/keys.mjs';
 import { listRates, readTotals } from '../store/rates.mjs';
-import { selectRows, shownRows } from '../store/query.mjs';
+import { toCsv } from '../ingest/schema.mjs';
+import { allRows, selectRows, shownRow, shownRows } from '../store/query.mjs';
 import { reviewList } from '../store/review.mjs';
 import { createRepo } from '../store/repo.mjs';
 import { HttpError, checked, fail, personOf, reply } from './http.mjs';
@@ -125,6 +126,21 @@ async function review(deps, sub) {
   return reply(200, { items: await reviewList(deps.store, sub) });
 }
 
+// toCsv already guards the free-text columns; the export guards every column but amount (Values).
+const FORMULA_START = /^[=+\-@\t\r]/;
+const guarded = (value) => (typeof value === 'string' && FORMULA_START.test(value) ? `'${value}` : value);
+const EXPORT_GUARDED = ['id', 'date', 'date_precision', 'kind', 'currency', 'source', 'country', 'import_batch'];
+
+// GET /export (AC-17): every row, review choices applied, in the schema's columns.
+async function exportCsv(deps, sub) {
+  const rows = (await allRows(deps.store, sub)).map(({ row, choice }) => {
+    const { review, ...shown } = shownRow(row, choice);
+    for (const field of EXPORT_GUARDED) shown[field] = guarded(shown[field]);
+    return shown;
+  });
+  return { statusCode: 200, headers: { 'content-type': 'text/csv; charset=utf-8' }, body: toCsv(rows) };
+}
+
 const ROUTE_HANDLERS = {
   'GET /imports': listImports,
   'GET /imports/{id}': readImport,
@@ -132,6 +148,7 @@ const ROUTE_HANDLERS = {
   'GET /totals': totals,
   'GET /rates': rates,
   'GET /review': review,
+  'GET /export': exportCsv,
 };
 
 export function createReadHandler({ store, now = () => Date.now(), routes = {} } = {}) {
