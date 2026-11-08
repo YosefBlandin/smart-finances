@@ -25,3 +25,15 @@ The Vercel project linked to this repo built the old Angular app. `vercel.json` 
 Early scaffold. Work is tracked as Epics 0-7 in the execution plan.
 
 The web app is hosted on Amplify Hosting ([ADR 0008](docs/adr/0008-web-framework-and-host.md)). The Vercel project stays off: `vercel.json` keeps its Git deployments disabled.
+
+## Release checks
+
+`scripts/api-call.mjs` calls one data route of a deployed stage as a given person, for the checks in [the data release steps](docs/specs/data-architecture/release.md). It builds the event the API's JWT authorizer would pass on, with that person's id (the `sub` claim) in it, and invokes the function that serves the route (`smart-finances-<stage>-api-read`, `-api-write` or `-api-delete`) with your own AWS profile. No sign-in is involved, so use it only with the stage's test users. It prints the status and the reply body.
+
+```bash
+AWS_PROFILE=<profile> node scripts/api-call.mjs --stage staging --as <sub> GET '/transactions?from=2026-01&to=2026-12'
+AWS_PROFILE=<profile> node scripts/api-call.mjs --stage staging --as <sub> PUT /rates/2026-05 '{"ars_per_usd":1000}'
+AWS_PROFILE=<profile> node scripts/api-call.mjs --stage staging --as <sub> --upload data/synthetic/transactions.csv
+```
+
+`--upload` asks `POST /imports` for an upload form (source `csv` unless the JSON names another), posts the file to it, and prints the import id to follow with `GET /imports/{id}`.
