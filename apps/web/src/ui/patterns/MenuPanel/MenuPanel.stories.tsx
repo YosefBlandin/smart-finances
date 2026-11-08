@@ -45,6 +45,7 @@ export const OpenAndClose: Story = {
     await expect(within(panel).getByRole('link', { name: 'Transactions' })).toBeVisible();
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(within(document.body).queryByRole('dialog')).toBeNull());
-    await expect(button).toHaveFocus();
+    // React Aria gives focus back a moment after the panel unmounts, as the unit test waits for (D-190).
+    await waitFor(() => expect(button).toHaveFocus());
   },
 };
