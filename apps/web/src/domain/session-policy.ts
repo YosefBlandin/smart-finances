@@ -5,6 +5,8 @@ const MIN = 60_000;
 
 export const SESSION_IDLE_MS = 30 * MIN;
 export const SESSION_ABSOLUTE_MS = 12 * 60 * MIN;
+/** last_seen_at is written at most this often, so a page's several reads cost one write, not one each (D-192). */
+export const SESSION_TOUCH_MS = MIN;
 /** Refresh on the server when the access token has less than this left. */
 export const REFRESH_WINDOW_MS = 5 * MIN;
 export const PRE_AUTH_MS = 15 * MIN;
