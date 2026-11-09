@@ -7,6 +7,7 @@ import {
   needsRefresh,
   preAuthExpiry,
   sessionExpiry,
+  SESSION_TOUCH_MS,
   tokenClaims,
 } from '@/domain/session-policy';
 import type { Clock } from '@/ports/clock';
@@ -72,6 +73,8 @@ export function createSessions({ sessionStore, preAuthStore, identityProvider, c
       await sessionStore.delete(idHash);
       return { status: state };
     }
+    // Within a minute of the last write the row just read is enough: the idle limit moves by at most that minute (D-192).
+    if (now - row.lastSeenAt < SESSION_TOUCH_MS) return { status: 'active', session: toSession(row) };
     if (!(await sessionStore.touch(idHash, now))) return { status: 'none' };
     return { status: 'active', session: toSession({ ...row, lastSeenAt: now }) };
   }

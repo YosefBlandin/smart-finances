@@ -379,6 +379,18 @@ describe.each(backends)('T-WAUTH-3 T-WAUTH-4 application/session.ts over the %s 
     expect((await stores.sessionStore.get(sha256(id)))?.lastSeenAt).toBe(T0 + 10 * MIN);
   });
 
+  it('T-WAUTH-3 last_seen_at is written at most once a minute, so a page of reads costs one write (D-192)', async () => {
+    const { id } = await s.createSession({ sub: SUB_A, tokens: tokensFor(SUB_A, T0 + HOUR) });
+    const touch = vi.spyOn(stores.sessionStore, 'touch');
+    clock.advance(30_000);
+    expect((await s.getSession(id))?.lastSeenAt).toBe(T0);
+    expect(touch).not.toHaveBeenCalled();
+    clock.advance(30_000);
+    expect((await s.getSession(id))?.lastSeenAt).toBe(T0 + MIN);
+    expect(touch).toHaveBeenCalledTimes(1);
+    expect((await stores.sessionStore.get(sha256(id)))?.lastSeenAt).toBe(T0 + MIN);
+  });
+
   it('T-WAUTH-3 no cookie, a malformed cookie or an unknown id is no session', async () => {
     expect(await s.getSession(undefined)).toBeNull();
     expect(await s.getSession('not a cookie id')).toBeNull();
