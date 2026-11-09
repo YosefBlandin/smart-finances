@@ -59,6 +59,7 @@ status: executing
 | D-42 | Narrows D-4 for qa only: the agent merges PR 2, then PR 3, into qa once CI is green and the conformance review has no blocker; CI then deploys qa. Staging and prod stay human. | 2-way | user, 2026-11-07 (standing permission) | accepted |
 | D-43 | The end-to-end check on qa uses synthetic data in the owner's qa account; real files stay out of qa, as release.md says. | 2-way | user, 2026-11-07 | accepted |
 | D-44 | Extends D-39 for PR 3: the shared category list gains the seven categories the importers already emit (Shopping, Pets, Income, Interest, Refunds, Loans, Transfers), before Uncategorized, which stays last; a test fails when an importer emits a category not in the list. The importers do not change (AC-20). | 2-way | user, 2026-11-07 | accepted |
+| D-45 | The rollup's stream source takes batches of up to 1,000 keys and waits up to 5 seconds to fill one, instead of 100 keys with no wait, so an import recomputes each touched month about once. Month totals can appear up to 5 seconds after their rows. | 2-way | owner, 2026-11-09 (cost review) | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:

@@ -60,7 +60,7 @@ status: executing
   - Export: text columns (every field except amount) whose first character is =, +, -, @, tab or carriage return get a leading single quote.
   - DELETE /data needs { confirm: "DELETE" }, else bad_request. quiet_until = erase end + 65 minutes.
   - Totals during the erase window: GET /totals answers conflict.
-  - Stream: keys only. Rollup: 512 MB, 60 s; starting position TRIM_HORIZON; filter on sk prefix TXN# or OVR#; batch 100; parallelization 1; bisect on error; 3 retries; record age 1 hour; on-failure SQS queue, 14-day retention; alarm on Maximum of ApproximateNumberOfMessagesVisible greater than 0, 1 evaluation period of 60 s, missing data not breaching, to SNS topic smart-finances-<stage>-rollup-failures.
+  - Stream: keys only. Rollup: 512 MB, 60 s; starting position TRIM_HORIZON; filter on sk prefix TXN# or OVR#; batch 1,000 within a 5 s window (D-45); parallelization 1; bisect on error; 3 retries; record age 1 hour; on-failure SQS queue, 14-day retention; alarm on Maximum of ApproximateNumberOfMessagesVisible greater than 0, 1 evaluation period of 60 s, missing data not breaching, to SNS topic smart-finances-<stage>-rollup-failures.
   - api-delete: 256 MB, 25 s.
 - Rules: README.md "Layout" (only data/synthetic is committed).
 - Public repo: tests and fixtures use synthetic data only. No personal data, names, account ids or real figures anywhere committed.

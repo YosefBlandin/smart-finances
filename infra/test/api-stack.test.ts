@@ -447,7 +447,7 @@ const STREAM_FILTERS = [
   { dynamodb: { Keys: { sk: { S: [{ prefix: 'OVR#' }] } } } },
 ];
 
-test('T-INF-12 rollup reads the table stream (TXN# and OVR# keys, batch 100, one at a time, bisect, 3 retries, 1 hour); failures go to a 14-day queue whose depth alarms a topic', () => {
+test('T-INF-12 rollup reads the table stream (TXN# and OVR# keys, batch 1,000 within 5 s, one at a time, bisect, 3 retries, 1 hour); failures go to a 14-day queue whose depth alarms a topic', () => {
   for (const stage of STAGES) {
     const { api } = addStage(new cdk.App({ context }), stage, env);
     const all = resources(api);
@@ -462,7 +462,8 @@ test('T-INF-12 rollup reads the table stream (TXN# and OVR# keys, batch 100, one
     assert.equal(mapping.FunctionName.Ref, rollup.id);
     assert.deepEqual(mapping.EventSourceArn, { 'Fn::GetAtt': [readerId, 'Parameters.2.Value'] }, 'the stream ARN read from SSM');
     assert.equal(mapping.StartingPosition, 'TRIM_HORIZON');
-    assert.equal(mapping.BatchSize, 100);
+    assert.equal(mapping.BatchSize, 1000);
+    assert.equal(mapping.MaximumBatchingWindowInSeconds, 5);
     assert.equal(mapping.ParallelizationFactor, 1);
     assert.equal(mapping.BisectBatchOnFunctionError, true);
     assert.equal(mapping.MaximumRetryAttempts, 3);
