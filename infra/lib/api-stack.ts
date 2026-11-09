@@ -229,7 +229,10 @@ export class ApiStack extends cdk.Stack {
     rollup.addEventSource(new DynamoEventSource(table, {
       startingPosition: lambda.StartingPosition.TRIM_HORIZON,
       filters: [lambda.FilterCriteria.filter(keyStartsWith('TXN#')), lambda.FilterCriteria.filter(keyStartsWith('OVR#'))],
-      batchSize: 100,
+      // Wait up to 5 s for up to 1,000 keys, so one import recomputes each month about once, not once
+      // per 100 rows (D-45). Totals land up to 5 s after the rows.
+      batchSize: 1000,
+      maxBatchingWindow: cdk.Duration.seconds(5),
       parallelizationFactor: 1,
       bisectBatchOnError: true,
       retryAttempts: 3,
