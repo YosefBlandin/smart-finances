@@ -144,6 +144,7 @@ export function parseBudgetWorkbook(buf, { file }) {
         currency: 'USD',
         category,
         merchant: '',
+        recipient_key: '',
         description_raw: description,
         source: 'excel',
         source_ref: `${cell} (${sheetCategory || 'no category'})`,

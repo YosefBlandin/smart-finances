@@ -7,8 +7,9 @@ import { categoryOf, monthRows } from './totals.mjs';
 // The flags that put a row on the review list (Values: "Review reasons").
 export const REVIEW_FLAGS = ['needs_review', 'possible_duplicate'];
 
-// Only the schema's fields leave the store; pk, sk, period and import_id stay inside.
-const fieldsOf = (row) => Object.fromEntries(FIELDS.map((f) => [f, row[f]]));
+// Only the schema's fields leave the store; pk, sk, period and import_id stay inside. A row stored
+// before recipient_key existed reads with an empty one (D-14).
+const fieldsOf = (row) => ({ ...Object.fromEntries(FIELDS.map((f) => [f, row[f]])), recipient_key: row.recipient_key ?? '' });
 
 // The review block of one row: approved true clears the reasons (Values).
 export function reviewOf(row, choice) {

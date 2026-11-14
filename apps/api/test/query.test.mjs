@@ -132,3 +132,22 @@ test('T-API-5 over 36 months, a bad range, sort, order, kind or limit, or a curs
   assert.equal(same.status, 200);
   assert.equal((await w.get(null, { from: '2026-06', to: '2026-06' })).status, 401);
 });
+
+test('T-ENR-1 a row stored without recipient_key reads as an empty string through GET /transactions and GET /review', async () => {
+  const w = await world();
+  const old = row('2026-10-02', -100, { flags: ['needs_review'] }); // stored before the field existed: no recipient_key
+  const keyed = row('2026-10-03', -200, { recipient_key: 'f'.repeat(32) });
+  assert.equal('recipient_key' in old, false);
+  await w.put(A, old);
+  await w.put(A, keyed);
+  const list = await w.get(A, { from: '2026-10', to: '2026-10' });
+  assert.equal(list.status, 200);
+  assert.equal(list.body.items.find((i) => i.id === old.id).recipient_key, '');
+  assert.equal(list.body.items.find((i) => i.id === keyed.id).recipient_key, 'f'.repeat(32));
+  const handler = createReadHandler({ store: w.store, now: () => T0 });
+  const res = await handler(httpEvent(A, 'GET /review'));
+  const body = JSON.parse(res.body);
+  assert.equal(res.statusCode, 200);
+  assert.ok(ROUTES['GET /review'].reply.safeParse(body).success, 'review reply parses with the contract');
+  assert.deepEqual(body.items.map((i) => [i.id, i.recipient_key]), [[old.id, '']]);
+});

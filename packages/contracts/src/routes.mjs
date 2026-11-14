@@ -33,6 +33,7 @@ export const Transaction = z.object({
   currency: z.string().regex(/^[A-Z]{3}$/),
   category: z.string(),
   merchant: z.string(),
+  recipient_key: z.string(), // empty when the source has none or the stored row predates the field
   description_raw: z.string(),
   source: z.string(),
   source_ref: z.string(),

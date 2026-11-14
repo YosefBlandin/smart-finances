@@ -229,7 +229,10 @@ async function twinCandidates(store, sub, issues, source, period) {
   return found;
 }
 
-const sameRow = (a, b) => FIELDS.every((f) => JSON.stringify(a[f]) === JSON.stringify(b[f]));
+// A field added after rows were stored (D-14) reads as its empty value, so re-importing an old file changes nothing.
+const ADDED_LATER = { recipient_key: '' };
+const valueOf = (row, f) => JSON.stringify(row[f] ?? ADDED_LATER[f]);
+const sameRow = (a, b) => FIELDS.every((f) => valueOf(a, f) === valueOf(b, f));
 
 // Makes the period's stored rows equal to its active file's rows (Contracts "Parser input").
 // load(record) returns that import's parsed { transactions, issues }. Running it again gives

@@ -15,7 +15,10 @@ type ListQuery = z.output<(typeof ROUTES)['GET /transactions']['request']>;
 type Seed = { transactions?: Tx[]; rates?: Record<string, number>; imports?: ImportRecord[] };
 
 // The fixtures as the prototype wrote them (apps/web/fixtures): rows carry flags and no review, imports short names.
-type FixtureRow = Omit<Tx, 'review' | 'date_precision' | 'source_ref' | 'import_batch'> & { date_precision?: string };
+type FixtureRow = Omit<Tx, 'review' | 'date_precision' | 'source_ref' | 'import_batch' | 'recipient_key'> & {
+  date_precision?: string;
+  recipient_key?: string;
+};
 type FixtureImport = {
   id: string;
   kind: string;
@@ -52,6 +55,7 @@ export function fixtureSeed(): Required<Seed> {
     currency: t.currency,
     category: t.category,
     merchant: t.merchant,
+    recipient_key: t.recipient_key ?? '',
     description_raw: t.description_raw,
     source: t.source,
     source_ref: t.id,

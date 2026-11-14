@@ -109,3 +109,14 @@ test('T-API-11 formula-like text gets a leading quote in every text column; amou
   assert.equal(r.amount, '-5.00', 'a negative amount stays a number');
   assert.equal(r.currency, 'ARS');
 });
+
+test('T-ENR-1 export has the recipient_key column after merchant, empty for a row stored without one', async () => {
+  const w = await world();
+  const old = row('000000000000000e', '2026-10-01');
+  assert.equal('recipient_key' in old, false);
+  await w.put(A, old);
+  await w.put(A, row('000000000000000f', '2026-10-02', { recipient_key: '0'.repeat(32) }));
+  const { head, rows } = parseCsv((await w.get(A)).body);
+  assert.equal(head[head.indexOf('merchant') + 1], 'recipient_key');
+  assert.deepEqual(rows.map((r) => r.recipient_key), ['', '0'.repeat(32)]);
+});

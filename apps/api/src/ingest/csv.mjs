@@ -105,6 +105,7 @@ export function parseGenericCsv(text, { file = 'upload.csv' } = {}) {
       currency,
       category: UNCATEGORIZED,
       merchant: '',
+      recipient_key: '',
       description_raw: description,
       source: 'csv',
       source_ref: ref,

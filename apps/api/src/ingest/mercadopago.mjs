@@ -99,6 +99,7 @@ export function parseReleaseReport(text, { file, currency = 'ARS', country = 'AR
       currency,
       category: categoryFor(kind, group),
       merchant: '',
+      recipient_key: '',
       description_raw: [[...types].join('+'), unit.BUSINESS_UNIT, unit.SUB_UNIT?.trim(), dated.PAYMENT_METHOD]
         .filter(Boolean)
         .join(' / '),

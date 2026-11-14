@@ -56,6 +56,7 @@ const tx = (id: string) => ({
   currency: 'ARS',
   category: 'Groceries',
   merchant: 'Shop',
+  recipient_key: '',
   description_raw: 'SHOP',
   source: 'mercadopago',
   source_ref: id,
@@ -149,6 +150,28 @@ describe('T-WSCR-1: HttpDataApi requests', () => {
 describe('T-WSCR-1: HttpDataApi replies are parsed with @smart-finances/contracts (D-133)', () => {
   it('T-WSCR-1: a reply that does not match the contract is a failure, never passed on', async () => {
     const { api } = setup(() => ({ status: 200, body: { items: [{ ...tx('a'), amount: 12.5 }] } }));
+    expect(await api.listTransactions(TOKEN, { from: '2026-05', to: '2026-05' })).toEqual({ ok: false, kind: 'failed', code: 'bad_reply' });
+  });
+
+  it('T-ENR-1: the API reply carries the recipient key, empty for an old row, in transactions and review', async () => {
+    const keyed = { ...tx('b'), recipient_key: 'f'.repeat(32) };
+    const { api } = setup((call) =>
+      new URL(call.url).pathname === '/review'
+        ? { status: 200, body: { items: [{ ...tx('a'), review: undefined, reasons: [] }] } }
+        : { status: 200, body: { items: [tx('a'), keyed] } },
+    );
+    const list = await api.listTransactions(TOKEN, { from: '2026-05', to: '2026-05' });
+    if (!list.ok) throw new Error('list failed');
+    expect(list.data.items.map((t) => t.recipient_key)).toEqual(['', 'f'.repeat(32)]);
+    const review = await api.review(TOKEN, {});
+    if (!review.ok) throw new Error('review failed');
+    expect(review.data.items[0]!.recipient_key).toBe('');
+  });
+
+  it('T-ENR-1: a reply row without recipient_key is refused, since the API always fills it', async () => {
+    const old: Record<string, unknown> = { ...tx('a') };
+    delete old.recipient_key;
+    const { api } = setup(() => ({ status: 200, body: { items: [old] } }));
     expect(await api.listTransactions(TOKEN, { from: '2026-05', to: '2026-05' })).toEqual({ ok: false, kind: 'failed', code: 'bad_reply' });
   });
 

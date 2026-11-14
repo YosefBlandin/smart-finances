@@ -13,12 +13,27 @@ const MiB = 1024 * 1024;
 const ok = (route, part, value) => ROUTES[route][part].safeParse(value);
 
 test('T-WEB-2 exports the field list, kinds and categories', () => {
-  assert.equal(FIELDS.length, 14);
+  assert.equal(FIELDS.length, 15);
   assert.deepEqual(FIELDS.slice(0, 4), ['id', 'date', 'date_precision', 'kind']);
   assert.deepEqual(KINDS, ['expense', 'income', 'inflow', 'refund', 'interest', 'transfer_out', 'loan_out']);
   assert.equal(CATEGORIES.at(-1), 'Uncategorized');
   assert.equal(CATEGORIES[0], 'Partner');
   assert.equal(new Set(CATEGORIES).size, CATEGORIES.length);
+});
+
+test('T-ENR-1 recipient_key is a shared field right after merchant, a required string in Transaction', () => {
+  assert.equal(FIELDS[FIELDS.indexOf('merchant') + 1], 'recipient_key');
+  assert.deepEqual(ROUTES['GET /export'].columns, FIELDS);
+  const row = {
+    id: '0000000000000001', date: '2026-10-02', date_precision: 'day', kind: 'expense', amount: -100, currency: 'ARS',
+    category: 'Groceries', merchant: '', recipient_key: '', description_raw: 'made-up', source: 'mercadopago',
+    source_ref: 'f#1', country: 'AR', flags: [], import_batch: 'b',
+  };
+  const tx = ROUTES['GET /transactions'].reply;
+  assert.ok(tx.safeParse({ items: [{ ...row, review: { reasons: [], approved: false } }] }).success, 'an empty key parses');
+  const { recipient_key: _k, ...without } = row;
+  assert.equal(tx.safeParse({ items: [{ ...without, review: { reasons: [], approved: false } }] }).success, false, 'the API always fills it');
+  assert.ok(ROUTES['GET /review'].reply.safeParse({ items: [{ ...row, recipient_key: 'a'.repeat(32), reasons: [] }] }).success);
 });
 
 test('T-WEB-2 the API re-exports are unchanged and every rule category is in CATEGORIES', () => {
@@ -104,7 +119,7 @@ test('T-WEB-2 GET /transactions query: months, limit, sort and the 36 month cap'
 });
 
 test('T-WEB-2 transaction rows keep amounts as integer cents and carry the review choice', () => {
-  const row = { id: '3f9a0c1e7b2d4a55', date: '2026-09-07', date_precision: 'day', kind: 'expense', amount: -8450000, currency: 'ARS', category: 'Groceries', merchant: 'Coto', description_raw: 'MP*COTO 0412', source: 'mercadopago', source_ref: 'row 3', country: 'AR', flags: ['possible_duplicate'], import_batch: 'mercadopago:abc123', review: { reasons: ['possible_duplicate'], approved: false } };
+  const row = { id: '3f9a0c1e7b2d4a55', date: '2026-09-07', date_precision: 'day', kind: 'expense', amount: -8450000, currency: 'ARS', category: 'Groceries', merchant: 'Coto', recipient_key: '', description_raw: 'MP*COTO 0412', source: 'mercadopago', source_ref: 'row 3', country: 'AR', flags: ['possible_duplicate'], import_batch: 'mercadopago:abc123', review: { reasons: ['possible_duplicate'], approved: false } };
   assert.ok(ok('GET /transactions', 'reply', { items: [row] }).success);
   assert.ok(!ok('GET /transactions', 'reply', { items: [{ ...row, amount: -84500.5 }] }).success);
   assert.ok(!ok('GET /transactions', 'reply', { items: [{ ...row, review: undefined }] }).success);
