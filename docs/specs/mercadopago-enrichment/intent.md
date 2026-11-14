@@ -2,7 +2,7 @@
 spec: mercadopago-enrichment
 ticket: none
 tier: M
-status: locked-v1
+status: executing
 refs: smart-finances@f9836e0
 door: 1-way   # names and labels stored on the server need a cleanup step to undo (intake Q3)
 appetite: 5 days; all parts ship together through CI, which deploys the API stacks before the web app; gaps of minutes are fine

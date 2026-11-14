@@ -2,7 +2,7 @@
 spec: mercadopago-enrichment
 ticket: none
 tier: M
-status: locked-v1
+status: executing
 ---
 # Mercado Pago enrichment: merchant names, category codes and name-once recipient labels: review
 
