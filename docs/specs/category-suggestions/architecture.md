@@ -2,7 +2,7 @@
 spec: category-suggestions
 ticket: none
 tier: L
-status: locked-v1
+status: executing
 ---
 # In-browser category suggestions with one-tap approval: architecture
 
