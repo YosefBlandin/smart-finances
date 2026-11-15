@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useHistory, useReview } from '@/queries/data';
 import { dataKeys, type ReviewReply } from '@/queries/keys';
 import { StateBlock } from '@/ui/patterns/StateBlock/StateBlock';
@@ -22,7 +22,8 @@ import { CHOICE_SOURCE, ReviewView, type ReviewChoice } from './View';
 // once and comes back on a refusal. It shares the choices' mutation key, so neither refetch undoes the other; after a
 // saved label the totals are asked once more 5 s later, since the API rebuilds them on its own.
 
-export type ChooseResult = { ok: true } | { ok: false; messageKey: string };
+/** retryAfterSeconds: the action's wait after a refusal for too many requests (category-suggestions D-25). */
+export type ChooseResult = { ok: true } | { ok: false; messageKey: string; retryAfterSeconds?: number };
 export type ReviewProps = {
   choose: (choice: ReviewChoice) => Promise<ChooseResult>;
   label?: (label: RecipientLabel) => Promise<ChooseResult>;
@@ -32,6 +33,8 @@ export type ReviewProps = {
 export const MUTATION = ['review-choice'] as const;
 /** After a saved label, the totals are asked again once the API's rebuild has had time to run (D-13). */
 export const LABEL_TOTALS_AGAIN_MS = 5_000;
+/** After single choices and labels, the list is asked again once, this long after the last settles (category-suggestions D-27). */
+export const SETTLE_AFTER_MS = 2_000;
 const UNCATEGORIZED = 'Uncategorized';
 
 export function Review({ choose, label }: ReviewProps) {
@@ -43,6 +46,8 @@ export function Review({ choose, label }: ReviewProps) {
   const history = useHistory(query.data?.items);
   const suggestions = useSuggestions(query.data?.items, history);
   const [failed, setFailed] = useState(false);
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(settleTimer.current), []);
   const mutation = useMutation({
     mutationKey: MUTATION,
     mutationFn: async (choice: ReviewChoice) => {
@@ -50,6 +55,7 @@ export function Review({ choose, label }: ReviewProps) {
       if (!result.ok) throw new Error(result.messageKey);
     },
     onMutate: async (choice) => {
+      clearTimeout(settleTimer.current);
       setFailed(false);
       await client.cancelQueries({ queryKey: dataKeys.review() });
       const before = client.getQueryData<ReviewReply>(dataKeys.review());
@@ -67,7 +73,7 @@ export function Review({ choose, label }: ReviewProps) {
       if (context?.token !== undefined) suggestions.remove(context.token);
       setFailed(true);
     },
-    onSettled: () => settle(),
+    onSettled: () => settleLater(),
   });
   const labeling = useMutation({
     mutationKey: MUTATION,
@@ -77,6 +83,7 @@ export function Review({ choose, label }: ReviewProps) {
       if (!result.ok) throw new Error(result.messageKey);
     },
     onMutate: async (saved) => {
+      clearTimeout(settleTimer.current);
       setFailed(false);
       await client.cancelQueries({ queryKey: dataKeys.review() });
       const before = client.getQueryData<ReviewReply>(dataKeys.review());
@@ -103,8 +110,21 @@ export function Review({ choose, label }: ReviewProps) {
     onSuccess: () => {
       setTimeout(() => void client.invalidateQueries({ queryKey: [...dataKeys.all, 'totals'] }), LABEL_TOTALS_AGAIN_MS);
     },
-    onSettled: () => settle(),
+    onSettled: () => settleLater(),
   });
+
+  /**
+   * Single choices and labels settle once, SETTLE_AFTER_MS after the last one in flight settles; a new one restarts the
+   * wait (D-27), so a fast pass costs one counted request a row plus one refetch at the end (RK-9).
+   */
+  function settleLater() {
+    if (client.isMutating({ mutationKey: MUTATION }) > 1) return;
+    clearTimeout(settleTimer.current);
+    settleTimer.current = setTimeout(() => {
+      if (client.isMutating({ mutationKey: MUTATION }) > 0) return;
+      settle();
+    }, SETTLE_AFTER_MS);
+  }
 
   function settle() {
     // Only after the last choice or label in flight, so an answer for an earlier one cannot undo a later one on screen.

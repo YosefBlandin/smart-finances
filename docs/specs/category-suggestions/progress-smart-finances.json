@@ -94,7 +94,7 @@
     {
       "id": "SF-7",
       "status": "done",
-      "commit": "",
+      "commit": "35fadbf",
       "evidence": [
         "tests first: npx vitest run src/screens/review/suggest/keys.test.tsx → 5 failed, 2 passed: expected null to be 0 (no tabindex); expected [] to deeply equal [3 choices]; activeElement stayed body",
         "verify: npm test --workspace @smart-finances/web -- src/screens/review/suggest/keys.test.tsx → Test Files 1 passed, Tests 7 passed (T-KEY-1 to T-KEY-3); npm run lint --workspace @smart-finances/web → pass; vitest src/screens → all pass",
@@ -104,10 +104,14 @@
     },
     {
       "id": "SF-8",
-      "status": "todo",
+      "status": "done",
       "commit": "",
-      "evidence": [],
-      "review": ""
+      "evidence": [
+        "tests first: npx vitest run src/screens/review/suggest/settle.test.tsx → 3 failed: expected undefined to be 2000 (SETTLE_AFTER_MS missing); unable to find role row (the immediate settle emptied the list after the first choice); tsc: no exported member SETTLE_AFTER_MS, retryAfterSeconds not in ChooseResult",
+        "verify: npm test --workspace @smart-finances/web -- src/screens/review → all pass (Test Files 6 passed incl. pool); npm run lint --workspace @smart-finances/web → pass; tsc clean",
+        "review (fresh spec-reviewer subagent, sonnet): no blocker or major. Minors: (1) no label-path test → added a T-SET-1 label case (label then choice, one settle 2 s after the last, 5 s totals refetch kept); (2) a pending settle is dropped on unmount → left as is: the next visit hydrates from the server; (3) the ChooseResult retry-wait test is type-only → renamed as a compile-time check"
+      ],
+      "review": "pass"
     },
     {
       "id": "SF-9",
