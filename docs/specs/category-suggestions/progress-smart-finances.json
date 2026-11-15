@@ -155,7 +155,7 @@
     {
       "id": "SF-12",
       "status": "done",
-      "commit": "",
+      "commit": "21371c4",
       "evidence": [
         "brief locked-v2 (D-30): the owner chose not to download the model; nothing was downloaded. Earlier in this task, before D-30: the revision was read from the Hugging Face model API (sha b68f4122911bcffcd6e1f695f2d99cd6788972d8; model.safetensors 433,680,480 bytes; tokenizer.json 2,563,370 bytes) and the task waited for the owner",
         "tests first: node --test apps/api/test/docs.test.mjs → T-MOD-1 failed: AssertionError: the Model gate section cites D-30",
@@ -175,9 +175,15 @@
     },
     {
       "id": "SF-14",
-      "status": "todo",
+      "status": "in_progress",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "T-LH-1 first run (npm run lhci): exit 1, LCP budget only (as at the baseline). /review medians: script 170278 bytes (baseline 164349, budget 204800), CLS 0.0759 (baseline 0.0003, budget 0.1), LCP 2778 ms. The 0.0758 shift was the review wrapper pushed down when Accept all appeared after history settled",
+        "fix (inside SF-10 and SF-6 files): Review.tsx keeps Accept all’s space (div[data-all=placeholder], aria-hidden, Review.module.css .allSlot at the small button height) while history is read on a list with payments rows. Tests first: new T-ALL-1 no-shift test failed (expected null not to be null), then accept-all.test.tsx 20 passed",
+        "T-LH-1 after the fix: exit 1, LCP budget only. Medians: /overview LCP 2767 CLS 0.0000 script 169808; /transactions 2766, 0.0001, 172780; /review 2558, 0.0331, 170337; /imports 2767, 0.0024, 167401; /rates 2617, 0.0001, 164497; /data 2616, 0.0007, 150728. /review First Load JS 148 kB (baseline 142 kB). The remaining 0.033 on /review is table rows: payments rows with no pick give up their kept space once suggestions settle (D-26: until the model is ready or off; D-30 means off) or chips wrap",
+        "full verify before the fix: npm test → node pass 248 fail 0, web Test Files 57 passed Tests 755 passed, infra pass 50 fail 0, exit 0; npm run build --workspace @smart-finances/infra → exit 0",
+        "after the fix: npm test --workspace @smart-finances/web → 757 passed; npm run lint → pass; npm run e2e → 115 passed (T-E2E-1 929 ms in the full run); test-storybook (CHROME_PATH) → 264 passed"
+      ],
       "review": ""
     }
   ],

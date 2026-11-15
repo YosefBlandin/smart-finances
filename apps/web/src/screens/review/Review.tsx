@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
+import { SUGGEST_SOURCE } from '@/domain/suggest';
 import { useHistory, useReview } from '@/queries/data';
 import { dataKeys, type ReviewReply } from '@/queries/keys';
 import { StateBlock } from '@/ui/patterns/StateBlock/StateBlock';
@@ -259,9 +260,12 @@ export function Review({ choose, label }: ReviewProps) {
       />
     );
   }
+  // Accept all only shows once suggestions settle: until then its space is kept, so the list does not move down when it
+  // arrives (D-26, RK-5). A list with no payments rows reads no history and never shows it.
+  const waiting = !suggestions.state.settled && query.data.items.some((r) => r.source === SUGGEST_SOURCE);
   return (
     <>
-      {bar}
+      {waiting ? <div className={styles.allSlot} data-all="placeholder" aria-hidden="true" /> : bar}
       {/* While Accept all runs, the single-choice, chip and label buttons wait (D-25). */}
       <div inert={running}>
         <ReviewView

@@ -160,3 +160,14 @@
     min-height: 44px;
   }
 }
+
+/* Accept all's space while history is read (category-suggestions D-26): one small button's height. */
+.allSlot {
+  min-height: var(--target);
+}
+
+@media (pointer: coarse) {
+  .allSlot {
+    min-height: 44px;
+  }
+}

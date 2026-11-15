@@ -391,3 +391,45 @@ describe('T-ALL-7: partial history', () => {
     expect(within(rowOf('a')!).getByRole('button', { name: 'Accept Groceries' })).toBeTruthy();
   });
 });
+
+describe('T-ALL-1: no layout shift when Accept all arrives', () => {
+  it('T-ALL-1 while history is read, the bar keeps its space, and Accept all takes it once suggestions settle', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    client.setQueryData(dataKeys.review(), { items: ROWS });
+    render(
+      <QueryClientProvider client={client}>
+        <NextIntlClientProvider locale="en" messages={en} timeZone="UTC">
+          <Review choose={async () => ({ ok: true })} />
+        </NextIntlClientProvider>
+      </QueryClientProvider>,
+    );
+    const slot = document.querySelector('[data-all="placeholder"]');
+    expect(slot).not.toBeNull();
+    expect(slot!.getAttribute('aria-hidden')).toBe('true');
+    expect(acceptAll()).toBeNull();
+    act(() => client.setQueryData(dataKeys.history(), { examples: EXAMPLES, complete: true }));
+    await waitFor(() => expect(acceptAll()).not.toBeNull());
+    expect(document.querySelector('[data-all="placeholder"]')).toBeNull();
+  });
+
+  it('T-ALL-1 a list with no payments rows keeps no space for it', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    client.setQueryData(dataKeys.review(), { items: [row('n', { source: 'notion' })] });
+    render(
+      <QueryClientProvider client={client}>
+        <NextIntlClientProvider locale="en" messages={en} timeZone="UTC">
+          <Review choose={async () => ({ ok: true })} />
+        </NextIntlClientProvider>
+      </QueryClientProvider>,
+    );
+    expect(document.querySelector('[data-all="placeholder"]')).toBeNull();
+  });
+});
