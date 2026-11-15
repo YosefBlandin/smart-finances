@@ -219,6 +219,8 @@
       "daily": "Ya hiciste 10 importaciones hoy, el límite diario. Inténtalo mañana.",
       "bytes": "Tus archivos guardados están cerca del límite de 200 MiB. Borra tus datos para hacer lugar.",
       "running": "Otra importación sigue en curso. Espera a que termine y envía este archivo.",
+      "erasing": "Tus datos todavía se están borrando. No se envió nada; inténtalo en una hora.",
+      "erasingUntil": "Acabas de borrar tus datos, así que las importaciones esperan hasta las {time}. No se envió nada; inténtalo a esa hora.",
       "conflict": "Esa importación no empezó. No se envió nada; inténtalo de nuevo.",
       "limited": "Demasiados pedidos por ahora. Espera un minuto y vuelve a intentarlo.",
       "failed": "Esa importación no empezó. No se envió nada; inténtalo de nuevo.",

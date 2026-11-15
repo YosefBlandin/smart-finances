@@ -11,6 +11,7 @@ import { Note } from '@/ui/primitives/Note/Note';
 import { SOURCES } from '@smart-finances/contracts/sources';
 import { ImportDetail } from './Detail';
 import styles from './Imports.module.css';
+import { lang } from '../overview/text';
 import { fileRefusal, periodText, refusalKey, SOURCE_IDS, statusText, statusTone, type ImportItem, type SourceId } from './model';
 
 // The imports island (SF-167; AC-5, D-114): pick where the file comes from (its name and size rule shows under the
@@ -20,10 +21,15 @@ import { fileRefusal, periodText, refusalKey, SOURCE_IDS, statusText, statusTone
 // beside the list until it ends. Imports wait for the server's answer: nothing here is optimistic (D-131).
 
 export type ImportStart = { importId: string; upload: { url: string; fields: Record<string, string> } };
-export type RequestResult = { ok: true; data: ImportStart } | { ok: false; messageKey: string };
+export type RequestResult = { ok: true; data: ImportStart } | { ok: false; messageKey: string; retryAfterSeconds?: number };
 export type ImportsProps = {
   request: (input: { source: string; fileName: string; size: number }) => Promise<RequestResult>;
 };
+
+const INTL = { en: 'en-US', es: 'es-AR' } as const;
+
+/** A refusal on screen: its message key and, after a delete-all, when imports open again (epoch ms). */
+type Refused = { key: string; until?: number };
 
 /** "Mercado Pago", "Monthly budget": the source's name as an option, first letter up. */
 const capitalised = (name: string, locale: string) => name.charAt(0).toLocaleUpperCase(locale) + name.slice(1);
@@ -34,7 +40,7 @@ export function Imports({ request }: ImportsProps) {
   const list = useImports();
   const [source, setSource] = useState<SourceId>('mercadopago');
   const [sending, setSending] = useState(false);
-  const [refused, setRefused] = useState<string>();
+  const [refused, setRefused] = useState<Refused>();
   const [open, setOpen] = useState<string>();
   const [dragging, setDragging] = useState(false);
 
@@ -42,14 +48,15 @@ export function Imports({ request }: ImportsProps) {
     setRefused(undefined);
     const reason = fileRefusal(source, file);
     if (reason) {
-      setRefused(refusalKey(reason, source));
+      setRefused({ key: refusalKey(reason, source) });
       return;
     }
     setSending(true);
     try {
       const started = await request({ source, fileName: file.name, size: file.size });
       if (!started.ok) {
-        setRefused(started.messageKey);
+        const wait = started.retryAfterSeconds;
+        setRefused(wait === undefined ? { key: started.messageKey } : { key: started.messageKey, until: Date.now() + wait * 1000 });
         return;
       }
       // The presigned form: its fields first, the file last (S3 POST policy).
@@ -60,9 +67,9 @@ export function Imports({ request }: ImportsProps) {
       // Either way the import opens and is read until it ends, so the server settles the person's slot (D-114); one
       // whose file never arrived ends as expired and gives its bytes back.
       setOpen(started.data.importId);
-      if (!sent?.ok) setRefused('imports.refused.upload');
+      if (!sent?.ok) setRefused({ key: 'imports.refused.upload' });
     } catch {
-      setRefused('imports.refused.failed');
+      setRefused({ key: 'imports.refused.failed' });
     } finally {
       setSending(false);
     }
@@ -77,6 +84,13 @@ export function Imports({ request }: ImportsProps) {
     event.preventDefault();
     setDragging(false);
     pick(event.dataTransfer.files);
+  }
+
+  /** The refusal's words; right after a delete-all, with the time (the person's own clock) imports open again. */
+  function refusedText({ key, until }: Refused) {
+    if (key !== 'imports.refused.erasing' || until === undefined) return t(key);
+    const time = new Intl.DateTimeFormat(INTL[lang(locale)], { timeStyle: 'short' }).format(new Date(until));
+    return t('imports.refused.erasingUntil', { time });
   }
 
   const names = (s: string) => (t.has(`sources.names.${s}`) ? t(`sources.names.${s}`) : s);
@@ -118,7 +132,7 @@ export function Imports({ request }: ImportsProps) {
         </div>
         {refused ? (
           <Note tone="error" role="alert">
-            {t(refused)}
+            {refusedText(refused)}
           </Note>
         ) : null}
       </div>

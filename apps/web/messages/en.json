@@ -219,6 +219,8 @@
       "daily": "You’ve made 10 imports today, the daily limit. Try again tomorrow.",
       "bytes": "Your stored files are close to the 200 MiB limit. Erase your data to make room.",
       "running": "Another import is still running. Wait for it to finish, then send this file.",
+      "erasing": "Your data is still being deleted. Nothing was sent; try again in an hour.",
+      "erasingUntil": "Your data was just deleted, so imports are paused until {time}. Nothing was sent; try again then.",
       "conflict": "That import didn’t start. Nothing was sent; try again.",
       "limited": "Too many requests for now. Wait a minute, then try again.",
       "failed": "That import didn’t start. Nothing was sent; try again.",

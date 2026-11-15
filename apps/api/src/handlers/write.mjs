@@ -80,9 +80,14 @@ async function repairPeriod(deps, sub, event) {
 }
 
 // Refused from erased_at until quiet_until (D-30).
+// During a delete-all and its quiet window (D-30). Once the erase has finished, Retry-After says when the quiet window
+// ends, so the web can say when to try again; an erase still running has no end yet, so it sends none.
 async function refuseWhileErasing(deps, sub) {
   const marker = await deps.store.get(erasedKey(sub), { consistent: true });
-  if (inEraseWindow(marker, deps.now())) throw new HttpError('conflict', 'your data is being deleted; try again later');
+  const now = deps.now();
+  if (!inEraseWindow(marker, now)) return;
+  const retryAfter = marker.quiet_until ? Math.max(1, Math.ceil((Date.parse(marker.quiet_until) - now) / 1000)) : undefined;
+  throw new HttpError('conflict', 'your data is being deleted; try again later', { retryAfter });
 }
 
 // POST /totals/rebuild: the owner's fix for a batch that reached the rollup's on-failure queue.

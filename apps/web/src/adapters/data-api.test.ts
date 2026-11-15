@@ -470,6 +470,11 @@ describe('T-ENR-20: putLabel on the data API', () => {
     });
   });
 
+  it('T-WSCR-1: a conflict keeps the Retry-After the API sent (the quiet window after a delete-all)', async () => {
+    const { api } = setup(() => ({ status: 409, body: { error: { code: 'conflict', message: 'erasing' } }, headers: { 'retry-after': '2400' } }));
+    expect(await api.getImport(TOKEN, { id: 'i1' })).toEqual({ ok: false, kind: 'conflict', code: 'conflict', retryAfter: 2400 });
+  });
+
   it('T-ENR-20: the erase window answers conflict', async () => {
     const { api } = setup(() => ({ status: 409, body: { error: { code: 'conflict', message: 'erasing' } } }));
     expect(await api.putLabel(TOKEN, { key: KEY, name: 'x', category: 'Housing & utilities' })).toEqual({

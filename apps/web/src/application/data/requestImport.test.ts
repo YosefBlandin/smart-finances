@@ -88,8 +88,12 @@ describe('T-WSCR-8: import caps (D-114)', () => {
     api.requestImport = async () => ({ ok: false, kind: 'failed', code: 'timeout' });
     expect(await s.imports.requestImport(WHO, CSV, REQ)).toMatchObject({ ok: false, reason: 'failed' });
     expect(await s.c.accountStore.getAccount(SUB)).toMatchObject(released);
+    // POST /imports answers 409 only during a delete-all and its quiet window: the refusal says so, with the wait.
+    api.requestImport = async () => ({ ok: false, kind: 'conflict', code: 'conflict', retryAfter: 2400 });
+    expect(await s.imports.requestImport(WHO, CSV, REQ)).toEqual({ ok: false, reason: 'erasing', retryAfter: 2400 });
+    expect(await s.c.accountStore.getAccount(SUB)).toMatchObject(released);
     api.requestImport = async () => ({ ok: false, kind: 'conflict' });
-    expect(await s.imports.requestImport(WHO, CSV, REQ)).toMatchObject({ ok: false, reason: 'conflict' });
+    expect(await s.imports.requestImport(WHO, CSV, REQ)).toEqual({ ok: false, reason: 'erasing' });
     expect(await s.c.accountStore.getAccount(SUB)).toMatchObject(released);
     api.requestImport = async () => Promise.reject(new Error('the data API is unreachable'));
     await expect(s.imports.requestImport(WHO, CSV, REQ)).rejects.toThrow('unreachable');

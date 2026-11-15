@@ -98,7 +98,7 @@ class Timeout extends Error {}
  * @smart-finances/contracts, the access token as a bearer token (D-53), a 5-second budget per request (D-101), the
  * input checked and the reply parsed with the shared schemas (D-133), and the status mapped to the port's kinds:
  * 401 refreshes the tokens once and retries, then signs out (the session row goes); 403 and 404 are not_found; 409 is
- * conflict; 429, 5xx, a timeout, a network error or a reply off the contract are failed (the screens offer a retry).
+ * conflict (with the API's Retry-After when it sent one, the quiet window after a delete-all); 429, 5xx, a timeout, a network error or a reply off the contract are failed (the screens offer a retry).
  * Every call counts against the person's limit first (D-120). Expected failures are answers, never throws.
  */
 export class HttpDataApi implements DataApi {
@@ -267,7 +267,7 @@ export class HttpDataApi implements DataApi {
     }
     const code = errorCode(text);
     if (status === 403 || status === 404) return fail('not_found', code ?? 'not_found');
-    if (status === 409) return fail('conflict', code ?? 'conflict');
+    if (status === 409) return fail('conflict', code ?? 'conflict', retryAfter);
     if (status === 429) return fail('failed', 'throttled', retryAfter);
     if (status >= 500) return fail('failed', 'server', retryAfter);
     return fail('failed', code ?? 'bad_request');

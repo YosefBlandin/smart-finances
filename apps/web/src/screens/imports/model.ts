@@ -25,6 +25,7 @@ export type ImportReason =
   | 'daily'
   | 'bytes'
   | 'running'
+  | 'erasing'
   | 'conflict'
   | 'limited'
   | 'unauthorized'
@@ -49,6 +50,7 @@ const KEYS: Record<ImportReason, string> = {
   daily: 'imports.refused.daily',
   bytes: 'imports.refused.bytes',
   running: 'imports.refused.running',
+  erasing: 'imports.refused.erasing',
   conflict: 'imports.refused.conflict',
   limited: 'imports.refused.limited',
   unauthorized: 'imports.refused.failed',

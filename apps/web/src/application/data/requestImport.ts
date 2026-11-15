@@ -52,6 +52,7 @@ export type ImportRefusal =
   | 'paused'
   | 'unavailable'
   | Exclude<ReserveRefusal, 'deleting'>
+  | 'erasing'
   | 'conflict'
   | 'limited'
   | 'unauthorized'
@@ -204,7 +205,8 @@ export function createImports(deps: ImportsDeps) {
         await giveBack();
         if (asked.kind === 'limited') return refuse('limited', asked.retryAfter);
         if (asked.kind === 'unauthorized') return refuse('unauthorized');
-        if (asked.kind === 'conflict') return refuse('conflict');
+        // POST /imports answers 409 only during a delete-all and its quiet window; retryAfter is when that window ends.
+        if (asked.kind === 'conflict') return refuse('erasing', asked.retryAfter);
         if (asked.code === 'too_large') return refuse('too_large');
         if (asked.code === 'bad_request') return refuse('name');
         return refuse('failed', asked.retryAfter);
