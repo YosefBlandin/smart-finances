@@ -8,24 +8,57 @@
 //   and those nets match the statement line for line.
 // The report is assigned to the month of its opening row; rows outside that month are left
 // out (the API treats the end date as inclusive, so a range can spill into the next day).
+// Sync adds three columns per operation (SF_MERCHANT, SF_CATEGORY_CODE, SF_RECIPIENT; ADR 0010): the merchant or
+// sender name, the payments service's category code and a keyed hash of the other party. A file without them
+// imports exactly as before.
+import { CATEGORIES } from '@smart-finances/contracts/categories';
+import { merchantCategory } from './merchants.mjs';
 import { batchId, hashId, toCents } from './schema.mjs';
 
 const REQUIRED = ['DATE', 'SOURCE_ID', 'DESCRIPTION', 'NET_CREDIT_AMOUNT', 'NET_DEBIT_AMOUNT', 'BALANCE_AMOUNT'];
 // The row type that decides what an operation is, strongest first.
 const PRIORITY = ['payout', 'refund', 'payment', 'tip', 'asset_management', 'reserve_for_payout', 'reserve_for_payment'];
+const ENRICHMENT = ['SF_MERCHANT', 'SF_CATEGORY_CODE', 'SF_RECIPIENT'];
+// A value of the wrong shape is left out, so a hand-edited file cannot store a key no label can match.
+const SHAPES = { SF_CATEGORY_CODE: /^\d{4}$/, SF_RECIPIENT: /^[0-9a-f]{32}$/ };
+const UNCATEGORIZED = CATEGORIES.at(-1);
+// Raw columns sync reads and then drops (D-19, D-21): a report that still holds one is refused as a whole,
+// so names and account numbers reach the server only through sync's cleaned file.
+export const PRIVATE_COLUMNS = ['PAYER_NAME', 'PAYOUT_BANK_ACCOUNT_NUMBER'];
 
-function parseRows(text) {
+// Thrown when the header holds a private column. The message names the column and the file, never a value.
+export class PrivateColumns extends Error {
+  constructor(column, file) {
+    super(`${file ? `${file}: ` : ''}the release report holds the ${column} column; save the month with sync (npm run mp:sync), which removes it`);
+    this.name = 'PrivateColumns';
+    this.code = 'private_columns';
+  }
+}
+
+function parseRows(text, file) {
   const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.length > 0);
+  // Before any row is read, so no value of a private column is ever looked at (D-21).
+  const header = (lines[0] ?? '').split(';').map((c) => c.trim());
+  // A quoted header cell still counts, so a hand-saved report with quotes is refused here, not as unreadable.
+  const names = header.map((c) => c.replace(/^"(.*)"$/, '$1').trim());
+  const privateColumn = PRIVATE_COLUMNS.find((c) => names.includes(c));
+  if (privateColumn) throw new PrivateColumns(privateColumn, file);
   if (lines.some((l) => l.includes('"'))) throw new Error('quoted CSV fields are not supported in the release report');
-  const header = lines[0].split(';');
   const missing = REQUIRED.filter((c) => !header.includes(c));
   if (missing.length) throw new Error(`release report is missing columns: ${missing.join(', ')}`);
-  return lines.slice(1).map((l) => Object.fromEntries(l.split(';').map((v, i) => [header[i], v.trim()])));
+  return { header, rows: lines.slice(1).map((l) => Object.fromEntries(l.split(';').map((v, i) => [header[i], v.trim()]))) };
+}
+
+// The first non-empty value of a column over an operation's rows, if it has the column's shape; else ''.
+function firstOf(group, column) {
+  const value = group.map((r) => r[column] ?? '').find((v) => v !== '') ?? '';
+  return !SHAPES[column] || SHAPES[column].test(value) ? value : '';
 }
 
 const net = (r) => toCents(r.NET_CREDIT_AMOUNT) - toCents(r.NET_DEBIT_AMOUNT);
 
-function classify(types, cents) {
+// enriched: the file has the enrichment columns, so an expense left Uncategorized waits on the review list (D-6).
+function classify(types, cents, { enriched = false, category } = {}) {
   const main = PRIORITY.find((t) => types.has(t)) ?? [...types][0];
   const flags = [];
   let kind;
@@ -41,18 +74,24 @@ function classify(types, cents) {
     flags.push('reserve_only');
   }
   if (kind === 'inflow') flags.push('needs_review'); // a transfer from yourself or money received
+  if (enriched && kind === 'expense' && category?.(kind) === UNCATEGORIZED) flags.push('needs_review');
   return { main, kind, flags };
 }
 
-function categoryFor(kind, rows) {
+// Expenses: the category code, then the merchant name (merchants.mjs), then the Mercado Libre rule (D-15).
+function categoryFor(kind, rows, { code = '', merchant = '' } = {}) {
   if (kind === 'interest') return 'Interest';
   if (kind === 'refund') return 'Refunds';
-  if (kind === 'expense' && rows.some((r) => r.BUSINESS_UNIT === 'Mercado Libre')) return 'Shopping';
-  return 'Uncategorized';
+  if (kind !== 'expense') return UNCATEGORIZED;
+  const known = merchantCategory({ code, merchant });
+  if (known) return known;
+  if (rows.some((r) => r.BUSINESS_UNIT === 'Mercado Libre')) return 'Shopping';
+  return UNCATEGORIZED;
 }
 
 export function parseReleaseReport(text, { file, currency = 'ARS', country = 'AR' } = {}) {
-  const rows = parseRows(text);
+  const { header, rows } = parseRows(text, file);
+  const enriched = ENRICHMENT.some((c) => header.includes(c));
   const opening = rows[0];
   const totals = rows.at(-1);
   if (opening?.DESCRIPTION || !opening?.DATE) throw new Error(`${file}: first row is not the opening balance`);
@@ -87,9 +126,13 @@ export function parseReleaseReport(text, { file, currency = 'ARS', country = 'AR
       continue;
     }
     const types = new Set(group.map((r) => r.DESCRIPTION));
-    const { main, kind, flags } = classify(types, cents);
+    const merchant = firstOf(group, 'SF_MERCHANT');
+    const code = firstOf(group, 'SF_CATEGORY_CODE');
+    const category = (k) => categoryFor(k, group, { code, merchant });
+    const { main, kind, flags } = classify(types, cents, { enriched, category });
     const dated = group.find((r) => r.DESCRIPTION === main) ?? group[0];
-    const unit = group.find((r) => r.BUSINESS_UNIT || r.SUB_UNIT.trim()) ?? {};
+    // SUB_UNIT is optional: a report configured without it still imports.
+    const unit = group.find((r) => r.BUSINESS_UNIT || (r.SUB_UNIT ?? '').trim()) ?? {};
     transactions.push({
       id: hashId('mercadopago', sourceId, month),
       date: dated.DATE.slice(0, 10),
@@ -97,8 +140,9 @@ export function parseReleaseReport(text, { file, currency = 'ARS', country = 'AR
       kind,
       amount: cents,
       currency,
-      category: categoryFor(kind, group),
-      merchant: '',
+      category: category(kind),
+      merchant,
+      recipient_key: firstOf(group, 'SF_RECIPIENT'),
       description_raw: [[...types].join('+'), unit.BUSINESS_UNIT, unit.SUB_UNIT?.trim(), dated.PAYMENT_METHOD]
         .filter(Boolean)
         .join(' / '),

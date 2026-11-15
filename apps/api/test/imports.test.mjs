@@ -182,6 +182,20 @@ function harness() {
   return { store, files, load, upload, run, stored };
 }
 
+test('T-ENR-2 re-importing an old file whose stored rows lack recipient_key changes no row', async () => {
+  const h = harness();
+  // Rows as the importer wrote them before the field existed.
+  const old = [txn('a', '2026-05-02'), txn('b', '2026-05-03')];
+  for (const t of old) assert.equal('recipient_key' in t, false);
+  const r1 = await h.run(await h.upload({ rows: old }));
+  assert.deepEqual(r1.counts, { added: 2, updated: 0, removed: 0, skipped: 0 });
+  // The same file parsed now: every importer writes an empty recipient_key.
+  const again = old.map((t) => ({ ...t, recipient_key: '' }));
+  const r2 = await h.run(await h.upload({ rows: again, hash: 'reparsed' }), T0 + 2 * MIN);
+  assert.equal(r2.reconcile, 'done');
+  assert.deepEqual(r2.counts, { added: 0, updated: 0, removed: 0, skipped: 0 });
+});
+
 test('T-REC-2 the same file twice stores its rows once and the second import ends unchanged', async () => {
   const h = harness();
   const rows = [txn('a', '2026-05-02'), txn('b', '2026-05-03')];

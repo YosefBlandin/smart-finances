@@ -15,7 +15,8 @@
   "scripts": {
     "data:generate": "node data/synthetic/generate.mjs",
     "ingest:local": "node scripts/ingest-local.mjs",
-    "test": "node --test apps/api/test/*.test.mjs packages/contracts/test/*.test.mjs && node scripts/check-no-raw-html.mjs && npm run lint --workspace @smart-finances/web && npm test --workspace @smart-finances/web && npm test --workspace @smart-finances/infra"
+    "mp:sync": "node scripts/mercadopago-report.mjs sync",
+    "test": "node --test apps/api/test/*.test.mjs packages/contracts/test/*.test.mjs scripts/mercadopago-sync.test.mjs scripts/mercadopago-probe.test.mjs && node scripts/check-no-raw-html.mjs && npm run lint --workspace @smart-finances/web && npm test --workspace @smart-finances/web && npm test --workspace @smart-finances/infra"
   },
   "devDependencies": {
     "esbuild": "0.28.2"

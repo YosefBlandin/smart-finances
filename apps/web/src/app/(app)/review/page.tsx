@@ -5,12 +5,13 @@ import { Review } from '@/screens/review/Review';
 import styles from '@/screens/review/Review.module.css';
 import { redirectIfStopped } from '../../api/data/respond';
 import { requireMoneyAccess } from '../../guarded';
-import { chooseReview } from './actions';
+import { chooseReview, labelRecipient } from './actions';
 import { readReview } from './read';
 
 // To review (SF-166; AC-8, D-131): the server reads the rows to review (the same read the shell's count made, so one
 // counted request) and hydrates the island with them; past the person limit, the limit page (AC-17). A failed read is
-// left out, so the island asks again and says so if it fails. Choices go through the chooseReview server action. The
+// left out, so the island asks again and says so if it fails. Choices go through the chooseReview server action, recipient
+// labels through labelRecipient (mercadopago-enrichment D-22). The
 // heading comes first and takes focus after a navigation (AC-10).
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +37,7 @@ export default async function ReviewPage() {
     <>
       {intro}
       <HydrationBoundary state={dehydrate(client)}>
-        <Review choose={chooseReview} />
+        <Review choose={chooseReview} label={labelRecipient} />
       </HydrationBoundary>
     </>
   );

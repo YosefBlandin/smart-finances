@@ -13,6 +13,7 @@ const row = (id: string, category = 'uncategorized'): Row =>
     date: '2026-10-02',
     category,
     merchant: `SYNTHETIC ${id}`,
+    recipient_key: '',
     amount: -100,
     currency: 'ARS',
     source: 'mercadopago',

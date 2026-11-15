@@ -27,3 +27,13 @@ export function undoChoice(shown: ReviewReply, before: ReviewReply, id: string):
   items.splice(next === -1 ? items.length : next, 0, previous);
   return { ...shown, items };
 }
+
+/** The list with a recipient label saved (D-7, D-18): a label approves its rows, so every row with the key leaves it. */
+export function applyLabel(reply: ReviewReply, key: string): ReviewReply {
+  return { ...reply, items: reply.items.filter((row) => row.recipient_key !== key) };
+}
+
+/** The shown list with one refused label undone: every row with its key back in its place; other rows as shown. */
+export function undoLabel(shown: ReviewReply, before: ReviewReply, key: string): ReviewReply {
+  return before.items.filter((row) => row.recipient_key === key).reduce((list, row) => undoChoice(list, before, row.id), shown);
+}

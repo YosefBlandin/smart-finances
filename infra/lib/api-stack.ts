@@ -7,6 +7,7 @@ import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { SqsDestination } from 'aws-cdk-lib/aws-lambda-destinations';
 import { DynamoEventSource, SqsDlq } from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as sns from 'aws-cdk-lib/aws-sns';
@@ -184,6 +185,7 @@ export class ApiStack extends cdk.Stack {
       [POST, '/imports/{id}/undo', write],
       [POST, '/periods/{source}/{period}/repair', write],
       [PUT, '/transactions/{id}/review', write],
+      [PUT, '/recipients/{key}/label', write],
       [PUT, '/rates/{month}', write],
       [POST, '/totals/rebuild', write],
       [apigw.HttpMethod.DELETE, '/data', erase],
@@ -239,6 +241,9 @@ export class ApiStack extends cdk.Stack {
       maxRecordAge: cdk.Duration.hours(1),
       onFailure: new SqsDlq(failures),
     }));
+    // The rebuild invokes ({ sub, months: 'all' }) from POST /totals/rebuild and the label route are async: one
+    // that still fails after Lambda's retries lands in the same queue, so it raises the same alarm (D-13).
+    rollup.configureAsyncInvoke({ onFailure: new SqsDestination(failures) });
 
     const topic = new sns.Topic(this, 'RollupFailuresTopic', { topicName: `smart-finances-${this.stage}-rollup-failures` });
     const alarm = new cloudwatch.Alarm(this, 'RollupFailuresAlarm', {

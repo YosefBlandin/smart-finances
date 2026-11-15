@@ -274,6 +274,16 @@ describe('T-WAUTH-2: the logger writes one JSON security event per line and refu
     expect(lines).toHaveLength(1);
   });
 
+  it('T-ENR-21: it also refuses name, merchant and payer fields, so no person or shop name reaches a log (AC-10)', () => {
+    const { lines, logger } = make();
+    for (const key of ['name', 'merchant', 'payer', 'labelName', 'merchant_name', 'payerName', 'Name']) {
+      const context = { requestId: 'r', [key]: 'Made-up Person' } as unknown as { requestId: string };
+      expect(() => logger.event('recipient_label', 'saved', context), key).toThrow(new RegExp(`refused field ${key}`, 'i'));
+      expect(() => new MemoryLogger().event('recipient_label', 'saved', context), key).toThrow(/refused field/);
+    }
+    expect(lines).toEqual([]);
+  });
+
   it('T-WAUTH-2: the memory logger used under STAGE=test refuses the same keys', () => {
     const logger = new MemoryLogger();
     for (const key of ['password', 'code', 'secret', 'token', 'email', 'ip']) {

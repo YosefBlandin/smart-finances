@@ -1,6 +1,6 @@
 # Threat model
 
-Status: v3, updated for the web UI (web-ui spec): open sign-up, the web server, the sessions and accounts tables, the web server's secrets and browser monitoring (RUM). v2 covered the data architecture (Epic 2): data stack, upload path, sign-in and delete-all. Revisit at the end of Epics 2, 4, 6 and 7. Method: assets and trust boundaries first, then STRIDE per boundary, then the OWASP Top 10 for LLM Applications 2025.
+Status: v4, updated for the Mercado Pago enrichment ([ADR 0010](adr/0010-recipient-labels.md)): names of people and shops, recipient keys and labels in the table, and the owner's machine as a boundary. v3 was updated for the web UI (web-ui spec): open sign-up, the web server, the sessions and accounts tables, the web server's secrets and browser monitoring (RUM). v2 covered the data architecture (Epic 2): data stack, upload path, sign-in and delete-all. Revisit at the end of Epics 2, 4, 6 and 7. Method: assets and trust boundaries first, then STRIDE per boundary, then the OWASP Top 10 for LLM Applications 2025.
 
 ## What exists today, honestly
 
@@ -28,6 +28,10 @@ Everything in the "control" columns below is planned unless marked **done**. **d
 | Point-in-time recovery of the table | Erased items stay restorable for the 35-day recovery window after delete-all | Disclosure after erase |
 | Erase marker (`ERASED` item) | Kept after delete-all with the person id and an erase time, so late background work cannot bring data back | Small residual disclosure |
 | Imported text (descriptions) | Attacker-controlled content inside trusted-looking data | Injection |
+| Names of people and shops (merchant on Mercado Pago rows) | Who the owner pays and who pays them, from sync's enriched files; stored like transactions and in uploaded files until delete-all (mercadopago-enrichment D-8) | Disclosure; injection (a name is untrusted text) |
+| Recipient keys (`recipient_key` on rows) | A keyed hash of the other party's payments user id or payout account, so one label covers all its rows; the raw id never leaves the owner's machine | Linking rows to a person if the hashing key leaks |
+| Recipient labels (`LBL#` items) | The name and category the owner gives a recipient; applied to every row with its key | Tampering (wrong totals), disclosure |
+| Local hashing key (`data/real/mercadopago/.hashing-key`) | Makes recipient keys; git-ignored, mode 600, only on the owner's machine | Disclosure (keys become linkable), loss (labels stop matching) |
 | Knowledge-base documents | Source of advice the assistant cites | Poisoning, misinformation |
 | Model access and spend | Pay-per-token | Denial of wallet |
 | CI deploy role | Can create AWS resources | Account takeover |
@@ -49,6 +53,7 @@ Everything in the "control" columns below is planned unless marked **done**. **d
 11. **B11** The web server and the hourly housekeeping function to the sessions and accounts tables
 12. **B12** The web server and the housekeeping function to their secrets (web client secret, counter HMAC key), read at run time
 13. **B13** Browser to CloudWatch RUM through the guest identity pool
+14. **B14** The owner's machine to the payments service (Mercado Pago's report and payments search, with the owner's token) and the owner's machine to the upload (sync's cleaned file, uploaded by hand)
 
 ## STRIDE per boundary
 
@@ -90,6 +95,12 @@ Everything in the "control" columns below is planned unless marked **done**. **d
 | B13 | Tampering | Fake RUM events or someone else's monitor | Guest credentials from an identity pool with unauthenticated identities only; the guest role may only put RUM events to this stage's monitor (**done**: T-WINF-15) | web UI |
 | B13 | Info disclosure | Personal data in browser monitoring | No cookies, addresses stripped of search values, no person ids (D-135, **done** for cookies: T-WINF-15) | web UI |
 | B13 | Denial of wallet | Event flood through the guest identity | About 1 dollar per 100,000 events (D-135); budget alarms at 50, 80 and 100% (**done**: T-WINF-12) | web UI |
+| B14 | Info disclosure | Raw payer names, payments ids or payout account numbers reach the upload or the repo | Sync drops the payer name and payout account columns before saving, in `replaced/` and `rejected/` too; ids and accounts leave the machine only as recipient keys; the importer refuses a file with those columns (`private_columns`) and the parser deletes that upload; `data/` is git-ignored ([ADR 0010](adr/0010-recipient-labels.md), **done**: T-ENR-7, T-ENR-18) | MP enrichment |
+| B14 | Info disclosure | The hashing key leaks, so recipient keys can be linked back to ids | A random local file, git-ignored, mode 600, never uploaded or logged; the server never holds it (**done**: T-ENR-14) | MP enrichment |
+| B14 | Info disclosure | Sync or probe logs print a response body, a name or a token | Log lines carry month, code, HTTP status and counts only; the token is read from the shell or a git-ignored file and never printed (**done**: T-ENR-17, T-ENR-19) | MP enrichment |
+| B14 | Tampering | A name from the payments service breaks the `;` format or carries a formula or contact details | Separators, quotes and control characters become spaces; names are cut to 80 characters; emails and phone or ID numbers are removed; export prefixes formula-like cells (**done**: T-ENR-13) | MP enrichment |
+| B14 | Tampering | A recipient label sets wrong categories on many rows | The route takes the person from the session only, checks the key shape and the erase window, and every label write rebuilds totals; the owner can relabel (**done**: T-ENR-8, T-ENR-11, T-ENR-20) | MP enrichment |
+| B14 | Denial of service | The payments search hangs or fails mid-month | 30 s per request; a failed month saves nothing and the next run tries again (**done**: T-ENR-17) | MP enrichment |
 | B3 | Repudiation | No record of what the model was asked | Trace ids, tool names, chunk ids (not raw text) | 5 |
 | B3 | Denial of wallet | Long or repeated prompts | Max output tokens, quotas, budget action, concurrency limits | 4, 6 |
 | B4 | Tampering | Instructions hidden in a merchant name or document | Mark as untrusted data, read-only tools, no secrets in context | 2, 4 |

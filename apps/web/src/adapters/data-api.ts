@@ -28,6 +28,8 @@ export const DATA_API_TIMEOUT_MS = 5_000;
  * everything in one call (the data spec's 25 s), so each gets 25 s instead of 5 (owner decisions, PR 4 review).
  */
 export const LONG_REQUEST_TIMEOUT_MS = 25_000;
+/** A recipient key (mercadopago-enrichment Contracts "PUT /recipients/{key}/label"): 32 lowercase hex characters. */
+export const RECIPIENT_KEY = /^[0-9a-f]{32}$/;
 /** A renewed access token is reused by calls that still hold the old one for this long, so they do not refresh again. */
 const RENEWED_FOR_MS = 60_000;
 
@@ -134,6 +136,15 @@ export class HttpDataApi implements DataApi {
       body,
       (b) => ({ method: 'PUT', path: `/transactions/${encodeURIComponent(id)}/review`, body: b }),
       () => id.length > 0,
+    );
+
+  putLabel: DataApi['putLabel'] = (token, { key, ...body }) =>
+    this.call(
+      token,
+      'PUT /recipients/{key}/label',
+      body,
+      (b) => ({ method: 'PUT', path: `/recipients/${key}/label`, body: b }),
+      () => RECIPIENT_KEY.test(key),
     );
 
   listImports: DataApi['listImports'] = (token, input) =>

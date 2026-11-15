@@ -1,0 +1,15 @@
+DATE;SOURCE_ID;DESCRIPTION;NET_CREDIT_AMOUNT;NET_DEBIT_AMOUNT;GROSS_AMOUNT;MP_FEE_AMOUNT;TAXES_AMOUNT;PAYMENT_METHOD;TRANSACTION_APPROVAL_DATE;BUSINESS_UNIT;SUB_UNIT;BALANCE_AMOUNT;PAYMENT_METHOD_TYPE;PURCHASE_ID;SF_MERCHANT;SF_CATEGORY_CODE;SF_RECIPIENT
+2026-05-01T00:00:00.000-03:00;;;1000.00;0.00;0.00;0.00;0.00;available_money;2026-05-01T00:00:00.000-03:00;;;1000.00;;;;;
+2026-05-02T10:00:00.000-03:00;111;reserve_for_payment;0.00;250.00;0.00;0.00;0.00;available_money;2026-05-02T10:00:00.000-03:00;Mercado Pago;QR;750.00;;;;;
+2026-05-02T10:00:01.000-03:00;111;reserve_for_payment;250.00;0.00;0.00;0.00;0.00;available_money;2026-05-02T10:00:01.000-03:00;;;1000.00;;;Made-up Cafe;5812;aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+2026-05-02T10:00:02.000-03:00;111;payment;0.00;250.00;0.00;0.00;0.00;available_money;2026-05-02T10:00:02.000-03:00;;;750.00;;;Made-up Cafe;5812;aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+2026-05-03T09:00:00.000-03:00;222;payment;500.00;0.00;0.00;0.00;0.00;cvu;2026-05-03T09:00:00.000-03:00;;;1250.00;;;Ana Example;;bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+2026-05-04T00:00:00.000-03:00;333;asset_management;1.25;0.00;0.00;0.00;0.00;available_money;2026-05-04T00:00:00.000-03:00;;;1251.25;;;;;
+2026-05-05T12:00:00.000-03:00;444;reserve_for_payout;0.00;100.00;0.00;0.00;0.00;available_money;2026-05-05T12:00:00.000-03:00;;;1151.25;;;;;cccccccccccccccccccccccccccccccc
+2026-05-05T12:00:01.000-03:00;444;reserve_for_payout;100.00;0.00;0.00;0.00;0.00;available_money;2026-05-05T12:00:01.000-03:00;;;1251.25;;;;;cccccccccccccccccccccccccccccccc
+2026-05-05T12:00:02.000-03:00;444;payout;0.00;100.00;0.00;0.00;0.00;available_money;2026-05-05T12:00:02.000-03:00;;;1151.25;;;;;cccccccccccccccccccccccccccccccc
+2026-05-06T08:00:00.000-03:00;666;payment;0.00;20.00;0.00;0.00;0.00;available_money;2026-05-06T08:00:00.000-03:00;;;1131.25;;;NETFLIX.COM;;dddddddddddddddddddddddddddddddd
+2026-05-07T08:00:00.000-03:00;777;payment;0.00;30.00;0.00;0.00;0.00;available_money;2026-05-07T08:00:00.000-03:00;;;1101.25;;;Made-up Shop;0000;eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+2026-05-08T08:00:00.000-03:00;888;payment;0.00;40.00;0.00;0.00;0.00;available_money;2026-05-08T08:00:00.000-03:00;Mercado Libre;;1061.25;;;;;
+2026-05-09T08:00:00.000-03:00;999;payment;0.00;10.00;0.00;0.00;0.00;available_money;2026-05-09T08:00:00.000-03:00;;;1051.25;;;Kiosco El Sol Sur;5499;ffffffffffffffffffffffffffffffff
+;;;1051.25;0.00;0.00;0.00;0.00;;;;;0.00;;;;;

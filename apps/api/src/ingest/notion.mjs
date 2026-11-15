@@ -98,6 +98,7 @@ export function parseNotionLog(text, { file = 'notion' } = {}) {
       currency: 'USD',
       category: entry.category,
       merchant: '',
+      recipient_key: '',
       description_raw: line,
       source: 'notion',
       source_ref: `${file}:${lineNo}`,

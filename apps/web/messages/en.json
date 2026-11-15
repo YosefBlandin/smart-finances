@@ -144,6 +144,19 @@
     },
     "saveFailed": "That change didn’t save. Nothing changed; try again."
   },
+  "label": {
+    "open": "Label this recipient",
+    "title": "Label this recipient",
+    "lead": "The name and category go on every payment with this person or shop, past and future, and approve them.",
+    "name": "Name",
+    "category": "Category",
+    "save": "Save label",
+    "cancel": "Cancel",
+    "nameRequired": "Write a name.",
+    "nameTooLong": "Keep the name to {n} characters or fewer.",
+    "categoryRequired": "Pick a category.",
+    "saveFailed": "That label didn’t save. Nothing changed; try again."
+  },
   "imports": {
     "sub": "Upload a file from each source. A new file for the same month replaces the old one, and you can undo it.",
     "whereFrom": "Where is this file from?",
@@ -237,6 +250,8 @@
     "sFilesD": "kept so an import can be undone or repaired",
     "sChoices": "Your review choices",
     "sChoicesD": "categories and approvals for Mercado Pago rows",
+    "sLabels": "Recipient labels",
+    "sLabelsD": "the names and categories you give people and shops, and the names Mercado Pago sends with your payments",
     "sRates": "Dollar rates",
     "sRatesD": "one per month",
     "sTotals": "Monthly totals",

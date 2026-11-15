@@ -1,0 +1,225 @@
+{
+  "spec": "mercadopago-enrichment",
+  "repo": "smart-finances",
+  "brief": "pr-smart-finances.md@locked-v1",
+  "tool": "Claude Code (desktop app, Code tab)",
+  "model": "claude-opus-5-5",
+  "baseline": {
+    "tests": "npm test (node --test api+contracts+scripts, check-no-raw-html, web lint, web vitest, infra vitest) @ c90276f: pass. node --test 186 pass / 0 fail; web vitest 46 files, 654 pass; infra 49 pass / 0 fail",
+    "lint": "npm run lint --workspace @smart-finances/web (eslint + prettier --check, inside npm test): pass, 0 problems, All matched files use Prettier code style",
+    "typecheck": "npm run build --workspace @smart-finances/infra (tsc --noEmit): pass, exit 0"
+  },
+  "tasks": [
+    {
+      "id": "SF-0",
+      "status": "done",
+      "commit": "",
+      "evidence": [
+        "HEAD c90276f on feature/mercadopago-sync = origin/qa f9836e0 + lock commits dcf6db9, c90276f; working tree holds only the uncommitted sync/probe files SF-1 commits",
+        "drift.mjs: 38 references: 38 OK",
+        "npm test: exit 0 (186 + 654 + 49 pass, lint clean)",
+        "npm run build --workspace @smart-finances/infra: exit 0"
+      ],
+      "review": "n/a"
+    },
+    {
+      "id": "SF-1",
+      "status": "done",
+      "commit": "25cf89a",
+      "evidence": [
+        "Tests first: none (existing tests)",
+        "node --test scripts/mercadopago-sync.test.mjs scripts/mercadopago-probe.test.mjs: tests 17, pass 17, fail 0",
+        "git show --stat 25cf89a: only the 7 listed files, nothing under docs/specs",
+        "grep of the new files: only made-up TEST- values and example.com in fixtures"
+      ],
+      "review": "n/a"
+    },
+    {
+      "id": "SF-2",
+      "status": "done",
+      "commit": "1f2db61",
+      "evidence": [
+        "Fail first: contracts T-ENR-1 (FIELDS[merchant+1] actual description_raw), query T-ENR-1 (recipient_key actual undefined, expected \"\"), web T-ENR-1 (schema dropped the field: Expected/Received diff); T-ENR-2 passed before any change (sameRow compares FIELDS only), then failed once FIELDS gained the field: counts actual {added:0,updated:2} expected {updated:0}",
+        "Verify: node --test packages/contracts/test/contracts.test.mjs apps/api/test/query.test.mjs apps/api/test/reconcile.test.mjs apps/api/test/export.test.mjs apps/api/test/schema.test.mjs apps/api/test/imports.test.mjs: tests 51, pass 51, fail 0",
+        "Verify: npm test --workspace @smart-finances/web -- src/adapters (npx vitest run src/adapters): 6 files, 158 pass",
+        "Extra: full node suite 201 pass; full web vitest 46 files 655 pass; web lint clean; web tsc --noEmit exit 0",
+        "Task review (spec-reviewer, sonnet, fresh context): 0 blocker, 0 major, 3 minor. Fixed: web T-ENR-1 retitled and a bad_reply case added for a row without the key; export T-ENR-1 added for an old row. Third minor was the progress record, filled here. One reviewer claim (web test passes without the change) was wrong: it failed first because the schema stripped the unknown key."
+      ],
+      "review": "pass"
+    },
+    {
+      "id": "SF-3",
+      "status": "done",
+      "commit": "f25d00b",
+      "evidence": [
+        "Fail first: node --test apps/api/test/merchants.test.mjs -> ERR_MODULE_NOT_FOUND apps/api/src/ingest/merchants.mjs (module not written yet)",
+        "Verify: node --test apps/api/test/merchants.test.mjs: tests 5, pass 5, fail 0",
+        "68 four-digit codes and 12 name rules (public shops and apps only), each mapped to a CATEGORIES entry other than Uncategorized; checked at load and by T-ENR-3"
+      ],
+      "review": "n/a"
+    },
+    {
+      "id": "SF-4",
+      "status": "done",
+      "commit": "568a21b",
+      "evidence": [
+        "Fail first: T-ENR-4 actual [\"\",\"\",\"Uncategorized\"] expected [\"Made-up Cafe\",\"aaaa…\",\"Dining out\"]; T-ENR-5 actual [] expected [\"needs_review\"]; T-ENR-6 (no SUB_UNIT) TypeError: Cannot read properties of undefined (reading trim). The two as-before guards (plain file, wrong-shape values) passed before the change, as regression guards.",
+        "Verify: node --test apps/api/test/mercadopago.test.mjs: tests 9, pass 9, fail 0",
+        "Extra: node --test apps/api/test/*.test.mjs packages/contracts/test/*.test.mjs scripts/*.test.mjs: 212 pass, 0 fail",
+        "Fixture apps/api/test/fixtures/release-enriched.csv: made-up operations, names (Made-up Cafe, Ana Example) and repeated-letter keys"
+      ],
+      "review": "n/a"
+    },
+    {
+      "id": "SF-5",
+      "status": "done",
+      "commit": "7ae0278",
+      "evidence": [
+        "Fail first: mercadopago T-ENR-7 err.code actual undefined expected private_columns; parser T-ENR-7 (refusal, delete-failure) failed: the report imported with the extra columns",
+        "Verify: node --test apps/api/test/mercadopago.test.mjs apps/api/test/parser.test.mjs: tests 27, pass 27, fail 0",
+        "Extra: node --test apps/api/test/*.test.mjs packages/contracts/test/*.test.mjs scripts/*.test.mjs: 216 pass, 0 fail",
+        "Task review (spec-reviewer, sonnet, fresh context): 0 blocker, 0 major, 3 minor. Fixed: a quoted header cell (\"PAYER_NAME\") now refused as private_columns, with a test. Accepted: a raw-column upload whose size differs from its form fails as size_mismatch first and its object stays until delete-all (the size check runs before parsing). Third minor was the progress record, filled here."
+      ],
+      "review": "pass"
+    },
+    {
+      "id": "SF-6",
+      "status": "done",
+      "commit": "9da628c",
+      "evidence": [
+        "Fail first (1): node --test apps/api/test/labels.test.mjs -> ERR_MODULE_NOT_FOUND apps/api/src/store/labels.mjs",
+        "Fail first (2), with keys.mjs#lblKey and labels.mjs#putLabel/readLabels written but reads not yet folded: T-ENR-8 merchant actual Made-up Shop expected Made-up Landlord; later row actual [\"\",\"Uncategorized\",false]; review reply approved actual false; T-ENR-10 categories not Transport. T-ENR-9 passed already: delete-all clears the whole partition (architecture: a test proves it)",
+        "Verify: node --test apps/api/test/labels.test.mjs apps/api/test/erase.test.mjs apps/api/test/query.test.mjs apps/api/test/totals.test.mjs apps/api/test/review.test.mjs (+ store.test.mjs): tests 37, pass 37, fail 0",
+        "Extra: node --test apps/api/test/*.test.mjs packages/contracts/test/*.test.mjs scripts/*.test.mjs: 223 pass, 0 fail",
+        "Task review (spec-reviewer, sonnet, fresh context): 0 blocker, 0 major, 3 minor. Fixed: T-ENR-10 gained a case where a rebuild that read label 1 is held and finishes after label 2 and its rebuild; it is skipped and totals match reads. Recorded: the two forced test edits outside Files (in surprises). Third minor was the progress record, filled here."
+      ],
+      "review": "pass"
+    },
+    {
+      "id": "SF-7",
+      "status": "done",
+      "commit": "75b2893",
+      "evidence": [
+        "Fail first: labels T-ENR-11 x3 (status actual 404 no such route), contracts T-ENR-11 (no schema), isolation T-AUTH-3 x2 (15 routes), infra T-INF-7, T-INF-11, T-ENR-12 (no label route, no rollup EventInvokeConfig)",
+        "Verify: node --test apps/api/test/labels.test.mjs apps/api/test/http.test.mjs apps/api/test/isolation.test.mjs packages/contracts/test/contracts.test.mjs: tests 27, pass 27, fail 0",
+        "Verify: npm test --workspace @smart-finances/infra: tests 50, pass 50, fail 0",
+        "Extra: full node suite 227 pass; npm run build --workspace @smart-finances/infra (tsc) exit 0; web vitest 46 files 656 pass; web tsc --noEmit exit 0",
+        "Task review (spec-reviewer, sonnet, fresh context): 0 blocker, 0 major, 2 minor. Fixed: T-ENR-12 now pins the rollup sqs:SendMessage grant to the RollupFailures queue only (infra 50 pass, tsc exit 0 after the change). Left for SF-13 by the brief: the ADR 0004 access-pattern row and the docs test route list for the new route.",
+        "Checkpoint after SF-7: npm test exit 0 (node --test 215 pass / 0 fail; check-no-raw-html ok; web lint clean; web vitest 46 files 656 pass; infra 50 pass); npm run build --workspace @smart-finances/infra exit 0"
+      ],
+      "review": "pass"
+    },
+    {
+      "id": "SF-8",
+      "status": "done",
+      "commit": "1db7d02",
+      "evidence": [
+        "Fail first: node --test scripts/mercadopago-sync.test.mjs: the file failed to load (cleanValue, enrichReport, HASH_KEY_FILE, loadHashKey, recipientKey not exported): tests 1, pass 0, fail 1",
+        "Verify: node --test scripts/mercadopago-sync.test.mjs: tests 23, pass 23, fail 0 (T-ENR-13 x1, T-ENR-14 x3, T-ENR-15 x4 new)",
+        "Task review (spec-reviewer, sonnet, fresh context): 0 blocker, 1 major, 4 minor. Fixed all: quoted raw header cells are now dropped too (major, new test); ID numbers written with dots are removed; the payer name is used only for money received (payment or tip adding money, or a collector-search hit), never for refunds, interest or releases (new test); a known-answer HMAC vector and a never-overwritten check pin T-ENR-14; the payout account number is hashed as the report gives it (trimmed), exactly per the Recipient key contract.",
+        "Verify after fixes: node --test scripts/mercadopago-sync.test.mjs: tests 25, pass 25, fail 0"
+      ],
+      "review": "pass"
+    },
+    {
+      "id": "SF-9",
+      "status": "done",
+      "commit": "9c55108",
+      "evidence": [
+        "Fail first: node --test scripts/mercadopago-sync.test.mjs: the file failed to load (searchPayments, holdsFullMonth with a file argument not there): tests 1, pass 0, fail 1",
+        "Verify: node --test scripts/mercadopago-sync.test.mjs: tests 34, pass 34, fail 0 (T-ENR-16 x4, T-ENR-17 x3, T-ENR-18 x2 new; the older sync tests now use enriched files for full months and a raw download with the D-19 columns)",
+        "Extra: node --test scripts/mercadopago-probe.test.mjs: 2 pass"
+      ],
+      "review": "n/a"
+    },
+    {
+      "id": "SF-10",
+      "status": "done",
+      "commit": "b85e8d3",
+      "evidence": [
+        "Fail first: node --test scripts/mercadopago-probe.test.mjs: the file failed to load (REPORT_COLUMNS not exported): tests 1, pass 0, fail 1",
+        "Verify: node --test scripts/mercadopago-probe.test.mjs scripts/mercadopago-sync.test.mjs: tests 38, pass 38, fail 0 (T-ENR-19 x2 new)",
+        "Extra: node --check scripts/mercadopago-report.mjs exit 0 (never run: it reads the token at import)",
+        "Checkpoint after SF-10: npm test exit 0 (node --test 236 pass / 0 fail; web vitest 46 files 656 pass; infra 50 pass)"
+      ],
+      "review": "n/a"
+    },
+    {
+      "id": "SF-11",
+      "status": "done",
+      "commit": "33c55e8",
+      "evidence": [
+        "Fail first: npx vitest run src/adapters src/application/data: 3 files failed, 8 tests failed (api.putLabel is not a function x7; logger accepted name, merchant, payer), label.test.ts failed to load (no ./label)",
+        "Verify: npm test --workspace @smart-finances/web -- src/adapters src/application/data src/app (run as npx vitest run in apps/web): 18 files, 396 tests pass (T-ENR-20 x8, T-ENR-21 x2 new)",
+        "Verify: npm run lint --workspace @smart-finances/web: eslint clean, prettier clean",
+        "Extra: apps/web npx tsc --noEmit exit 0; full web vitest 47 files, 666 tests pass"
+      ],
+      "review": "n/a"
+    },
+    {
+      "id": "SF-12",
+      "status": "done",
+      "commit": "c940117",
+      "evidence": [
+        "Order slip: the screen code was written before the tests. Fail-first was then shown by taking the SF-12 source changes out (git diff to a patch and git checkout, no stash) and running the new test: npx vitest run src/screens/label: 1 file failed (cannot resolve ./LabelForm), no tests ran; with the changes put back: 8 pass",
+        "Verify: npm test --workspace @smart-finances/web -- src/screens src/i18n (run as npx vitest run in apps/web): 4 files, 37 tests pass (T-ENR-22 x6, T-ENR-23 x3 new)",
+        "Verify: npm run lint --workspace @smart-finances/web: eslint clean, prettier clean",
+        "Extra: apps/web npx tsc --noEmit exit 0; full web vitest 48 files, 675 tests pass; the T-ENR-23 review test passed 3 runs in a row. Storybook interaction tests run in CI only (web-ui D-136), not run here."
+      ],
+      "review": "n/a"
+    },
+    {
+      "id": "SF-13",
+      "status": "done",
+      "commit": "9af10e1",
+      "evidence": [
+        "Fail-first: node --test apps/api/test/docs.test.mjs with the route list and the two T-ENR-24 tests added before any doc: pass 1, fail 3",
+        "Verify: node --test apps/api/test/docs.test.mjs: pass 4, fail 0",
+        "Docs: ADR 0010 (new, accepted, cites D-8, D-10 to D-21), ADR README row, ADR 0004 label item, route row and the LBL# prefix-query note, threat model v4 with 4 asset rows, boundary B14 and 6 STRIDE rows citing their tests, apps/api/README.md sync paragraph in order: config, column check, sync enriches and drops the raw columns, upload; hashing key backup",
+        "Docs are not under prettier in this repo (the existing ADR 0009 and threat model fail prettier --check too), so no formatting step"
+      ],
+      "review": "n/a"
+    },
+    {
+      "id": "SF-14",
+      "status": "done",
+      "commit": "1aeed5a",
+      "evidence": [
+        "Full verify before the fix: npm test exit 0 (node 238 pass, web 48 files 675 pass, infra 50 pass); npm run build --workspace @smart-finances/infra exit 0",
+        "Conformance review: fresh spec-reviewer on Sonnet, read-only, branch diff against origin/qa: CF1-3, 5, 6, 8, 10 yes; CF4 and CF9 no; CF7 unknown (the verify was still running); 5 minor findings, no blocker or major",
+        "Finding 4 (sync, two old reports): new T-ENR-16 case failed first (failed: report_without_d19_columns), fixed in 1aeed5a; node --test sync and probe: 39 pass",
+        "Findings 1 and 2 recorded as deviations for the owner; findings 3 and 5 recorded as surprises",
+        "Full verify after the fix: npm test exit 0 (node 239 pass, web 48 files 675 pass, infra 50 pass); infra build exit 0. Baseline was node 186, web 654, infra 49, all green"
+      ],
+      "review": "conformance: 5 minor, 1 fixed, 4 recorded"
+    }
+  ],
+  "deviations": [
+    "SF-4 vs AC-5 and D-6 (owner to decide): an expense still Uncategorized goes on the review list only when its file has the enrichment columns, as the SF-4 brief says (a file without them parses exactly as before). AC-5 and D-6 read wider. Rows from earlier plain uploads reach the review list once their month is synced and uploaded again with the enrichment. Code: apps/api/src/ingest/mercadopago.mjs (the enriched check). Found by the SF-14 conformance review.",
+    "SF-11 vs architecture.md Components, Web screens, Logs (owner to accept): labelRecipient logs the outcome, the person and the request id, not the first 8 characters of the key. The Logger port has no field for a key prefix and the port is outside the task Files; leaving the key out logs less. Code: apps/web/src/application/data/label.ts. Found by the SF-14 conformance review."
+  ],
+  "surprises": [
+    "SF-2: apps/web/src/adapters/container.test.ts also seeds a typed Transaction fixture; given recipient_key: \"\" as one of the memory adapter tests (\"their tests\").",
+    "SF-2: T-ENR-2 cannot fail before FIELDS changes (sameRow compares FIELDS only); its fail-first run is after the FIELDS edit, before the sameRow fix.",
+    "SF-4: plain files keep the old flags, so needs_review on an Uncategorized expense applies only to a file with the enrichment columns (D-6 says after enrichment; the brief says a plain file parses exactly as before). AC-5 reads after import; this reading follows the brief.",
+    "SF-4: the importer leaves out SF_CATEGORY_CODE and SF_RECIPIENT values that do not have the Contracts shape (4 digits, 32 lowercase hex), so a hand-edited file cannot store an unlabelable key; not stated in the brief.",
+    "SF-5: sync (scripts/mercadopago-sync.mjs) calls parseReleaseReport on the raw download; once the D-19 config is applied, that raw file holds PAYER_NAME and will now throw private_columns. SF-8/SF-9 must drop the raw columns before any parse (architecture: the result must parse before it is saved).",
+    "SF-5: accepted edge from the review: a raw-column upload whose byte size differs from its form fails as size_mismatch before parsing, so its object is not deleted (stays until delete-all).",
+    "SF-6: two existing tests outside the Files list pin what the task changes: totals.test.mjs T-ROL-2 asserted monthRows makes exactly 2 queries (now 3: the LBL prefix query the architecture names), and store.test.mjs T-KEY-1 lists every key builder (now with lblKey). Both updated, with the change marked T-ENR-8.",
+    "SF-7: the API docs test (docs.test.mjs) keeps its own route list, so the new route is unchecked there until SF-13 adds the ADR 0004 row and extends that list.",
+    "Checkpoint push refused: git push -u origin feature/mercadopago-sync -> 403, Permission to YosefBlandin/smart-finances.git denied to yosefblandin-ai. The brief says gh and push are set up and to stop on failure; the branch is local only. HUMAN: give that credential write access, or push the branch yourself.",
+    "SF-9: the older sync tests treated plain files as full months; with D-16 only enriched files count, so their fixtures now use enriched files (same test file, within the task).",
+    "SF-9: sync error lines dropped every response-body excerpt (brief()) and the parser message in skipped-file lines now shows the error code only (research correction 1, AC-10).",
+    "SF-9: the hashing key is loaded through the report folder (reportFolder(dir).hashKey), so the CLI in mercadopago-report.mjs needed no change for SF-9.",
+    "SF-10: the config default in mercadopago-report.mjs before this change was not the 15 live columns (it listed EXTERNAL_REFERENCE, RECORD_TYPE, TRANSACTION_DATE, CURRENCY, OPERATION_TAGS and lacked TAXES_AMOUNT, TRANSACTION_APPROVAL_DATE, BUSINESS_UNIT, SUB_UNIT, PURCHASE_ID). REPORT_COLUMNS now follows the brief exactly; the owner should check the applied config with show-config after the HUMAN config step.",
+    "SF-10: the probe search line now says N payments read (searchPayments returns the lists, not the paging total).",
+    "SF-11: architecture.md Web screens (Logs) asks labelRecipient to log the key prefix (first 8 characters). The web Logger port (apps/web/src/ports/logger.ts, outside SF-11 Files) carries only sub and requestId, so the line is event recipient_label, the outcome code, sub and request id. No name or key reaches the log (T-ENR-21). Widening the port is a later choice for the owner.",
+    "SF-11: labelRecipient answers a refusal with the existing review.saveFailed message key; SF-12 adds the label copy and may switch to a label key.",
+    "SF-12: reaching labelRecipient from the screens needed a prop through four files outside SF-12 Files: app/(app)/review/page.tsx, app/(app)/transactions/page.tsx, screens/transactions/Transactions.tsx and screens/transactions/List/Container.tsx (the same way chooseReview reaches Review). Prop wiring only; no behaviour beyond the task.",
+    "SF-12: on the transactions screen a label waits for the server answer (no optimistic change there; web-ui D-131 keeps optimism to the review screen), then refreshes transactions, review and totals, and totals again after 5 s.",
+    "SF-12: added a text-only test for markup in a merchant name (architecture RK-1 mitigation).",
+    "SF-12: apps/web/src/screens/review/model.ts (outside the Files list) gained applyLabel and undoLabel, the optimistic leave-and-return logic T-ENR-23 covers. Found by the SF-14 conformance review.",
+    "SF-5: scripts/ingest-local.mjs was not changed; a release report with the raw columns throws the private_columns error there (file name and column only, no value), uncaught. That refusal is tested in the importer and the parser (T-ENR-7), not at the local-ingest level.",
+    "SF-14: the conformance review found that with two pre-config reports listed for a month, sync could fail the month while its new report was still generating. Fixed in 1aeed5a (every listed report for the month is discarded), with a new T-ENR-16 case that failed first."
+  ]
+}

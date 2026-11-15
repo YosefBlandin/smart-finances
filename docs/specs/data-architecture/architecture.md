@@ -105,6 +105,7 @@ All JSON. Errors: { "error": { "code", "message" } } with codes unauthorized 401
 | POST /totals/rebuild | none | 202 { months: count } | AC-11, AC-12 |
 | GET /export | none | text/csv: the schema's columns in order, review choices applied, formula-like text neutralised | AC-17 |
 | DELETE /data | { confirm: "DELETE" } | 202 { deleted: { items, files } } | AC-18 |
+| PUT /recipients/{key}/label | { name (1 to 80 after trim), category (not Uncategorized) }; key is 32 lowercase hex, else not_found | 200 { label: { recipient_key, name, category, updated_at } }; conflict in the erase window; asks the rollup for a full rebuild | mercadopago-enrichment AC-6 |
 
 - POST /imports: file_name must match the source's pattern (excel needs ..._MMM_YYYY.xlsx); size at most 20 MiB for excel and 5 MiB for the others, else too_large. The form allows exactly that key and a content-length range of 1 byte to the cap, and expires in 15 minutes. S3 refuses a larger file, so no object arrives: readers show that import as expired with the reason that the file never arrived, for example because it was over the limit (AC-6).
 - PUT review: the transaction must exist at TXN#date#id, else not_found; the choice is stored at OVR#date#id; source other than mercadopago gives source_file_only (AC-15). category must be a known category; approved true clears the review reasons for that row.

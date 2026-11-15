@@ -6,16 +6,20 @@ import type { DataApi, DataApiFailure, DataApiResult } from '@/ports/data-api';
 import type { Logger } from '@/ports/logger';
 import hostile from '../../../fixtures/hostile.json';
 import sample from '../../../fixtures/sample.json';
-import { countPersonRequest, tokenSub } from '../data-api';
+import { countPersonRequest, RECIPIENT_KEY, tokenSub } from '../data-api';
 
 type Reply<M extends keyof DataApi> = Awaited<ReturnType<DataApi[M]>> extends DataApiResult<infer T> ? T : never;
 type Tx = Reply<'listTransactions'>['items'][number];
 type ImportRecord = Reply<'getImport'>;
 type ListQuery = z.output<(typeof ROUTES)['GET /transactions']['request']>;
+type Label = Reply<'putLabel'>['label'];
 type Seed = { transactions?: Tx[]; rates?: Record<string, number>; imports?: ImportRecord[] };
 
 // The fixtures as the prototype wrote them (apps/web/fixtures): rows carry flags and no review, imports short names.
-type FixtureRow = Omit<Tx, 'review' | 'date_precision' | 'source_ref' | 'import_batch'> & { date_precision?: string };
+type FixtureRow = Omit<Tx, 'review' | 'date_precision' | 'source_ref' | 'import_batch' | 'recipient_key'> & {
+  date_precision?: string;
+  recipient_key?: string;
+};
 type FixtureImport = {
   id: string;
   kind: string;
@@ -52,6 +56,7 @@ export function fixtureSeed(): Required<Seed> {
     currency: t.currency,
     category: t.category,
     merchant: t.merchant,
+    recipient_key: t.recipient_key ?? '',
     description_raw: t.description_raw,
     source: t.source,
     source_ref: t.id,
@@ -104,6 +109,8 @@ export class MemoryDataApi implements DataApi {
   private readonly transactions = new Map<string, Tx>();
   private readonly rateMap = new Map<string, number>();
   private readonly imports = new Map<string, ImportRecord>();
+  /** Recipient labels by key, applied when rows are read, as the API does (D-13, D-18). */
+  private readonly labels = new Map<string, Label>();
   /** Imports requested from this fake, with when: each is importing, then done with two skipped rows (SF-167). */
   private readonly requested = new Map<string, number>();
   private nextImport = 1;
@@ -129,6 +136,25 @@ export class MemoryDataApi implements DataApi {
     return limits ? countPersonRequest({ ...limits, logger }, tokenSub(token) ?? token) : undefined;
   }
 
+  /**
+   * A row as reads show it (Contracts "How a label applies"): a label of its recipient gives the shown merchant, the
+   * category over the row's and its choice's, and approves the row (its review choice's time is kept).
+   */
+  private shown(t: Tx): Tx {
+    const label = t.recipient_key ? this.labels.get(t.recipient_key) : undefined;
+    if (!label) return t;
+    return {
+      ...t,
+      merchant: label.name,
+      category: label.category,
+      review: { ...t.review, reasons: [], category_override: label.category, approved: true, updated_at: t.review.updated_at ?? label.updated_at },
+    };
+  }
+
+  private rows(): Tx[] {
+    return [...this.transactions.values()].map((t) => this.shown(t));
+  }
+
   private async parse<K extends keyof typeof ROUTES>(token: string, route: K, input: unknown) {
     const refused = await this.gate(token);
     if (refused) return { error: refused };
@@ -143,7 +169,7 @@ export class MemoryDataApi implements DataApi {
     if (p.error) return p.error;
     const q = p.value as ListQuery;
     const dir = q.order === 'asc' ? 1 : -1;
-    const rows = [...this.transactions.values()]
+    const rows = this.rows()
       .filter((t) => month(t.date) >= q.from && month(t.date) <= q.to)
       .filter((t) => (!q.category || t.category === q.category) && (!q.kind || t.kind === q.kind))
       .filter((t) => !q.q || `${t.merchant}`.toLowerCase().includes(q.q.toLowerCase()))
@@ -159,7 +185,7 @@ export class MemoryDataApi implements DataApi {
     if (p.error) return p.error;
     const { from, to } = p.value as { from: string; to: string };
     const months = new Map<string, Record<string, Record<string, Record<string, number>>>>();
-    for (const t of this.transactions.values()) {
+    for (const t of this.rows()) {
       const m = month(t.date);
       if (m < from || m > to) continue;
       const byKind = months.get(m) ?? {};
@@ -189,7 +215,7 @@ export class MemoryDataApi implements DataApi {
   async review(token: string) {
     const p = await this.parse(token, 'GET /review', {});
     if (p.error) return p.error;
-    const items = [...this.transactions.values()].filter((t) => t.review.reasons.length > 0 && !t.review.approved);
+    const items = this.rows().filter((t) => t.review.reasons.length > 0 && !t.review.approved);
     return done({ items: items.map(({ review, ...t }) => ({ ...t, reasons: review.reasons })) });
   }
 
@@ -201,6 +227,17 @@ export class MemoryDataApi implements DataApi {
     if (body.category) t.category = body.category;
     if (body.approved !== undefined) t.review.approved = body.approved;
     return done({ review: structuredClone(t.review) });
+  }
+
+  /** PUT /recipients/{key}/label: a bad key is not_found, a bad body bad_request; the label replaces any earlier one. */
+  async putLabel(token: string, { key, ...body }: Parameters<DataApi['putLabel']>[1]) {
+    const p = await this.parse(token, 'PUT /recipients/{key}/label', body);
+    if (p.error) return p.error;
+    if (!RECIPIENT_KEY.test(key)) return failed('not_found');
+    const { name, category } = p.value as { name: string; category: Label['category'] };
+    const label: Label = { recipient_key: key, name, category, updated_at: new Date(this.clock.now()).toISOString() };
+    this.labels.set(key, label);
+    return done({ label: { ...label } });
   }
 
   async listImports(token: string, input: Parameters<DataApi['listImports']>[1]) {
@@ -264,7 +301,7 @@ export class MemoryDataApi implements DataApi {
     if (p.error) return p.error;
     const cols = ROUTES['GET /export'].columns as readonly string[];
     const cell = (v: unknown) => `"${String(Array.isArray(v) ? v.join(';') : (v ?? '')).replaceAll('"', '""')}"`;
-    const lines = [...this.transactions.values()].map((t) => cols.map((c) => cell((t as Record<string, unknown>)[c])).join(','));
+    const lines = this.rows().map((t) => cols.map((c) => cell((t as Record<string, unknown>)[c])).join(','));
     return done([cols.join(','), ...lines].join('\n'));
   }
 
@@ -283,8 +320,9 @@ export class MemoryDataApi implements DataApi {
     const now = this.clock.now();
     if ([...this.requested.values()].some((at) => now - at < MEMORY_IMPORT_RUN_MS)) return failed('conflict');
     const files = this.imports.size;
-    const items = this.transactions.size + this.rateMap.size + files;
+    const items = this.transactions.size + this.rateMap.size + files + this.labels.size;
     this.transactions.clear();
+    this.labels.clear();
     this.rateMap.clear();
     this.imports.clear();
     this.requested.clear();
@@ -301,6 +339,7 @@ export class FailingDataApi implements DataApi {
   putRate = this.fail;
   review = this.fail;
   putReview = this.fail;
+  putLabel = this.fail;
   listImports = this.fail;
   getImport = this.fail;
   requestImport = this.fail;
@@ -332,6 +371,7 @@ export class RefusingDataApi implements DataApi {
   putRate: DataApi['putRate'] = this.pass((t, i) => this.inner.putRate(t, i));
   review: DataApi['review'] = this.pass((t, i) => this.inner.review(t, i));
   putReview: DataApi['putReview'] = this.pass((t, i) => this.inner.putReview(t, i));
+  putLabel: DataApi['putLabel'] = this.pass((t, i) => this.inner.putLabel(t, i));
   listImports: DataApi['listImports'] = this.pass((t, i) => this.inner.listImports(t, i));
   getImport: DataApi['getImport'] = this.pass((t, i) => this.inner.getImport(t, i));
   requestImport: DataApi['requestImport'] = this.pass((t, i) => this.inner.requestImport(t, i));
@@ -370,6 +410,7 @@ export class PersonDataApis implements DataApi {
   putRate: DataApi['putRate'] = (token, input) => this.pick(token).putRate(token, input);
   review: DataApi['review'] = (token, input) => this.pick(token).review(token, input);
   putReview: DataApi['putReview'] = (token, input) => this.pick(token).putReview(token, input);
+  putLabel: DataApi['putLabel'] = (token, input) => this.pick(token).putLabel(token, input);
   listImports: DataApi['listImports'] = (token, input) => this.pick(token).listImports(token, input);
   getImport: DataApi['getImport'] = (token, input) => this.pick(token).getImport(token, input);
   requestImport: DataApi['requestImport'] = (token, input) => this.pick(token).requestImport(token, input);

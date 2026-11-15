@@ -8,6 +8,8 @@ import { Transactions } from '@/screens/transactions/Transactions';
 import styles from '@/screens/transactions/Transactions.module.css';
 import { redirectIfStopped } from '../../api/data/respond';
 import { requireMoneyAccess } from '../../guarded';
+// A recipient label is the same guarded action the review screen uses (mercadopago-enrichment D-22).
+import { labelRecipient } from '../review/actions';
 
 // Transactions (SF-165; AC-6, D-82, D-127): the server reads the first page for the address (month, kind, category,
 // sort; free text is never in it) through the read use case, hydrates the island with it, and renders nothing until then.
@@ -54,7 +56,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
     <>
       {intro}
       <HydrationBoundary state={dehydrate(client)}>
-        <Transactions key={JSON.stringify(address)} address={address} now={now} />
+        <Transactions key={JSON.stringify(address)} address={address} now={now} label={labelRecipient} />
       </HydrationBoundary>
     </>
   );

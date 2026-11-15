@@ -305,6 +305,7 @@ describe('T-WEB-14: memory adapters keep the port rules', () => {
       currency: 'ARS',
       category: 'Groceries',
       merchant: 'Shop',
+      recipient_key: '',
       description_raw: 'SHOP',
       source: 'mercadopago',
       source_ref: id,

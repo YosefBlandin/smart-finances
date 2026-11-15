@@ -38,6 +38,7 @@ const ALL_ROUTES: Record<string, string> = {
   'PUT /rates/{month}': 'api-write',
   'POST /totals/rebuild': 'api-write',
   'DELETE /data': 'api-delete',
+  'PUT /recipients/{key}/label': 'api-write',
 };
 const FUNCTIONS = ['api-delete', 'api-read', 'api-write', 'health', 'parser', 'rollup'];
 
@@ -47,7 +48,7 @@ test('T-INF-7 GET /health has no authorizer, there is no default route, throttli
     const all = resources(api);
 
     const routes = ofType(all, 'AWS::ApiGatewayV2::Route').map(([, r]) => r.Properties);
-    assert.deepEqual(routes.map((r) => r.RouteKey).sort(), Object.keys(ALL_ROUTES).sort(), 'the 15 routes, no $default');
+    assert.deepEqual(routes.map((r) => r.RouteKey).sort(), Object.keys(ALL_ROUTES).sort(), 'the 16 routes, no $default');
     const healthRoute = routes.find((r) => r.RouteKey === 'GET /health')!;
     assert.ok([undefined, 'NONE'].includes(healthRoute.AuthorizationType), 'health has no authorizer');
     assert.equal(healthRoute.AuthorizerId, undefined);
@@ -362,7 +363,7 @@ test('T-INF-9 sizes, environment and retries of the import functions', () => {
   assert.deepEqual(write.Environment.Variables.PARSER_FUNCTION, { Ref: parser.id });
   assert.deepEqual(write.Environment.Variables.ROLLUP_FUNCTION, { Ref: fnNamed(all, 'smart-finances-qa-rollup').id });
   assert.deepEqual(Object.keys(parser.props.Environment.Variables).sort(), ['BUCKET_NAME', 'STAGE', 'TABLE_NAME']);
-  const [[, invokeConfig]] = ofType(all, 'AWS::Lambda::EventInvokeConfig');
+  const [, invokeConfig] = ofType(all, 'AWS::Lambda::EventInvokeConfig').find(([, c]) => c.Properties.FunctionName.Ref === parser.id)!;
   assert.equal(invokeConfig.Properties.MaximumRetryAttempts, 2);
   assert.equal(invokeConfig.Properties.FunctionName.Ref, parser.id);
   assert.equal(invokeConfig.Properties.DestinationConfig, undefined, 'no on-failure destination');
@@ -424,13 +425,13 @@ test('T-INF-9 grants: read only reads the table; write puts uploads and invokes 
 });
 
 // ---- SF-50: the read, rollup and delete functions ----
-test('T-INF-11 all 15 routes exist; every one but GET /health binds the JWT authorizer; each reaches its function', () => {
+test('T-INF-11 all 16 routes exist (T-ENR-12: with the label route); every one but GET /health binds the JWT authorizer; each reaches its function', () => {
   for (const stage of STAGES) {
     const { api } = addStage(new cdk.App({ context }), stage, env);
     const all = resources(api);
     const [[authorizerId]] = ofType(all, 'AWS::ApiGatewayV2::Authorizer');
     const routes = ofType(all, 'AWS::ApiGatewayV2::Route').map(([, r]) => r);
-    assert.equal(routes.length, 15);
+    assert.equal(routes.length, 16);
     for (const route of routes) {
       const key = route.Properties.RouteKey;
       assert.ok(key in ALL_ROUTES, key);
@@ -525,4 +526,26 @@ test('T-INF-8 grants: rollup reads and writes the table, reads its stream, sends
   const uploadsArn = JSON.stringify({ 'Fn::Join': ['', ['arn:', { Ref: 'AWS::Partition' }, ':s3:::', bucketName, '/uploads/*']] });
   assert.deepEqual(d[bucketArn], { actions: ['s3:ListBucket'], condition: { StringLike: { 's3:prefix': 'uploads/*' } } });
   assert.deepEqual(d[uploadsArn], { actions: ['s3:DeleteObject'], condition: undefined });
+});
+
+test('T-ENR-12 the label route reaches api-write behind the authorizer, and the rollup\'s failed async invokes go to RollupFailures', () => {
+  for (const stage of STAGES) {
+    const { api } = addStage(new cdk.App({ context }), stage, env);
+    const all = resources(api);
+    const route = ofType(all, 'AWS::ApiGatewayV2::Route').find(([, r]) => r.Properties.RouteKey === 'PUT /recipients/{key}/label');
+    assert.ok(route, 'the label route exists');
+    assert.equal(integrationTarget(all, route![1]), fnNamed(all, `smart-finances-${stage}-api-write`).id);
+    assert.equal(route![1].Properties.AuthorizationType, 'JWT');
+
+    const rollup = fnNamed(all, `smart-finances-${stage}-rollup`);
+    const configs = ofType(all, 'AWS::Lambda::EventInvokeConfig').filter(([, c]) => c.Properties.FunctionName.Ref === rollup.id);
+    assert.equal(configs.length, 1, 'one async-invoke config on the rollup');
+    const queues = ofType(all, 'AWS::SQS::Queue');
+    assert.equal(queues.length, 1, 'the existing RollupFailures queue, no new one');
+    assert.ok(queues[0][0].startsWith('RollupFailures'));
+    assert.deepEqual(configs[0][1].Properties.DestinationConfig, { OnFailure: { Destination: { 'Fn::GetAtt': [queues[0][0], 'Arn'] } } });
+    // the destination grants sending to that queue only
+    const sends = statementsOf(all, rollup.roleId).filter((st) => actionsOf([st]).includes('sqs:SendMessage'));
+    assert.deepEqual(sends.map((st) => st.Resource), [{ 'Fn::GetAtt': [queues[0][0], 'Arn'] }]);
+  }
 });

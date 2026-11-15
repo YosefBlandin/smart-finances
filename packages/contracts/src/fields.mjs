@@ -10,6 +10,7 @@ export const FIELDS = [
   'currency', // ISO code as recorded at the source (ARS, USD)
   'category',
   'merchant', // cleaned name when the source has one, else empty
+  'recipient_key', // keyed hash of the other party (Mercado Pago only, made by sync), else empty
   'description_raw', // source text, kept for audit
   'source', // 'mercadopago' | 'notion'
   'source_ref', // where in the source the row came from

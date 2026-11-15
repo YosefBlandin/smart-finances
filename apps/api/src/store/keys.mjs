@@ -9,10 +9,12 @@ export const PREFIX = Object.freeze({
   PER: 'PER#',
   RATE: 'RATE#',
   SUM: 'SUM#',
+  LBL: 'LBL#',
 });
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH = /^\d{4}-\d{2}$/;
+const RECIPIENT = /^[0-9a-f]{32}$/;
 
 function part(value, what) {
   if (typeof value !== 'string' || !value || /[#/]/.test(value)) {
@@ -41,6 +43,8 @@ export const perKey = (sub, source, p) => key(sub, `${PREFIX.PER}${part(source, 
 export const rateKey = (sub, m) => key(sub, `${PREFIX.RATE}${month(m)}`);
 export const sumKey = (sub, m) => key(sub, `${PREFIX.SUM}${month(m)}`);
 export const erasedKey = (sub) => key(sub, 'ERASED');
+// One recipient label per recipient key (D-13); not month-ranged.
+export const lblKey = (sub, recipientKey) => key(sub, `${PREFIX.LBL}${match(recipientKey, RECIPIENT, 'recipient key (32 lowercase hex)')}`);
 
 export const uploadKey = (sub, importId) => `uploads/${part(sub, 'person')}/${part(importId, 'import id')}`;
 // Every upload of one person, for delete-all.

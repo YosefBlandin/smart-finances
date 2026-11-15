@@ -224,3 +224,54 @@ test('T-IMP-7 a file that is not the size the form was asked for fails', async (
   assert.equal((await h.record(r.import_id)).error.code, 'size_mismatch');
   assert.equal(h.rows().length, 0);
 });
+
+// ---- T-ENR-7 (AC-10, D-21): raw payer name and payout account columns never reach the store. Values are made up. ----
+const PRIVATE_VALUES = ['Zed Made-up Person', '0000003100099999999901'];
+const withRaw = (text, column, value) => text.split('\n').map((l, i) => `${l};${i === 0 ? column : i === 2 ? value : ''}`).join('\n');
+async function captureLogs(fn) {
+  const lines = [];
+  const log = console.log;
+  console.log = (...args) => lines.push(args.join(' '));
+  try {
+    await fn();
+  } finally {
+    console.log = log;
+  }
+  return lines;
+}
+
+test('T-ENR-7 a report with PAYER_NAME or PAYOUT_BANK_ACCOUNT_NUMBER fails with private_columns, its upload is deleted, and no row or log holds a value', async () => {
+  for (const [column, value] of [['PAYER_NAME', PRIVATE_VALUES[0]], ['PAYOUT_BANK_ACCOUNT_NUMBER', PRIVATE_VALUES[1]]]) {
+    const h = setup();
+    const r = await h.upload('mercadopago', 'release-2026-05.csv', withRaw(mpReport, column, value));
+    const logs = await captureLogs(() => h.handler(h.event(r.s3_key)));
+    const rec = await h.record(r.import_id);
+    assert.deepEqual([rec.status, rec.error.code], ['failed', 'private_columns'], column);
+    assert.match(rec.error.message, new RegExp(column));
+    assert.equal(h.store.objects.has(r.s3_key), false, 'the uploaded object is deleted');
+    assert.equal(h.rows().length, 0);
+    assert.equal(await getPointer(h.store, A, 'mercadopago', '2026-05'), undefined);
+    const everything = JSON.stringify([...h.store.items.values()]) + logs.join('\n');
+    assert.doesNotMatch(everything, new RegExp(value));
+    assert.ok(logs.some((l) => l.includes(r.import_id)));
+  }
+});
+
+test('T-ENR-7 when the delete fails the import is still failed and the parser logs the import id only', async () => {
+  const h = setup();
+  const r = await h.upload('mercadopago', 'release-2026-05.csv', withRaw(mpReport, 'PAYER_NAME', PRIVATE_VALUES[0]));
+  h.store.deleteObject = async () => { throw new Error('denied'); };
+  const logs = await captureLogs(() => h.handler(h.event(r.s3_key)));
+  const rec = await h.record(r.import_id);
+  assert.deepEqual([rec.status, rec.error.code], ['failed', 'private_columns']);
+  assert.ok(logs.some((l) => l.includes('delete_failed') && l.includes(r.import_id)), logs.join('\n'));
+  assert.doesNotMatch(logs.join('\n'), /Zed|denied/);
+});
+
+test('T-ENR-7 other failed imports keep their uploaded object', async () => {
+  const h = setup();
+  const r = await h.upload('mercadopago', 'x.csv', 'just,some,text\n1,2,3\n');
+  await h.handler(h.event(r.s3_key));
+  assert.equal((await h.record(r.import_id)).status, 'failed');
+  assert.equal(h.store.objects.has(r.s3_key), true);
+});

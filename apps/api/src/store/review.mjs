@@ -2,7 +2,8 @@
 // is stored apart from its row at OVR#<date>#<id>, only for payments report rows, and applied on
 // top of the row wherever rows are read; re-importing the file leaves it in place.
 import { eraseCheck } from './imports.mjs';
-import { ovrKey, txnKey } from './keys.mjs';
+import { lblKey, ovrKey, txnKey } from './keys.mjs';
+import { withLabel } from './labels.mjs';
 import { ConditionFailed } from './memory.mjs';
 import { allRows, reviewOf, shownRow } from './query.mjs';
 
@@ -40,7 +41,10 @@ export async function putReview(store, sub, id, { date, category, approved }, { 
     try {
       // One transaction: not in the erase window, the row still exists, then the choice.
       await store.transact([eraseCheck(sub, now), { check: rowKey, if: [{ attr: 'sk', exists: true }] }, { put: choice, if: unchanged }]);
-      return { review: reviewOf(row, choice) };
+      // The reply shows the row as reads will: a label of its recipient beats the choice (D-18).
+      const label = /^[0-9a-f]{32}$/.test(row.recipient_key ?? '') ? await store.get(lblKey(sub, row.recipient_key), { consistent: true }) : undefined;
+      const shown = withLabel(row, choice, label);
+      return { review: reviewOf(shown.row, shown.choice) };
     } catch (err) {
       if (!(err instanceof ConditionFailed)) throw err;
       if (err.index === 0) return { error: 'conflict' };

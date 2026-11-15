@@ -144,6 +144,19 @@
     },
     "saveFailed": "Ese cambio no se guardó. No cambió nada; inténtalo de nuevo."
   },
+  "label": {
+    "open": "Etiquetar a este destinatario",
+    "title": "Etiquetar a este destinatario",
+    "lead": "El nombre y la categoría van en todos los pagos con esta persona o comercio, pasados y futuros, y los aprueban.",
+    "name": "Nombre",
+    "category": "Categoría",
+    "save": "Guardar etiqueta",
+    "cancel": "Cancelar",
+    "nameRequired": "Escribe un nombre.",
+    "nameTooLong": "Usa {n} caracteres o menos para el nombre.",
+    "categoryRequired": "Elige una categoría.",
+    "saveFailed": "Esa etiqueta no se guardó. No cambió nada; inténtalo de nuevo."
+  },
   "imports": {
     "sub": "Sube un archivo de cada fuente. Un archivo nuevo del mismo mes reemplaza al anterior, y puedes deshacerlo.",
     "whereFrom": "¿De dónde viene este archivo?",
@@ -237,6 +250,8 @@
     "sFilesD": "se guardan para poder deshacer o reparar una importación",
     "sChoices": "Tus revisiones",
     "sChoicesD": "categorías y aprobaciones de movimientos de Mercado Pago",
+    "sLabels": "Etiquetas de destinatarios",
+    "sLabelsD": "los nombres y categorías que das a personas y comercios, y los nombres que Mercado Pago envía con tus pagos",
     "sRates": "Cotizaciones",
     "sRatesD": "una por mes",
     "sTotals": "Totales mensuales",

@@ -56,6 +56,7 @@ const tx = (id: string) => ({
   currency: 'ARS',
   category: 'Groceries',
   merchant: 'Shop',
+  recipient_key: '',
   description_raw: 'SHOP',
   source: 'mercadopago',
   source_ref: id,
@@ -149,6 +150,28 @@ describe('T-WSCR-1: HttpDataApi requests', () => {
 describe('T-WSCR-1: HttpDataApi replies are parsed with @smart-finances/contracts (D-133)', () => {
   it('T-WSCR-1: a reply that does not match the contract is a failure, never passed on', async () => {
     const { api } = setup(() => ({ status: 200, body: { items: [{ ...tx('a'), amount: 12.5 }] } }));
+    expect(await api.listTransactions(TOKEN, { from: '2026-05', to: '2026-05' })).toEqual({ ok: false, kind: 'failed', code: 'bad_reply' });
+  });
+
+  it('T-ENR-1: the API reply carries the recipient key, empty for an old row, in transactions and review', async () => {
+    const keyed = { ...tx('b'), recipient_key: 'f'.repeat(32) };
+    const { api } = setup((call) =>
+      new URL(call.url).pathname === '/review'
+        ? { status: 200, body: { items: [{ ...tx('a'), review: undefined, reasons: [] }] } }
+        : { status: 200, body: { items: [tx('a'), keyed] } },
+    );
+    const list = await api.listTransactions(TOKEN, { from: '2026-05', to: '2026-05' });
+    if (!list.ok) throw new Error('list failed');
+    expect(list.data.items.map((t) => t.recipient_key)).toEqual(['', 'f'.repeat(32)]);
+    const review = await api.review(TOKEN, {});
+    if (!review.ok) throw new Error('review failed');
+    expect(review.data.items[0]!.recipient_key).toBe('');
+  });
+
+  it('T-ENR-1: a reply row without recipient_key is refused, since the API always fills it', async () => {
+    const old: Record<string, unknown> = { ...tx('a') };
+    delete old.recipient_key;
+    const { api } = setup(() => ({ status: 200, body: { items: [old] } }));
     expect(await api.listTransactions(TOKEN, { from: '2026-05', to: '2026-05' })).toEqual({ ok: false, kind: 'failed', code: 'bad_reply' });
   });
 
@@ -408,5 +431,165 @@ describe('T-WSCR-1: the container wires the real adapter (D-167)', () => {
     expect(r.ok && r.data.items.length).toBe(50);
     delete (globalThis as { [SHARED]?: unknown })[SHARED];
     vi.unstubAllEnvs();
+  });
+});
+
+// T-ENR-20 (AC-6, D-13, D-18): putLabel over HTTP, and the memory adapter applying labels the way the API does.
+// Synthetic keys and names only.
+const KEY = 'a'.repeat(32);
+const LABEL_REPLY = {
+  label: { recipient_key: KEY, name: 'Made-up Landlord', category: 'Housing & utilities', updated_at: '2026-11-05T12:00:00.000Z' },
+};
+
+describe('T-ENR-20: putLabel on the data API', () => {
+  it('T-ENR-20: PUT /recipients/{key}/label sends the name and category and parses the reply with the contract', async () => {
+    const { api, calls } = setup(() => ({ status: 200, body: LABEL_REPLY }));
+    expect(await api.putLabel(TOKEN, { key: KEY, name: '  Made-up Landlord ', category: 'Housing & utilities' })).toEqual({
+      ok: true,
+      data: LABEL_REPLY,
+    });
+    expect(calls.map((c) => `${c.init.method} ${new URL(c.url).pathname} ${c.init.body}`)).toEqual([
+      `PUT /recipients/${KEY}/label {"name":"Made-up Landlord","category":"Housing & utilities"}`,
+    ]);
+    expect(calls[0]!.init.headers.authorization).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it('T-ENR-20: a bad key, an empty or long name and Uncategorized never reach the API; a reply off the contract is refused', async () => {
+    const { api, calls } = setup(() => ({ status: 200, body: { label: { ...LABEL_REPLY.label, category: 'Uncategorized' } } }));
+    const refused = { ok: false, kind: 'failed', code: 'bad_request' };
+    expect(await api.putLabel(TOKEN, { key: 'A'.repeat(32), name: 'x', category: 'Housing & utilities' })).toEqual(refused);
+    expect(await api.putLabel(TOKEN, { key: '../x', name: 'x', category: 'Housing & utilities' })).toEqual(refused);
+    expect(await api.putLabel(TOKEN, { key: KEY, name: '   ', category: 'Housing & utilities' })).toEqual(refused);
+    expect(await api.putLabel(TOKEN, { key: KEY, name: 'x'.repeat(81), category: 'Housing & utilities' })).toEqual(refused);
+    expect(await api.putLabel(TOKEN, { key: KEY, name: 'x', category: 'Uncategorized' })).toEqual(refused);
+    expect(calls).toHaveLength(0);
+    expect(await api.putLabel(TOKEN, { key: KEY, name: 'x', category: 'Housing & utilities' })).toEqual({
+      ok: false,
+      kind: 'failed',
+      code: 'bad_reply',
+    });
+  });
+
+  it('T-ENR-20: the erase window answers conflict', async () => {
+    const { api } = setup(() => ({ status: 409, body: { error: { code: 'conflict', message: 'erasing' } } }));
+    expect(await api.putLabel(TOKEN, { key: KEY, name: 'x', category: 'Housing & utilities' })).toEqual({
+      ok: false,
+      kind: 'conflict',
+      code: 'conflict',
+    });
+  });
+});
+
+describe('T-ENR-20: the memory adapter applies labels like the API', () => {
+  const keyed = (id: string, over: object = {}) => ({
+    ...tx(id),
+    date_precision: 'day' as const,
+    recipient_key: KEY,
+    merchant: '',
+    category: 'Uncategorized',
+    ...over,
+  });
+  const make = () => {
+    const clock = new MemoryClock(Date.UTC(2026, 10, 5, 12, 0, 0));
+    const api = new MemoryDataApi(clock);
+    api.allowToken(TOKEN);
+    api.seed({
+      transactions: [
+        keyed('k1', { flags: ['needs_review'], review: { reasons: ['needs_review'], approved: false } }),
+        keyed('k2', {
+          amount: -500,
+          review: { reasons: [], category_override: 'Dining out', approved: false, updated_at: '2026-11-01T00:00:00.000Z' },
+        }),
+        {
+          ...tx('other'),
+          date_precision: 'day' as const,
+          merchant: 'Made-up Shop',
+          flags: ['needs_review'],
+          review: { reasons: ['needs_review'], approved: false },
+        },
+      ],
+    });
+    return { api, clock };
+  };
+
+  it('T-ENR-20: a label names, categorizes and approves every row with its key, over a review choice; other rows stay', async () => {
+    const { api } = make();
+    const saved = await api.putLabel(TOKEN, { key: KEY, name: ' Made-up Landlord ', category: 'Housing & utilities' });
+    expect(saved).toEqual({
+      ok: true,
+      data: { label: { recipient_key: KEY, name: 'Made-up Landlord', category: 'Housing & utilities', updated_at: '2026-11-05T12:00:00.000Z' } },
+    });
+
+    const list = await api.listTransactions(TOKEN, { from: '2026-05', to: '2026-05' });
+    if (!list.ok) throw new Error('list failed');
+    const byId = new Map(list.data.items.map((t) => [t.id, t]));
+    expect(byId.get('k1')).toMatchObject({
+      merchant: 'Made-up Landlord',
+      category: 'Housing & utilities',
+      review: { reasons: [], category_override: 'Housing & utilities', approved: true },
+    });
+    expect(byId.get('k2')).toMatchObject({
+      merchant: 'Made-up Landlord',
+      category: 'Housing & utilities',
+      review: { category_override: 'Housing & utilities', approved: true, updated_at: '2026-11-01T00:00:00.000Z' },
+    });
+    expect(byId.get('other')).toMatchObject({ merchant: 'Made-up Shop', category: 'Groceries', review: { approved: false } });
+    // The replies still parse with the contracts.
+    expect(ROUTES['GET /transactions'].reply.safeParse(list.data).success).toBe(true);
+
+    const review = await api.review(TOKEN);
+    if (!review.ok) throw new Error('review failed');
+    expect(review.data.items.map((t) => t.id)).toEqual(['other']);
+
+    const totals = await api.totals(TOKEN, { from: '2026-05', to: '2026-05' });
+    if (!totals.ok) throw new Error('totals failed');
+    expect(totals.data.months[0]!.totals.expense).toEqual({ 'Housing & utilities': { ARS: -12845 }, Groceries: { ARS: -12345 } });
+
+    const csv = await api.exportCsv(TOKEN);
+    if (!csv.ok) throw new Error('export failed');
+    expect(csv.data.split('\n').filter((l) => l.includes('"Made-up Landlord"') && l.includes('"Housing & utilities"'))).toHaveLength(2);
+  });
+
+  it('T-ENR-20: the filters see the label: category and search match the label, not the stored row', async () => {
+    const { api } = make();
+    await api.putLabel(TOKEN, { key: KEY, name: 'Made-up Landlord', category: 'Housing & utilities' });
+    const housing = await api.listTransactions(TOKEN, { from: '2026-05', to: '2026-05', category: 'Housing & utilities' });
+    const named = await api.listTransactions(TOKEN, { from: '2026-05', to: '2026-05', q: 'landlord' });
+    expect(housing.ok && housing.data.items.map((t) => t.id).sort()).toEqual(['k1', 'k2']);
+    expect(named.ok && named.data.items.map((t) => t.id).sort()).toEqual(['k1', 'k2']);
+  });
+
+  it('T-ENR-20: a row seeded after the label shows it; labeling again replaces it; erase removes labels', async () => {
+    const { api } = make();
+    await api.putLabel(TOKEN, { key: KEY, name: 'Made-up Landlord', category: 'Housing & utilities' });
+    api.seed({ transactions: [keyed('later', { date: '2026-05-20' })] });
+    await api.putLabel(TOKEN, { key: KEY, name: 'Made-up Owner', category: 'Home' });
+    const list = await api.listTransactions(TOKEN, { from: '2026-05', to: '2026-05' });
+    if (!list.ok) throw new Error('list failed');
+    expect(
+      list.data.items
+        .filter((t) => t.recipient_key === KEY)
+        .map((t) => [t.id, t.merchant, t.category])
+        .sort(),
+    ).toEqual([
+      ['k1', 'Made-up Owner', 'Home'],
+      ['k2', 'Made-up Owner', 'Home'],
+      ['later', 'Made-up Owner', 'Home'],
+    ]);
+    expect((await api.erase(TOKEN, { confirm: 'DELETE' })).ok).toBe(true);
+    api.seed({ transactions: [keyed('after')] });
+    const after = await api.listTransactions(TOKEN, { from: '2026-05', to: '2026-05' });
+    expect(after.ok && after.data.items.map((t) => [t.merchant, t.category])).toEqual([['', 'Uncategorized']]);
+  });
+
+  it('T-ENR-20: a bad key is not_found and a bad body is bad_request, as the API answers', async () => {
+    const { api } = make();
+    expect(await api.putLabel(TOKEN, { key: 'nope', name: 'x', category: 'Housing & utilities' })).toEqual({
+      ok: false,
+      kind: 'not_found',
+      code: 'not_found',
+    });
+    expect(await api.putLabel(TOKEN, { key: KEY, name: 'x', category: 'Uncategorized' })).toEqual({ ok: false, kind: 'failed', code: 'bad_request' });
+    expect(await api.putLabel('unknown', { key: KEY, name: 'x', category: 'Housing & utilities' })).toEqual({ ok: false, kind: 'unauthorized' });
   });
 });

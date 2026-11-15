@@ -8,13 +8,15 @@ import { DataTable } from '@/ui/patterns/DataTable/DataTable';
 import { Button } from '@/ui/primitives/Button/Button';
 import { SelectField } from '@/ui/primitives/Field/Field';
 import { Note } from '@/ui/primitives/Note/Note';
+import { LabelControl, type LabelResult, type RecipientLabel } from '../label/LabelForm';
 import { categoryName, lang } from '../overview/text';
 import styles from './Review.module.css';
 
 // The rows to review (SF-166; F-11): each with its date, what it is (the place, the original text as it arrived, the
 // source and category), why it is here (the importer's flag and a plain reason), the exact amount (D-23) and what you
 // can do. Mercado Pago rows take a category or an approval; rows of other sources are fixed in their file, so they say
-// so and offer nothing (data spec PUT review: source_file_only). Imported text renders only as text (AC-9).
+// so and offer nothing (data spec PUT review: source_file_only). Imported text renders only as text (AC-9). Every row
+// with a recipient key also offers Label this recipient (mercadopago-enrichment D-22).
 
 export type ReviewRow = ReviewReply['items'][number];
 export type ReviewChoice = { id: string; date: string; category?: string; approved?: true };
@@ -29,9 +31,11 @@ export type ReviewViewProps = {
   /** A plain message after a refused choice, which was rolled back. */
   failed: boolean;
   onChoose: (choice: ReviewChoice) => void;
+  /** Saves a recipient label; rows with a recipient key offer it when given. */
+  onLabel?: (label: RecipientLabel) => Promise<LabelResult>;
 };
 
-export function ReviewView({ rows, failed, onChoose }: ReviewViewProps) {
+export function ReviewView({ rows, failed, onChoose, onLabel }: ReviewViewProps) {
   const t = useTranslations();
   const locale = lang(useLocale());
   const day = new Intl.DateTimeFormat(INTL[locale], { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
@@ -104,6 +108,9 @@ export function ReviewView({ rows, failed, onChoose }: ReviewViewProps) {
                 ) : (
                   <span className={styles.fix}>{t('review.fixIn', { s: source(row.source) })}</span>
                 )}
+                {row.recipient_key && onLabel ? (
+                  <LabelControl recipientKey={row.recipient_key} name={row.merchant} category={row.category} onSave={onLabel} />
+                ) : null}
               </DataTable.Cell>
             </DataTable.Row>
           ))}
