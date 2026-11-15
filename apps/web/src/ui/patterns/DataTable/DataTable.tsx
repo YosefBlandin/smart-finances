@@ -1,7 +1,7 @@
 // DataTable: a compound table (D-143): Root, Header, Column, Body, Row, Cell. Plain table elements (D-141 keeps simple
 // parts plain); the scroll box is a labelled region the keyboard can focus, so wide tables scroll without a mouse (AC-10).
 // Raw imported text renders as text in Chivo Mono (AC-9, D-16).
-import { useId, type ReactNode } from 'react';
+import { useId, type KeyboardEventHandler, type ReactNode, type Ref } from 'react';
 import styles from './DataTable.module.css';
 
 type Align = 'start' | 'end';
@@ -55,9 +55,30 @@ function Body({ children }: { children: ReactNode }) {
   return <tbody>{children}</tbody>;
 }
 
-function Row({ selected, children }: { selected?: boolean; children: ReactNode }) {
+type RowProps = {
+  selected?: boolean;
+  children: ReactNode;
+  /** A row the keyboard can focus and act on (category-suggestions AC-10): a roving tab stop with its own keys. */
+  ref?: Ref<HTMLTableRowElement>;
+  tabIndex?: number;
+  onKeyDown?: KeyboardEventHandler<HTMLTableRowElement>;
+  onKeyUp?: KeyboardEventHandler<HTMLTableRowElement>;
+  'aria-keyshortcuts'?: string;
+  'aria-label'?: string;
+};
+
+function Row({ selected, children, ref, tabIndex, onKeyDown, onKeyUp, 'aria-keyshortcuts': keyShortcuts, 'aria-label': label }: RowProps) {
   return (
-    <tr className={styles.row} data-selected={selected || undefined}>
+    <tr
+      ref={ref}
+      className={styles.row}
+      data-selected={selected || undefined}
+      tabIndex={tabIndex}
+      onKeyDown={onKeyDown}
+      onKeyUp={onKeyUp}
+      aria-keyshortcuts={keyShortcuts}
+      aria-label={label}
+    >
       {children}
     </tr>
   );

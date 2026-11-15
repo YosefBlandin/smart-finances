@@ -60,7 +60,7 @@
     {
       "id": "SF-4",
       "status": "done",
-      "commit": "",
+      "commit": "1956eb5",
       "evidence": [
         "tests first: npx vitest run src/queries/history.test.tsx → 6 failed: TypeError: historyRanges is not a function; expected undefined to be 200 (HISTORY_LIMIT missing)",
         "verify: npm test --workspace @smart-finances/web -- src/queries/history.test.tsx → Test Files 1 passed, Tests 6 passed (T-HIST-1 to T-HIST-4); npm run lint --workspace @smart-finances/web → pass; tsc --noEmit clean",
@@ -70,9 +70,13 @@
     },
     {
       "id": "SF-5",
-      "status": "todo",
+      "status": "done",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "tests first: npx vitest run src/ui/patterns/DataTable src/screens/review/messages.test.ts → 3 failed: T-MSG-1 expected [] to deeply equal [accept, acceptAll, …]; T-MSG-1 shopping: expected undefined to be Shopping; T-ROW-1 unable to find role row named Row one",
+        "verify: npm test --workspace @smart-finances/web -- src/ui/patterns/DataTable src/screens/review/messages.test.ts → Test Files 2 passed, Tests 7 passed; npm run lint --workspace @smart-finances/web → pass; tsc clean",
+        "messages: review.suggest (11 keys, exact contract text) in en and es; categories shopping, pets, interest, refunds, loans added before uncategorized in both; DataTable story KeyboardRows added (runs with test-storybook at SF-11)"
+      ],
       "review": ""
     },
     {

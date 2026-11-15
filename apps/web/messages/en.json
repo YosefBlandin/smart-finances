@@ -142,7 +142,20 @@
       "bcv_rate": "Converted at the official Venezuelan rate",
       "summed": "A month total, not single purchases"
     },
-    "saveFailed": "That change didn’t save. Nothing changed; try again."
+    "saveFailed": "That change didn’t save. Nothing changed; try again.",
+    "suggest": {
+      "accept": "Accept {category}",
+      "use": "Use {category}",
+      "acceptAll": "{n, plural, one {Accept all (# suggestion)} other {Accept all (# suggestions)}}",
+      "confirmTitle": "Save these suggestions and approve the rows?",
+      "confirmLine": "{n, plural, one {# as {category}} other {# as {category}}}",
+      "save": "Save and approve",
+      "cancel": "Cancel",
+      "saving": "{n, plural, one {Saving # row…} other {Saving # rows…}}",
+      "waiting": "{s, plural, one {Too many saves at once. Trying again in # second…} other {Too many saves at once. Trying again in # seconds…}}",
+      "someFailed": "{n, plural, one {# row didn't save. It's back on the list.} other {# rows didn't save. They're back on the list.}}",
+      "keys": "Enter accepts the suggestion, 1 to 3 pick one, the arrow keys move between rows."
+    }
   },
   "label": {
     "open": "Label this recipient",
@@ -335,6 +348,11 @@
     "transfers": "Transfers",
     "transport": "Transport",
     "travel": "Travel",
+    "shopping": "Shopping",
+    "pets": "Pets",
+    "interest": "Interest",
+    "refunds": "Refunds",
+    "loans": "Loans",
     "uncategorized": "Uncategorized",
     "partner": "Partner",
     "gifts": "Gifts",
