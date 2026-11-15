@@ -38,7 +38,7 @@
     {
       "id": "SF-2",
       "status": "done",
-      "commit": "",
+      "commit": "7e60b01",
       "evidence": [
         "tests first: node --test packages/contracts/test/rules.test.mjs apps/api/test/merchants.test.mjs → fail 2: ERR_MODULE_NOT_FOUND packages/contracts/src/rules.mjs; ERR_PACKAGE_PATH_NOT_EXPORTED ./rules not defined by exports of @smart-finances/contracts",
         "verify: node --test packages/contracts/test/rules.test.mjs apps/api/test/merchants.test.mjs apps/api/test/*.test.mjs → tests 195, pass 195, fail 0; node --test packages/contracts/test/*.test.mjs → pass 18, fail 0",
@@ -48,9 +48,13 @@
     },
     {
       "id": "SF-3",
-      "status": "todo",
+      "status": "done",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "tests first: npx vitest run src/domain/suggest.test.ts → Test Files 1 failed, no tests (the module ./suggest did not exist yet)",
+        "verify: npm test --workspace @smart-finances/web -- src/domain/suggest.test.ts → Test Files 1 passed, Tests 19 passed (T-SUG-1 to T-SUG-10); npm run lint --workspace @smart-finances/web → eslint clean, all files use Prettier code style; tsc --noEmit -p apps/web clean",
+        "design notes: a choice made on the page is an owner example dated after all history; the model is asked only for rows with no pick from levels 1 to 4; others = rest of the pick level, lower levels, then the owner’s most used categories for the row’s kind"
+      ],
       "review": ""
     },
     {
