@@ -26,7 +26,8 @@ import { MemoryAccountStore } from './memory/account-store';
 import { MemoryBreachChecker } from './memory/breach-checker';
 import { MemoryClock, SystemClock } from './memory/clock';
 import { MemoryCounter } from './memory/counter';
-import { FailingDataApi, fixtureSeed, MemoryDataApi, PersonDataApis, RefusingDataApi } from './memory/data-api';
+import suggest from '../../fixtures/suggest.json';
+import { FailingDataApi, fixtureSeed, MemoryDataApi, PersonDataApis, RefusingDataApi, type ExtraFixture } from './memory/data-api';
 import { MemoryIdentityProvider } from './memory/identity-provider';
 import { MemoryLogger } from './memory/logger';
 import { MemoryParameterStore } from './memory/parameter-store';
@@ -244,6 +245,13 @@ export const E2E_PEOPLE = [
   'limit-es',
   // apps/web/lighthouserc.json (D-188, T-WEB-17): Lighthouse CI opens every money page 5 times with this person's __Host-sid.
   'lighthouse',
+  // e2e/suggest.spec.ts (category-suggestions SF-11): the fixtures plus fixtures/suggest.json, one person per test.
+  'suggest-time',
+  'suggest-privacy',
+  'suggest-steady',
+  'suggest-learn',
+  'suggest-all',
+  'suggest-es',
 ] as const;
 
 type E2EName = (typeof E2E_PEOPLE)[number];
@@ -251,9 +259,10 @@ type E2EName = (typeof E2E_PEOPLE)[number];
 /**
  * STAGE=test people whose data is not the fixtures as is: none at all (the empty states), a data API that fails (AC-8),
  * one whose first erase fails (SF-168), one that refuses the token at once or after two reads (signed out, SF-164,
- * SF-165), or the fixtures with reads the limit does not count (Lighthouse, T-WEB-17).
+ * SF-165), the fixtures with reads the limit does not count (Lighthouse, T-WEB-17), or those plus the suggestions
+ * fixture, also uncounted (category-suggestions SF-11).
  */
-type E2EData = 'empty' | 'failing' | 'erase-fails-once' | 'refused' | 'refused-after-2' | 'uncounted';
+type E2EData = 'empty' | 'failing' | 'erase-fails-once' | 'refused' | 'refused-after-2' | 'uncounted' | 'suggest';
 const E2E_DATA: Partial<Record<E2EName, E2EData>> = {
   // Its data API refuses its token, so the overview's prefetch signs it out (SF-164).
   'overview-signed-out': 'refused',
@@ -272,6 +281,31 @@ const E2E_DATA: Partial<Record<E2EName, E2EData>> = {
   // The fixtures with reads not counted against the limit: Lighthouse makes 30 page loads in a few minutes, and the
   // 429 page is not what it measures (D-188, T-WEB-17).
   lighthouse: 'uncounted',
+  // To review reads up to 12 history pages a load once rows come from the payments report (category-suggestions D-24),
+  // past a STAGE=test person's 5 a minute: the people who open it with the fixtures, and do not test the limit, are not
+  // counted (SF-11).
+  ...Object.fromEntries(
+    (['en', 'es'] as const).flatMap((lang) => (['light', 'dark'] as const).map((theme) => [`a11y-review-${lang}-${theme}`, 'uncounted'])),
+  ),
+  'a11y-keys-review': 'uncounted',
+  'hostile-review': 'uncounted',
+  'review-approve': 'uncounted',
+  'review-category': 'uncounted',
+  'review-rollback': 'uncounted',
+  'review-source': 'uncounted',
+  'shell-screens-review': 'uncounted',
+  'shell-menu': 'uncounted',
+  'shell-lang': 'uncounted',
+  'shell-lang-tablet': 'uncounted',
+  // The limit people keep counting; with no rows To review reads no history, so a load is still one counted read.
+  'limit-first': 'empty',
+  'limit-second': 'empty',
+  'suggest-time': 'suggest',
+  'suggest-privacy': 'suggest',
+  'suggest-steady': 'suggest',
+  'suggest-learn': 'suggest',
+  'suggest-all': 'suggest',
+  'suggest-es': 'suggest',
 };
 
 /**
@@ -302,8 +336,12 @@ function seedTestPerson(c: Container) {
   });
   c.dataApi = apis;
   const seed = fixtureSeed();
+  const withSuggest = fixtureSeed(suggest as ExtraFixture);
   seedPerson(c, apis, seed, TEST_PERSON);
-  for (const name of E2E_PEOPLE) seedPerson(c, apis, seed, e2ePerson(name), E2E_DATA[name]);
+  for (const name of E2E_PEOPLE) {
+    const data = E2E_DATA[name];
+    seedPerson(c, apis, data === 'suggest' ? withSuggest : seed, e2ePerson(name), data);
+  }
   for (const name of E2E_DELETE_PEOPLE) {
     const { sub, email } = e2ePerson(name);
     (c.identityProvider as MemoryIdentityProvider).seedUser({ sub, email, password: E2E_DELETE_PASSWORD });
@@ -329,7 +367,7 @@ function seedPerson(
     dataApi.allowToken(accessToken);
     apis.add(accessToken, new RefusingDataApi(dataApi, data === 'refused' ? 0 : 2));
   } else {
-    const limits = data === 'uncounted' ? undefined : c;
+    const limits = data === 'uncounted' || data === 'suggest' ? undefined : c;
     const dataApi = new MemoryDataApi(c.clock, { limits, logger: c.logger, eraseFailures: ERASE_FAILURES[data ?? 'fixtures'] ?? 0 });
     if (data !== 'empty') dataApi.seed(seed);
     dataApi.allowToken(accessToken);

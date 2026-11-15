@@ -127,7 +127,7 @@
     {
       "id": "SF-10",
       "status": "done",
-      "commit": "",
+      "commit": "4659a7e",
       "evidence": [
         "tests first: npx vitest run src/screens/review/suggest/accept-all.test.tsx → 13 failed (e.g. expected undefined to be \"Accept all (3 suggestions)\"; Cannot find module ./suggest/AcceptAll before the file existed)",
         "verify: npm test --workspace @smart-finances/web -- src/screens/review → Test Files 7 passed, Tests 52 passed (T-ALL-1 to T-ALL-7 plus applyChoices); eslint src/screens/review → clean; tsc --noEmit (apps/web) → clean",
@@ -139,9 +139,16 @@
     },
     {
       "id": "SF-11",
-      "status": "todo",
+      "status": "done",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "tests first: with container.ts and data-api.ts set aside, npx playwright test e2e/suggest.spec.ts → 6 failed (T-E2E-2 to 6: expect(locator).toBeVisible()/toHaveCount failed; T-E2E-1: no chips in 30 s), since the suggest people did not exist",
+        "verify: npm run e2e --workspace @smart-finances/web → 115 passed (3.3m), exit 0; CHROME_PATH=<installed Chrome> npm run test-storybook --workspace @smart-finances/web → Test Suites 23 passed, Tests 264 passed, exit 0 (Playwright headless shell not installed; the repo test-runner config takes CHROME_PATH, nothing downloaded). First storybook run: NoPick failed (2 rows still pick at the rule level with no history); the story now checks a no-pick row instead",
+        "T-E2E-1 time: 933 ms after the list with --workers=1 (target 1000 ms); 4065 ms when run beside the other 5 suggest tests, with the machine load average 20 to 35 from other sessions",
+        "data: fixtures/suggest.json made by a generator: 15 made-up shops, 4 made-up keyed people, a rule-only shop, 3 hostile names on a known key, 13 new shops; 12 months 2025-12 to 2026-11; the e2e spec fixes the page date at 2026-11-15. Checked with the domain code: 47 of 60 rows get a pick, the 13 new shops none, hostile rows pick Family by key",
+        "people: six suggest-* people (one per e2e test), not one suggest person as architecture.md names it, because playwright runs fullyParallel and T-E2E-4 and T-E2E-5 change the data. uncounted: a11y-review-*, a11y-keys-review, hostile-review, review-approve/category/rollback/source, shell-screens-review, shell-menu, shell-lang, shell-lang-tablet. empty: limit-first, limit-second; limit.spec now expects the empty state for limit-second (its data changed)",
+        "also: npm run lint → pass; prettier --check src e2e → pass; npm test (web) → 751 of 755: T-WEB-5 plural count (pending the planning session); T-SET-2 at 5.0 to 5.2 s against the 5 s test timeout and then T-SET-1 label in the same file, and T-SUG-9 (50 ms budget) at 100 ms, all under load; settle.test.tsx alone → 5 passed. Those files are outside SF-11 Files, so they were not changed"
+      ],
       "review": ""
     },
     {
