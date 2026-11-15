@@ -99,9 +99,9 @@ status: draft
 - Implements: D-7, D-22, D-23 · After: SF-0 · Judgment: normal
 - Files: smart-finances:docs/adr/0011-in-browser-category-suggestions.md (new), docs/adr/README.md, docs/threat-model.md
 - Files (test): apps/api/test/docs.test.mjs
-- Tests first: T-DOC-1
+- Tests first: T-DOC-11
 - Do: write the ADR with Status accepted (context, the decisions above, and a "Model gate" section saying "pending SF-12", which SF-12 fills in); add it to the README index as accepted; change the threat model's status line to v5 and add the items in architecture.md "Records before code".
-- Verify: `node --test apps/api/test/docs.test.mjs` → pass, T-DOC-1 included
+- Verify: `node --test apps/api/test/docs.test.mjs` → pass, T-DOC-11 included
 - Done when: verify is green and the ADR names D-7, D-17, D-22 and D-23
 
 ### SF-2 · Move the payments rules to contracts
@@ -186,12 +186,12 @@ status: draft
 
 ### SF-12 · Model gate: evaluation and converter
 - Implements: AC-17, D-12, D-22 · After: SF-3 and the SF-12 HUMAN need · Judgment: high
-- Files: apps/web/fixtures/suggest-eval.json (new), scripts/suggest-model.mjs (new), scripts/suggest-model.test.mjs (new), apps/web/src/domain/suggest-model.eval.test.ts (new), package.json (root test script), docs/adr/0011-in-browser-category-suggestions.md
+- Files: apps/web/fixtures/suggest-eval.json (new), smart-finances:apps/web/src/domain/suggest-model.ts (new), scripts/suggest-model.mjs (new), scripts/suggest-model.test.mjs (new), apps/web/src/domain/suggest-model.eval.test.ts (new), package.json (root test script), docs/adr/0011-in-browser-category-suggestions.md
 - Tests first: T-MOD-1
 - Do:
   - First, read the model's current revision: `curl -s https://huggingface.co/api/models/sentence-transformers/static-similarity-mrl-multilingual-v1` (its `sha` and `siblings`). Tell the owner the revision, the two file names (the static-embedding weights and tokenizer.json) and their sizes, and wait for the HUMAN need above. Pin that revision in the converter.
   - Commit the evaluation set first, alone (this task is two commits): at least 30 synthetic names that `merchantCategory` misses, plus at least 40 synthetic history examples (architecture.md Components "Static model").
-  - Write the converter (Contracts "Model file"); it reads the files under ~/.cache/smart-finances/suggest-model and writes its output there, never into the repo. It exports its tokenizer and embedding so the eval test uses the same code; the browser copy in SF-13 is kept in step by T-MOD-4. Its own test uses a tiny synthetic table, no downloaded file; add it to the root `npm test` list.
+  - Write the converter (Contracts "Model file"); it reads the files under ~/.cache/smart-finances/suggest-model and writes its output there, never into the repo. The tokenizer, embedding and scorer live in apps/web/src/domain/suggest-model.ts (new; add it to Files), used by the eval test and later by the SF-13 loader; the converter keeps a reference tokenizer only for T-MOD-4's expected ids. Its own test uses a tiny synthetic table, no downloaded file; add it to the root `npm test` list.
   - The eval test skips (not fails) when the downloaded files are absent; it reads D from `SUGGEST_DIMS`. Run T-MOD-1 for D = 64, 128, 256; record each size and score in progress and in the ADR's "Model gate" section.
   - Pass (bar met at a size of 30 MB or less): continue to SF-13 with the smallest passing D. Miss: record the numbers in the ADR and progress, skip SF-13, and keep the converter and evaluation set without any model file.
 - Verify: `node --test scripts/suggest-model.test.mjs` and `npm test --workspace @smart-finances/web -- src/domain/suggest-model.eval.test.ts` → pass, scores printed
@@ -206,7 +206,7 @@ status: draft
 - Done when: verify is green and the build sizes are in progress
 
 ### SF-14 · Full verify, Lighthouse and draft PR
-- Implements: AC-18 · After: SF-13 (or SF-12 when the model missed) · Judgment: normal
+- Implements: AC-18 · After: every earlier task (SF-13 skipped when the model missed) · Judgment: normal
 - Files: none beyond fixes inside earlier tasks' files
 - Tests first: T-LH-1
 - Do: run the full verify and Lighthouse (T-LH-1 is that run; record its numbers); start a fresh read-only reviewer for the conformance review (the spec-reviewer agent, given this brief, test-matrix.md and the diff against origin/qa) and log it in review.md Conformance review; fix or record its findings; push the branch; `gh pr create --draft --base qa --head feature/category-suggestions` with the PR body below, then reread the body against "PR body" yourself.

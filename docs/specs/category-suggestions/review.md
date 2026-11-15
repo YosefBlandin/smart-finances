@@ -44,6 +44,7 @@ status: draft
 | Brief | Round | Date | Model class | Cannot start | Missing values | Assumptions | Fixed in |
 |---|---|---|---|---|---|---|---|
 | pr-smart-finances.md | 1 | 2026-11-15 | same, fresh context | 2 | 12 | 16 | SF-0 `npm ci`; SF-11 test person mode, fixture seeding and the rule for existing /review people (architecture.md Cross-cutting); T-DOC-1; T-HIST-4 with the no-payments-row rule; Messages wording table; SuggestRow and Save pool contracts; SF-12 revision steps; SF-14 conformance steps; lighthouse baseline field. Accepted as written: SF-4 ranges from the browser clock, SF-7 shortcut value, SF-13 webpack asset emit (next.config.ts now in Files). |
+| pr-smart-finances.md | 2 | 2026-11-15 | same, fresh context | 0 | 5 | 17 | Model scorer values and minimum score, one scorer home (architecture.md "Static model"); useHistory return shape; fixture rows may carry review fields; test id T-DOC-11 (T-DOC-1 is taken); SF-14 after every task. The locked version and the HUMAN needs are expected. Accepted as written: SF-0 commits the progress file; tasks run in id order. |
 
 ## Conformance review
 <!-- Before each draft PR: a fresh reviewer compares the diff with the brief and its test ids. A finding that needs a decision becomes a deviation, not an edit. -->

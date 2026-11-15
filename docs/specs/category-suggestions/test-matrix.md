@@ -13,7 +13,7 @@ status: draft
 <!-- unit and int rows, grouped by PR. Keep the check terse: one line, no Given/When/Then. When the change classifies a set (routes, keys, types), add one coverage test that pins the count, so a new member fails CI until someone classifies it. -->
 | Test | Traces | Task | Level | Gate | Check |
 |---|---|---|---|---|---|
-| T-DOC-1 | D-7, D-22, D-23 | SF-1 | unit | G-merge | ADR 0011 exists with status accepted, names D-7, D-17, D-22 and D-23 and has a Model gate section; the README lists it; the threat model status line says v5. |
+| T-DOC-11 | D-7, D-22, D-23 | SF-1 | unit | G-merge | ADR 0011 exists with status accepted, names D-7, D-17, D-22 and D-23 and has a Model gate section; the README lists it; the threat model status line says v5. |
 | T-RULE-1 | D-15, AC-1 | SF-2 | unit | G-merge | The contracts `merchantCategory` gives the same answer as before for every code and name case in the existing API tests. |
 | T-RULE-2 | D-15, RK-6 | SF-2 | unit | G-merge | The API module's `merchantCategory`, `CODE_CATEGORIES` and `NAME_RULES` are the same objects as the contracts exports. |
 | T-SUG-1 | AC-1, D-17 | SF-3 | unit | G-merge | Levels rank key, then name, then rules, then shared words, then model; the first level with a match gives the pick. |
