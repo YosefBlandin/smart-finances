@@ -28,6 +28,7 @@ const ROUTES = [
   'POST /totals/rebuild',
   'GET /export',
   'DELETE /data',
+  'PUT /recipients/{key}/label',
 ];
 
 test('T-DOC-1 ADRs 0004, 0006 and 0007 exist, cite their decisions and are listed as accepted', () => {
@@ -65,4 +66,23 @@ test('T-DOC-2 the threat model covers the data stack, the upload path, delete-al
     /invoke rights/,
   ];
   for (const pattern of named) assert.match(text, pattern);
+});
+
+test('T-ENR-24 ADR 0010 is accepted, cites its decisions, is listed, and the label route and item are in ADR 0004', () => {
+  const text = read('adr/0010-recipient-labels.md');
+  assert.match(text, /^Status: accepted/m);
+  for (const id of ['D-10', 'D-11', 'D-12', 'D-13', 'D-14', 'D-18', 'D-19', 'D-21']) assert.ok(cites(text, id), `0010 cites ${id}`);
+  for (const term of ['SF_MERCHANT', 'SF_CATEGORY_CODE', 'SF_RECIPIENT', 'private_columns', 'LBL#']) assert.ok(text.includes(term), `0010 names ${term}`);
+  const index = read('adr/README.md').split('\n');
+  assert.match(index.find((line) => line.includes('0010') && line.startsWith('|')) ?? '', /\baccepted\b/, 'README lists 0010 as accepted');
+  const patterns = read('adr/0004-access-patterns.md');
+  assert.ok(patterns.includes('| PUT /recipients/{key}/label |'), '0004 has the label route row');
+  assert.ok(patterns.includes('`LBL#<recipient_key>`'), '0004 has the label item row');
+});
+
+test('T-ENR-24 the threat model names the new assets and the owner-machine boundary', () => {
+  const text = read('threat-model.md');
+  for (const pattern of [/recipient key/i, /recipient label/i, /hashing key/i, /owner's machine/i, /payments service/i, /names of people and shops/i, /private_columns/]) {
+    assert.match(text, pattern);
+  }
 });

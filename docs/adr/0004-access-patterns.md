@@ -60,6 +60,7 @@ One table. P = `U#<sub>`. All items of one person share one partition. Keys are 
 | Period pointer | P | `PER#<source>#<period>` | active_import, history (import ids of the files that counted, oldest first, no repeats, no cap), lock_import, lock_until |
 | Rate | P | `RATE#<yyyy-mm>` | ars_per_usd as a string with exactly two decimals, updated_at |
 | Month total | P | `SUM#<yyyy-mm>` | totals: kind, then category, then currency, to integer cents; row_count; computed_at (ms epoch of the consistent read it came from); row_count 0 is a tombstone that readers skip |
+| Recipient label | P | `LBL#<recipient_key>` | recipient_key (32 lowercase hex), name (1 to 80 characters), category (never Uncategorized), updated_at; applied when rows are read ([ADR 0010](0010-recipient-labels.md)) |
 | Erase marker | P | `ERASED` | erased_at, quiet_until (unset while erasing; the erase's end plus 65 minutes when it finishes); never removed |
 
 importId is a ULID, so `IMP#` items sort by time. date is `YYYY-MM-DD`; id is the 16-hex row id; period is `yyyy-mm` or `log`. Text attributes are stored as imported and every reader treats them as untrusted.
@@ -83,7 +84,10 @@ Every pattern below is a query or get on the signed-in person's partition only; 
 | PUT /rates/{month} | put `RATE#<month>` | none |
 | POST /totals/rebuild | query `begins_with(sk, TXN#)` and `begins_with(sk, SUM#)` for the months; async invoke of the rollup | erase window refused |
 | GET /export | query `begins_with(sk, TXN#)` and `begins_with(sk, OVR#)` | review choices applied; formula-like text neutralised |
+| PUT /recipients/{key}/label | one transaction: condition check on `ERASED`, put `LBL#<key>`; async invoke of the rollup for every month ([ADR 0010](0010-recipient-labels.md)) | erase window refused; key of 32 lowercase hex |
 | DELETE /data | put `ERASED`; query the whole partition; delete every item except `ERASED`; list and delete `uploads/<sub>/`; update `ERASED` | refused while a period lock is live or an import is requested and unexpired |
+
+Since [ADR 0010](0010-recipient-labels.md), every route and worker above that applies review choices (GET /transactions, GET /review, GET /export, the rollup) also queries `begins_with(sk, LBL#)` once and applies the person's recipient labels.
 
 Background work uses the same partition:
 
