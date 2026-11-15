@@ -1,21 +1,27 @@
 {
   "spec": "category-suggestions",
   "repo": "smart-finances",
-  "brief": "",
-  "tool": "",
-  "model": "",
+  "brief": "pr-smart-finances.md@locked-v1",
+  "tool": "Claude Code 2.1.325 (desktop app, claude-desktop entrypoint)",
+  "model": "claude-opus-5-5",
   "baseline": {
-    "tests": "",
-    "lint": "",
-    "typecheck": "",
-    "lighthouse": ""
+    "tests": "green: node --test api+contracts+scripts 240/240 pass; check-no-raw-html pass; web vitest 680/680 pass (49 files); infra 50/50 pass (npm test exit 0)",
+    "lint": "green: npm run lint --workspace @smart-finances/web (eslint + prettier) pass",
+    "typecheck": "green: infra tsc --noEmit pass (npm run build --workspace @smart-finances/infra exit 0); web typecheck is in next build, which passed in the lhci run",
+    "lighthouse": "exit 1 before any change: LCP budget 2500 ms missed on all 6 pages on this machine (medians /overview 2916, /transactions 2769, /review 2770, /imports 2764, /rates 2612, /data 2613 ms); script size and CLS pass. /review: script 164349 bytes (budget 204800), CLS 0.0003, next build First Load JS 142 kB"
   },
   "tasks": [
     {
       "id": "SF-0",
-      "status": "todo",
+      "status": "done",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "git status clean at start; HEAD e0df576 on top of origin/qa e8da84b; drift.mjs: 22 references, 8 NEW, 14 OK",
+        "npm ci at worktree root: ok",
+        "npm test → exit 0 (node 240 pass 0 fail; web Test Files 49 passed, Tests 680 passed; infra 50 pass)",
+        "npm run build --workspace @smart-finances/infra → tsc --noEmit exit 0",
+        "npm run lhci --workspace @smart-finances/web → exit 1: largest-contentful-paint fails on all 6 money pages (pre-existing, see baseline.lighthouse); resource-summary:script:size and cumulative-layout-shift pass"
+      ],
       "review": ""
     },
     {
@@ -118,5 +124,7 @@
     }
   ],
   "deviations": [],
-  "surprises": []
+  "surprises": [
+    "SF-0: the Lighthouse LCP budget (2500 ms) already fails on all six money pages on this machine before any change (2.6 to 2.9 s simulated). T-LH-1 checks script size and CLS only, so it is recorded, not fixed."
+  ]
 }
