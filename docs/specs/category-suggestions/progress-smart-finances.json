@@ -175,8 +175,8 @@
     },
     {
       "id": "SF-14",
-      "status": "in_progress",
-      "commit": "d7bbd3c",
+      "status": "done",
+      "commit": "d7bbd3c, 5ec18ee",
       "evidence": [
         "T-LH-1 first run (npm run lhci): exit 1, LCP budget only (as at the baseline). /review medians: script 170278 bytes (baseline 164349, budget 204800), CLS 0.0759 (baseline 0.0003, budget 0.1), LCP 2778 ms. The 0.0758 shift was the review wrapper pushed down when Accept all appeared after history settled",
         "fix (inside SF-10 and SF-6 files): Review.tsx keeps Accept all’s space (div[data-all=placeholder], aria-hidden, Review.module.css .allSlot at the small button height) while history is read on a list with payments rows. Tests first: new T-ALL-1 no-shift test failed (expected null not to be null), then accept-all.test.tsx 20 passed",
@@ -184,7 +184,8 @@
         "full verify before the fix: npm test → node pass 248 fail 0, web Test Files 57 passed Tests 755 passed, infra pass 50 fail 0, exit 0; npm run build --workspace @smart-finances/infra → exit 0",
         "after the fix: npm test --workspace @smart-finances/web → 757 passed; npm run lint → pass; npm run e2e → 115 passed (T-E2E-1 929 ms in the full run); test-storybook (CHROME_PATH) → 264 passed",
         "conformance review (fresh spec-reviewer subagent, sonnet): pass with findings, no blocker or major. Tasks 14 of 14 (SF-13 skipped), test ids 46 of 46, one off-brief change (the recorded T-WEB-5 deviation). Minors fixed: docs/threat-model.md (SF-1 file) notes no model ships (D-30) and cites T-MOD-1 instead of T-MOD-2/3; shas filled; T-SET-2 timeout 20 s (SF-8 file); full verify re-run. Recorded: T-SUG-9 load sensitivity (surprises). Logged in review.md",
-        "final full verify after the fixes: npm test → node pass 248 fail 0, web Test Files 57 passed Tests 757 passed, infra pass 50 fail 0, exit 0; npm run build --workspace @smart-finances/infra → exit 0; npm run lint (web) → pass; node --test apps/api/test/docs.test.mjs → pass 6"
+        "final full verify after the fixes: npm test → node pass 248 fail 0, web Test Files 57 passed Tests 757 passed, infra pass 50 fail 0, exit 0; npm run build --workspace @smart-finances/infra → exit 0; npm run lint (web) → pass; node --test apps/api/test/docs.test.mjs → pass 6",
+        "draft PR https://github.com/YosefBlandin/smart-finances/pull/45 into qa (draft, open, mergeable, 1 check passing at open). Body reread against the brief PR body list: changes per task, test ids and results, model not shipped (D-30), T-E2E-1 time, Lighthouse script size before and after, deviations, T-MAN-1 and T-MAN-2: all present"
       ],
       "review": ""
     }
@@ -207,5 +208,6 @@
     "SF-0: the Lighthouse LCP budget (2500 ms) already fails on all six money pages on this machine before any change (2.6 to 2.9 s simulated). T-LH-1 checks script size and CLS only, so it is recorded, not fixed.",
     "SF-5: the existing T-WEB-5 test in apps/web/src/i18n/i18n.test.ts pins the number of plural messages at 9; the five contract plurals make it 14, so the full web suite has 1 failure. The file is outside every task’s Files: asked the planning session (2026-11-15) before editing it; not changed. Resolved 2026-11-15: the planning session approved the one-line change (see deviations).",
     "SF-11/SF-14: under heavy machine load from other sessions (load average 20 to 35), T-SET-2 ran 5.0 to 5.2 s against the 5 s test timeout and T-SUG-9 took 100 ms against its 50 ms budget; both pass at normal load (full runs 755 and 757). T-SET-2 now has a 20 s timeout (SF-14, inside SF-8 files); T-SUG-9 keeps the 50 ms budget test-matrix.md pins."
-  ]
+  ],
+  "pr": "https://github.com/YosefBlandin/smart-finances/pull/45"
 }
