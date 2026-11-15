@@ -22,6 +22,8 @@ export interface DataApi {
   putRate: Call<In<'PUT /rates/{month}'> & { month: string }, Out<'PUT /rates/{month}'>>;
   review: Call<In<'GET /review'>, Out<'GET /review'>>;
   putReview: Call<In<'PUT /transactions/{id}/review'> & { id: string }, Out<'PUT /transactions/{id}/review'>>;
+  /** A recipient label (mercadopago-enrichment D-13): names, categorizes and approves every row with the key. */
+  putLabel: Call<In<'PUT /recipients/{key}/label'> & { key: string }, Out<'PUT /recipients/{key}/label'>>;
   listImports: Call<In<'GET /imports'>, Out<'GET /imports'>>;
   getImport: Call<{ id: string }, Out<'GET /imports/{id}'>>;
   requestImport: Call<In<'POST /imports'>, Out<'POST /imports'>>;

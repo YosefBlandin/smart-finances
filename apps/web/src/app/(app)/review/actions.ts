@@ -2,6 +2,7 @@
 
 import { CATEGORIES } from '@smart-finances/contracts/categories';
 import { z } from 'zod';
+import { createLabel } from '@/application/data/label';
 import { createReview } from '@/application/data/review';
 import { guarded, type ActionResult } from '../../guarded';
 
@@ -20,5 +21,18 @@ const choice = z
 
 export const chooseReview = guarded(choice, { kind: 'money' }, async (input, { container, session }): Promise<ActionResult<null>> => {
   const saved = await createReview(container).choose(session!, input);
+  return saved.ok ? { ok: true, data: null } : { ok: false, messageKey: 'review.saveFailed', retryAfterSeconds: saved.retryAfter };
+});
+
+// A recipient label (mercadopago-enrichment D-7, D-13, D-22): the same guarded money action as a review choice, then the
+// use case for that session's person only. The key is the row's recipient key; the category is never Uncategorized.
+const label = z.object({
+  key: z.string().regex(/^[0-9a-f]{32}$/),
+  name: z.string().trim().min(1).max(80),
+  category: z.enum(CATEGORIES).refine((c) => c !== 'Uncategorized'),
+});
+
+export const labelRecipient = guarded(label, { kind: 'money' }, async (input, { container, session, requestId }): Promise<ActionResult<null>> => {
+  const saved = await createLabel(container).label(session!, input, { requestId });
   return saved.ok ? { ok: true, data: null } : { ok: false, messageKey: 'review.saveFailed', retryAfterSeconds: saved.retryAfter };
 });

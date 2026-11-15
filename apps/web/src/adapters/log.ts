@@ -3,8 +3,9 @@ import type { Logger } from '@/ports/logger';
 
 // architecture.md Contracts "Security events" (D-80, RK-6): one JSON line per event, never an email, password, code,
 // token, secret or IP. A field whose name holds one of these words, in any case or spelling (accessToken, client_ip,
-// emailHash), makes the call throw before anything is written.
-const REFUSED = new Set(['password', 'code', 'secret', 'token', 'email', 'ip']);
+// emailHash), makes the call throw before anything is written. Name, merchant and payer are refused too, so no person's
+// or shop's name reaches a log (mercadopago-enrichment AC-10, F-19).
+const REFUSED = new Set(['password', 'code', 'secret', 'token', 'email', 'ip', 'name', 'merchant', 'payer']);
 
 /** The words of a key: camelCase, snake_case, kebab-case and spaces split; lower case. */
 function words(key: string): string[] {
