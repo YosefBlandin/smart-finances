@@ -129,3 +129,27 @@ test('T-ENR-6 enrichment values of the wrong shape are left out', () => {
   const t = byRef(parseReleaseReport(bad, { file: 'release-2026-05.csv' }).transactions);
   assert.deepEqual([t['777'].recipient_key, t['777'].category], ['', 'Uncategorized']);
 });
+
+// ---- refusal of raw columns (SF-5, D-21). Values are made up. ----
+const withColumn = (text, column, value) => text.split('\n').map((l, i) => (l ? `${l};${i === 0 ? column : i === 2 ? value : ''}` : l)).join('\n');
+
+test('T-ENR-7 a release report that still holds PAYER_NAME or PAYOUT_BANK_ACCOUNT_NUMBER is refused with private_columns, naming only the column', () => {
+  for (const [column, value] of [['PAYER_NAME', 'Zed "Made-up" Person'], ['PAYOUT_BANK_ACCOUNT_NUMBER', '0000003100099999999901']]) {
+    const text = withColumn(report, column, value);
+    assert.ok(text.split('\n')[0].endsWith(column));
+    assert.throws(
+      () => parseReleaseReport(text, { file: 'release-2026-05.csv' }),
+      (err) => {
+        assert.equal(err.code, 'private_columns', column);
+        assert.match(err.message, new RegExp(column));
+        assert.match(err.message, /sync/);
+        assert.match(err.message, /release-2026-05\.csv/, 'local ingest names the file');
+        assert.doesNotMatch(err.message, /Zed|Made-up|0000003100099999999901/);
+        return true;
+      },
+    );
+  }
+  // a hand-saved copy with a quoted header cell is refused the same way, not as unreadable
+  const quoted = withColumn(report, '"PAYER_NAME"', '"Zed Made-up Person"');
+  assert.throws(() => parseReleaseReport(quoted, { file: 'release-2026-05.csv' }), (err) => err.code === 'private_columns' && !/Zed/.test(err.message));
+});

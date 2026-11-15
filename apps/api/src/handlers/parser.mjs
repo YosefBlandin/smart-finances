@@ -53,6 +53,7 @@ function readFile(importers, source, buf, file) {
   try {
     result = importer(buf, { file });
   } catch (err) {
+    if (err?.code === 'private_columns') throw new Refused('private_columns', err.message);
     throw new Refused('unreadable', String(err?.message ?? 'The file could not be read.').slice(0, 300));
   }
   const issues = result.issues ?? [];
@@ -121,8 +122,18 @@ export function createParserHandler({ store, now = () => Date.now(), importers =
     try {
       parsed = readFile(importers, record.source, buf, record.file_name);
     } catch (err) {
-      if (err instanceof Refused) return fail(record, err.code, err.message);
-      throw err;
+      if (!(err instanceof Refused)) throw err;
+      const outcome = await fail(record, err.code, err.message);
+      // The one failed import whose upload goes at once: it holds raw names or account numbers (D-21).
+      if (err.code === 'private_columns') {
+        try {
+          await store.deleteObject(key);
+        } catch {
+          // The import stays failed; the object stays until delete-all.
+          console.log(JSON.stringify({ msg: 'parser', import_id: importId, outcome: 'delete_failed' }));
+        }
+      }
+      return outcome;
     }
     const at = now();
     const eventTime = Date.parse(event.time ?? '') || at;

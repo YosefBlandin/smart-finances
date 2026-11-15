@@ -22,11 +22,28 @@ const ENRICHMENT = ['SF_MERCHANT', 'SF_CATEGORY_CODE', 'SF_RECIPIENT'];
 // A value of the wrong shape is left out, so a hand-edited file cannot store a key no label can match.
 const SHAPES = { SF_CATEGORY_CODE: /^\d{4}$/, SF_RECIPIENT: /^[0-9a-f]{32}$/ };
 const UNCATEGORIZED = CATEGORIES.at(-1);
+// Raw columns sync reads and then drops (D-19, D-21): a report that still holds one is refused as a whole,
+// so names and account numbers reach the server only through sync's cleaned file.
+export const PRIVATE_COLUMNS = ['PAYER_NAME', 'PAYOUT_BANK_ACCOUNT_NUMBER'];
 
-function parseRows(text) {
+// Thrown when the header holds a private column. The message names the column and the file, never a value.
+export class PrivateColumns extends Error {
+  constructor(column, file) {
+    super(`${file ? `${file}: ` : ''}the release report holds the ${column} column; save the month with sync (npm run mp:sync), which removes it`);
+    this.name = 'PrivateColumns';
+    this.code = 'private_columns';
+  }
+}
+
+function parseRows(text, file) {
   const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.length > 0);
+  // Before any row is read, so no value of a private column is ever looked at (D-21).
+  const header = (lines[0] ?? '').split(';').map((c) => c.trim());
+  // A quoted header cell still counts, so a hand-saved report with quotes is refused here, not as unreadable.
+  const names = header.map((c) => c.replace(/^"(.*)"$/, '$1').trim());
+  const privateColumn = PRIVATE_COLUMNS.find((c) => names.includes(c));
+  if (privateColumn) throw new PrivateColumns(privateColumn, file);
   if (lines.some((l) => l.includes('"'))) throw new Error('quoted CSV fields are not supported in the release report');
-  const header = lines[0].split(';');
   const missing = REQUIRED.filter((c) => !header.includes(c));
   if (missing.length) throw new Error(`release report is missing columns: ${missing.join(', ')}`);
   return { header, rows: lines.slice(1).map((l) => Object.fromEntries(l.split(';').map((v, i) => [header[i], v.trim()]))) };
@@ -73,7 +90,7 @@ function categoryFor(kind, rows, { code = '', merchant = '' } = {}) {
 }
 
 export function parseReleaseReport(text, { file, currency = 'ARS', country = 'AR' } = {}) {
-  const { header, rows } = parseRows(text);
+  const { header, rows } = parseRows(text, file);
   const enriched = ENRICHMENT.some((c) => header.includes(c));
   const opening = rows[0];
   const totals = rows.at(-1);
