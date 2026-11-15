@@ -105,7 +105,7 @@
     {
       "id": "SF-8",
       "status": "done",
-      "commit": "",
+      "commit": "c7f3554",
       "evidence": [
         "tests first: npx vitest run src/screens/review/suggest/settle.test.tsx → 3 failed: expected undefined to be 2000 (SETTLE_AFTER_MS missing); unable to find role row (the immediate settle emptied the list after the first choice); tsc: no exported member SETTLE_AFTER_MS, retryAfterSeconds not in ChooseResult",
         "verify: npm test --workspace @smart-finances/web -- src/screens/review → all pass (Test Files 6 passed incl. pool); npm run lint --workspace @smart-finances/web → pass; tsc clean",
@@ -115,10 +115,14 @@
     },
     {
       "id": "SF-9",
-      "status": "todo",
+      "status": "done",
       "commit": "",
-      "evidence": [],
-      "review": ""
+      "evidence": [
+        "tests first: npx vitest run src/screens/review/suggest/pool.test.ts → Test Files 1 failed: Cannot find module ./pool",
+        "verify: npm test --workspace @smart-finances/web -- src/screens/review/suggest/pool.test.ts → Test Files 1 passed, Tests 7 passed (T-POOL-1 to T-POOL-3); npm run lint --workspace @smart-finances/web → pass; tsc clean",
+        "review (fresh spec-reviewer subagent, sonnet): no blocker or major. Minors fixed: a comment says a timed-out call counts as settled on purpose; T-POOL-2 now asserts the thrown, rejected and timed-out rows are called once. Also: a throwing onWait no longer fails a row"
+      ],
+      "review": "pass"
     },
     {
       "id": "SF-10",
