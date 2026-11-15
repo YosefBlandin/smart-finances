@@ -4,7 +4,7 @@ ticket: none
 tier: L
 status: draft
 refs: smart-finances@e8da84b
-door: 2-way
+door: 1-way
 appetite: 1 week; one PR, all parts at once, gaps of minutes are fine
 ---
 # In-browser category suggestions with one-tap approval
