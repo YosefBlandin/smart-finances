@@ -2,7 +2,7 @@
 spec: category-suggestions
 ticket: none
 tier: L
-status: executing
+status: locked-v2
 ---
 # In-browser category suggestions with one-tap approval: brief for smart-finances
 
@@ -10,7 +10,7 @@ status: executing
 
 <!-- Fill every header line at handoff. Worktree and branch follow the convention in spec-profile.md Notes. Base is origin/ plus base_branch for smart-finances. -->
 - Goal: payments rows on the review list show a suggested category and up to two others, saved and approved with one tap or with Accept all after a confirmation.
-- Implements: AC-1 to AC-20; D-5, D-7 to D-12, D-15, D-17 to D-19, D-22 to D-27
+- Implements: AC-1 to AC-20; D-5, D-7 to D-11, D-15, D-17 to D-19, D-24 to D-27, D-30
 - Spec folder: /Users/v/projects/smart-finances/.claude/worktrees/category-suggestions/docs/specs/category-suggestions
 - Refs: smart-finances at the sha in intent.md refs; run `node ~/.claude/skills/spec/scripts/drift.mjs <spec folder>` before the first task
 - Worktree: /Users/v/projects/smart-finances/.claude/worktrees/category-suggestions (it exists; data/real is already symlinked)
@@ -25,7 +25,6 @@ status: executing
 5. test-matrix.md: the rows whose task is yours, and the repo's CLAUDE.md or AGENTS.md if one exists.
 
 ## HUMAN needs
-- <HUMAN: the owner approves downloading the upstream model files (model sentence-transformers/static-similarity-mrl-multilingual-v1 from huggingface.co: its static-embedding weights file and tokenizer.json, about 440 MB, at a revision the executor names) into ~/.cache/smart-finances/suggest-model, outside the repo, or places them there> · Blocks: SF-12
 - <HUMAN: the owner merges the draft PR into qa, then runs T-MAN-1 and T-MAN-2 on qa> · Blocks: G-merge, G-promote
 
 ## Global constraints
@@ -35,16 +34,14 @@ status: executing
 - D-9: Every payments report row on the review list gets a suggestion, money sent and received included; notes and workbook rows do not.
 - D-10: Design for 20 to 60 review rows a month.
 - D-11: Suggestions learn from rows the person approved, recategorized or labelled, and from rows the import rules categorized; the person's own choices weigh more.
-- D-12: The model's accuracy bar: on synthetic shop names the rules cannot place, the right category is among the 3 shown for at least 8 of 10, and is the top suggestion for at least 6 of 10.
 - D-15: The payments import rules (category codes and shop name rules) move to the shared contracts package; the API module re-exports them unchanged, so the browser and the importer use one copy.
 - D-17: Suggestion levels, strongest first: same recipient key, same cleaned shop name, import rules, shared words, model; within a level the owner's own rows beat rule-categorized rows.
 - D-18: A row gets a suggestion only from a match on its own key or name; the other likely categories come from weaker matches, then from the owner's most used categories for that kind of row.
 - D-19: One tap sends the existing review choice with the category and the approval together; no API change.
-- D-22: If the model ships: a static multilingual model cut to Latin-script tokens, at most 256 dimensions, int8, as one hashed built file from the app's own address with an integrity check, loaded after idle on the review page only and run on the main thread in small chunks.
-- D-23: If the model meets the bar, its converted file (at most 30 MB) is committed to the public repo with its licence notice.
 - D-24: History is read again on every visit to the review page: the cached copy is dropped when the page is left. Each 3-month range is kept on its own; if one fails, suggestions use what was read and Accept all is hidden for that visit. Supersedes D-16.
 - D-25: Accept all closes its confirmation on any other choice, label or list change, and Save works once. Each save is handled on its own: a refusal, an error or 20 s without an answer marks that row failed and the rest go on. It retries once after a wait of 60 s or less, shows the wait, and refetches once at the end. Supersedes D-20.
 - D-26: Suggestions show only after the history read settles, in space kept for them. Rows with no suggestion keep that space until the model is ready or off. Model results only fill rows with no suggestion, and nothing outlives the page. Supersedes D-21.
+- D-30: After the lock the owner chose not to download the upstream model: no model is built, measured or shipped in this PR. Suggestions come from history and the import rules only (the D-7 fallback); the evaluation set, converter and loader are not built. Supersedes D-22 and D-23.
 - D-27: After single choices and labels, the list is refetched once, 2 s after the last one, so fast tapping stays within the request limit.
 - Logs, errors and reports carry internal ids and counts only: no shop names, recipient keys, emails or row text (architecture.md Cross-cutting).
 - Public repo: fixtures, stories, the evaluation set and tests use made-up shop names only (docs/specs/spec-profile.md, "Rules to honour"). Nothing from data/real enters a commit, a test or a log.
@@ -63,13 +60,13 @@ status: executing
 - Record each verify command and its result in progress-smart-finances.json before the next task.
 
 **ASK FIRST**
-- Downloading any file from outside the repo (the upstream model included: see HUMAN needs).
+- Downloading any file from outside the repo.
 - Adding or upgrading a dependency that no decision or architecture.md Contracts names.
 - Any command with side effects outside the worktree and the spec folder.
 
 **NEVER**
 - Change the content security policy, add WebAssembly or a Worker, call an outside host from the browser, or write to browser storage.
-- Commit a model file that misses the bar (T-MOD-1) or is over 30 MB.
+- Download, convert or commit any model file (D-30).
 - Merge, mark a PR ready, promote, push a protected branch, write to cloud resources, read production or enter a password.
 - Edit a decision. Record a deviation in progress-smart-finances.json and stop.
 
@@ -184,29 +181,24 @@ status: executing
 - Verify: `npm run e2e --workspace @smart-finances/web` (the whole suite) and `npm run test-storybook --workspace @smart-finances/web` → pass (T-E2E-1 prints its time; a miss is recorded, not a failure)
 - Done when: verify is green
 
-### SF-12 · Model gate: evaluation and converter
-- Implements: AC-17, D-12, D-22 · After: SF-3 and the SF-12 HUMAN need · Judgment: high
-- Files: apps/web/fixtures/suggest-eval.json (new), smart-finances:apps/web/src/domain/suggest-model.ts (new), scripts/suggest-model.mjs (new), scripts/suggest-model.test.mjs (new), apps/web/src/domain/suggest-model.eval.test.ts (new), package.json (root test script), docs/adr/0011-in-browser-category-suggestions.md
+### SF-12 · Record that no model ships
+- Implements: AC-17, D-30 · After: SF-11 · Judgment: normal
+- Files: docs/adr/0011-in-browser-category-suggestions.md, apps/api/test/docs.test.mjs
 - Tests first: T-MOD-1
-- Do:
-  - First, read the model's current revision: `curl -s https://huggingface.co/api/models/sentence-transformers/static-similarity-mrl-multilingual-v1` (its `sha` and `siblings`). Tell the owner the revision, the two file names (the static-embedding weights and tokenizer.json) and their sizes, and wait for the HUMAN need above. Pin that revision in the converter.
-  - Commit the evaluation set first, alone (this task is two commits): at least 30 synthetic names that `merchantCategory` misses, plus at least 40 synthetic history examples (architecture.md Components "Static model").
-  - Write the converter (Contracts "Model file"); it reads the files under ~/.cache/smart-finances/suggest-model and writes its output there, never into the repo. The tokenizer, embedding and scorer live in apps/web/src/domain/suggest-model.ts (new; add it to Files), used by the eval test and later by the SF-13 loader; the converter keeps a reference tokenizer only for T-MOD-4's expected ids. Its own test uses a tiny synthetic table, no downloaded file; add it to the root `npm test` list.
-  - The eval test skips (not fails) when the downloaded files are absent; it reads D from `SUGGEST_DIMS`. Run T-MOD-1 for D = 64, 128, 256; record each size and score in progress and in the ADR's "Model gate" section.
-  - Pass (bar met at a size of 30 MB or less): continue to SF-13 with the smallest passing D. Miss: record the numbers in the ADR and progress, skip SF-13, and keep the converter and evaluation set without any model file.
-- Verify: `node --test scripts/suggest-model.test.mjs` and `npm test --workspace @smart-finances/web -- src/domain/suggest-model.eval.test.ts` → pass, scores printed
-- Done when: verify is green, the outcome is in progress and the ADR, and the reviewer has no blocker
+- Do: fill the ADR's "Model gate" section: no model was built or measured; the owner chose not to download it after the lock (D-30); suggestions come from history and rules; a later change may revisit it with architecture.md "Static model". Download nothing.
+- Verify: `node --test apps/api/test/docs.test.mjs` → pass, T-MOD-1 included
+- Done when: verify is green
 
-### SF-13 · Model loader (only if SF-12 passed)
-- Implements: AC-16, AC-17, D-22, D-23, D-26 · After: SF-12, SF-11 · Judgment: normal
-- Files: apps/web/next.config.ts (only if the build does not emit the file from `new URL(..., import.meta.url)` on its own), smart-finances:apps/web/src/screens/review/suggest/model.ts#loadModel (new), smart-finances:apps/web/src/screens/review/suggest/model.ts#MODEL_SHA384 (new), apps/web/src/screens/review/suggest/suggest-model.bin (new), apps/web/src/screens/review/suggest/NOTICE-suggest-model.txt (new), apps/web/src/screens/review/suggest/model.test.ts (new)
-- Tests first: T-MOD-2 to T-MOD-4
-- Do: architecture.md Components "Static model" and Contracts "Model file"; dynamic import from the island; run `npm run build --workspace @smart-finances/web` and record the size of .next/static/media and of the build output.
-- Verify: `npm test --workspace @smart-finances/web -- src/screens/review/suggest/model.test.ts` and `npm run e2e --workspace @smart-finances/web -- e2e/suggest.spec.ts` → pass
-- Done when: verify is green and the build sizes are in progress
+### SF-13 · RETIRED by D-30
+- Implements: none · After: none · Judgment: normal
+- Files: none
+- Tests first: none
+- Do: nothing; mark it skipped in progress with "D-30".
+- Verify: none → n/a
+- Done when: progress says skipped
 
 ### SF-14 · Full verify, Lighthouse and draft PR
-- Implements: AC-18 · After: every earlier task (SF-13 skipped when the model missed) · Judgment: normal
+- Implements: AC-18 · After: every earlier task · Judgment: normal
 - Files: none beyond fixes inside earlier tasks' files
 - Tests first: T-LH-1
 - Do: run the full verify and Lighthouse (T-LH-1 is that run; record its numbers); start a fresh read-only reviewer for the conformance review (the spec-reviewer agent, given this brief, test-matrix.md and the diff against origin/qa) and log it in review.md Conformance review; fix or record its findings; push the branch; `gh pr create --draft --base qa --head feature/category-suggestions` with the PR body below, then reread the body against "PR body" yourself.
@@ -222,8 +214,6 @@ status: executing
 - Credentials or production access are needed.
 - The next step is a push to a protected branch, marking a PR ready, or a merge.
 - The draft PR is open and its body is checked.
-- SF-12 needs the model download and the owner has not approved it.
-- T-MOD-1 misses the bar: record it and go on without SF-13; never tune the evaluation set after seeing scores.
 
 ## Hand-back report
 <!-- Build it from progress-smart-finances.json, not from memory: task rows (status, commit, evidence) live there; status.mjs prints only task counts. -->
@@ -237,4 +227,4 @@ status: executing
 
 ## PR body
 <!-- Use the repo's PR template (path in spec-profile.md Notes). Include: what changed per task id, test ids and results, deviations, and the HUMAN steps left. Attribution follows the tool's own settings; never hard-code a model. -->
-No PR template: list changes per task id, test ids with results, the T-MOD-1 scores and model file size (or "model not shipped"), the T-E2E-1 time, the Lighthouse script size before and after, deviations, and the HUMAN steps left (T-MAN-1, T-MAN-2).
+No PR template: list changes per task id, test ids with results, "model not shipped (D-30)", the T-E2E-1 time, the Lighthouse script size before and after, deviations, and the HUMAN steps left (T-MAN-1, T-MAN-2).

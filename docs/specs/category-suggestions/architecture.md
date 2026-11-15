@@ -2,7 +2,7 @@
 spec: category-suggestions
 ticket: none
 tier: L
-status: executing
+status: locked-v2
 ---
 # In-browser category suggestions with one-tap approval: architecture
 
@@ -101,6 +101,7 @@ chip tap / Accept all ── chooseReview {category, approved:true} ─► API P
 - Serves AC-3, AC-4, AC-6 to AC-11, AC-16 and AC-19.
 
 ### Static model (gated; D-7, D-12, D-22, D-23)
+- Not built in this PR (D-30): the owner chose not to download the upstream model. The rest of this section stays as the design for a later change; everything below about the model is inactive, and the island treats the model as "none shipped".
 - This component ships only if the measurement task meets the bar. It is built in this order:
   1. a converter, `smart-finances:scripts/suggest-model.mjs (new)`;
   2. an evaluation set, `smart-finances:apps/web/fixtures/suggest-eval.json (new)`, written and committed before any model run;

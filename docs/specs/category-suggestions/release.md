@@ -2,7 +2,7 @@
 spec: category-suggestions
 ticket: none
 tier: L
-status: executing
+status: locked-v2
 ---
 # In-browser category suggestions with one-tap approval: release
 
@@ -10,7 +10,7 @@ status: executing
 
 ## Plan at a glance
 <!-- At most 8 numbered lines: PR order, merges, checks and promotions, each with its owner. The user approves this at the handoff decision point. -->
-1. EXECUTOR: one PR on feature/category-suggestions, tasks SF-0 to SF-14; asks the owner before the model download (SF-12).
+1. EXECUTOR: one PR on feature/category-suggestions, tasks SF-0 to SF-14; no model ships (D-30).
 2. EXECUTOR: full verify, Lighthouse, conformance review, push, draft PR into qa.
 3. HUMAN: the owner reviews and merges into qa; CI deploys qa.
 4. HUMAN: the owner runs T-MAN-1 and T-MAN-2 on qa.
@@ -26,7 +26,6 @@ status: executing
 ## HUMAN needs
 <!-- Values and actions only a person can supply, each as a HUMAN marker with the gate it blocks. Preflight failures from intake land here. The executor asks for these at the start and never invents them. -->
 - <HUMAN: the owner merges the draft PR into qa and promotes qa to staging and main> · Blocks: G-merge, G-promote
-- <HUMAN: the owner approves the upstream model download (about 440 MB from huggingface.co into ~/.cache/smart-finances/suggest-model), or places the files there> · Blocks: SF-12
 
 ## Staging and device checks
 <!-- One row per check, citing its test ids. Fixtures use internal ids only. Checks that need a login, a device or a real gateway are HUMAN. Example row: | One page open writes one event | T-E2E-1 | staging | HUMAN | exactly one new page-view event | -->
@@ -54,6 +53,5 @@ status: executing
 ## Definition of done
 <!-- The close step ticks these. List each AC with the check where it passed, for example: - [ ] AC-1 passes on production (T-E2E-1). -->
 - [ ] Every AC passes, each with the check where it passed (AC-1 to AC-20 per test-matrix.md).
-- [ ] If the model shipped, its file stays in git history after any revert (D-23); noted in the ADR.
 - [ ] Follow-up tickets are drafted for every deferred item.
 - [ ] review.md outcome and metrics are filled, and every file's status is closed.

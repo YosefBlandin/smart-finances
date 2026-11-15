@@ -2,7 +2,7 @@
 spec: category-suggestions
 ticket: none
 tier: L
-status: executing
+status: locked-v2
 ---
 # In-browser category suggestions with one-tap approval: decisions
 
@@ -36,14 +36,15 @@ status: executing
 | D-19 | One tap sends the existing review choice with the category and the approval together; no API change. | 2-way | design, 2026-11-15 | accepted |
 | D-20 | Accept all is one client action: a confirmation snapshot, all rows leave at once, saves go 4 at a time, a save refused with a wait of 60 s or less is retried once, and the list is asked again once at the end. No bulk route or bulk action. | 2-way | design, 2026-11-15 | superseded-by D-25 |
 | D-21 | Suggestions show only after the history read settles, in space kept for them; model results only fill rows with no suggestion; everything lives in page memory and goes when the page is left. | 2-way | design, 2026-11-15 | superseded-by D-26 |
-| D-22 | If the model ships: a static multilingual model cut to Latin-script tokens, at most 256 dimensions, int8, as one hashed built file from the app's own address with an integrity check, loaded after idle on the review page only and run on the main thread in small chunks. | 2-way | design, 2026-11-15 | accepted |
-| D-23 | If the model meets the bar, its converted file (at most 30 MB) is committed to the public repo with its licence notice. | 1-way | user, 2026-11-15 (DP3) | accepted |
+| D-22 | If the model ships: a static multilingual model cut to Latin-script tokens, at most 256 dimensions, int8, as one hashed built file from the app's own address with an integrity check, loaded after idle on the review page only and run on the main thread in small chunks. | 2-way | design, 2026-11-15 | superseded-by D-30 |
+| D-23 | If the model meets the bar, its converted file (at most 30 MB) is committed to the public repo with its licence notice. | 1-way | user, 2026-11-15 (DP3) | superseded-by D-30 |
 | D-24 | History is read again on every visit to the review page: the cached copy is dropped when the page is left. Each 3-month range is kept on its own; if one fails, suggestions use what was read and Accept all is hidden for that visit. Supersedes D-16. | 2-way | design, 2026-11-15 (lens review) | accepted |
 | D-25 | Accept all closes its confirmation on any other choice, label or list change, and Save works once. Each save is handled on its own: a refusal, an error or 20 s without an answer marks that row failed and the rest go on. It retries once after a wait of 60 s or less, shows the wait, and refetches once at the end. Supersedes D-20. | 2-way | design, 2026-11-15 (lens review) | accepted |
 | D-26 | Suggestions show only after the history read settles, in space kept for them. Rows with no suggestion keep that space until the model is ready or off. Model results only fill rows with no suggestion, and nothing outlives the page. Supersedes D-21. | 2-way | design, 2026-11-15 (lens review) | accepted |
 | D-27 | After single choices and labels, the list is refetched once, 2 s after the last one, so fast tapping stays within the request limit. | 2-way | design, 2026-11-15 (lens review) | accepted |
 | D-28 | At DP3 the owner signed D-23 (commit the model file if it meets the bar) and accepted D-14, D-15, D-17 to D-19, D-22 and D-24 to D-27 in bulk; the feature door becomes 1-way because of D-23. | 2-way | user, 2026-11-15 | accepted |
 | D-29 | At DP4 the owner approved the plan in pr-smart-finances.md and release.md and kept D-5: commit on the feature branch, push it, open a draft PR into qa. | 2-way | user, 2026-11-15 | accepted |
+| D-30 | After the lock the owner chose not to download the upstream model: no model is built, measured or shipped in this PR. Suggestions come from history and the import rules only (the D-7 fallback); the evaluation set, converter and loader are not built. Supersedes D-22 and D-23. | 2-way | user, 2026-11-15 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:

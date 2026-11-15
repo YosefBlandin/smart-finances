@@ -2,7 +2,7 @@
 spec: category-suggestions
 ticket: none
 tier: L
-status: executing
+status: locked-v2
 ---
 # In-browser category suggestions with one-tap approval: test matrix
 
@@ -52,10 +52,7 @@ status: executing
 | T-ALL-5 | AC-7 | SF-10 | unit | G-merge | When every row is accepted, the saving line shows and the empty state waits for settle; focus goes to the saving line, then the heading. |
 | T-ALL-6 | AC-9, RK-3 | SF-10 | unit | G-merge | 60 accepted rows plus 12 history reads against a limiter of 120 a minute give no refusal. |
 | T-ALL-7 | D-24 | SF-10 | unit | G-merge | With history partial, Accept all is hidden and single chips still show. |
-| T-MOD-1 | AC-17, D-12 | SF-12 | int | G-merge | On suggest-eval.json with the model, the right category is in the 3 shown for at least 80% and the pick for at least 60%; the numbers are printed. |
-| T-MOD-2 | AC-17, D-23 | SF-13 | unit | G-merge | The committed model file is at most 30 MB and its SHA-384 equals MODEL_SHA384. |
-| T-MOD-3 | AC-16, D-26 | SF-13 | unit | G-merge | A fetch, integrity or parse failure turns the model off with suggestions unchanged; model results only fill rows with no pick. |
-| T-MOD-4 | D-22 | SF-13 | unit | G-merge | The browser tokenizer gives the same token ids as the converter for 20 synthetic names. |
+| T-MOD-1 | AC-17, D-30 | SF-12 | unit | G-merge | ADR 0011's Model gate section says no model was built (D-30), and the tree holds no suggest-model file, converter or loader. |
 | T-LH-1 | AC-18, RK-5 | SF-14 | int | G-merge | Lighthouse CI on /review: script at most 204800 bytes and layout shift at most 0.1. |
 
 ## End-to-end and manual
@@ -77,4 +74,4 @@ status: executing
 |---|---|---|
 | A tab closed in the middle of Accept all leaves unsent rows on the list. | D-19 | Each sent row is saved whole or not at all; unsent rows wait for the next visit. |
 | Rows of notes and workbook sources get no suggestion. | D-9 | The server does not take choices on them. |
-| A model that misses the bar or size does not ship (AC-17's fallback). | D-7 | T-MOD-1 records the numbers; the PR ships history and rules only. |
+| No model in this PR, so model loading, its size cap, its integrity check and its tokenizer have no tests (AC-16's model part). | D-30 | The owner chose not to download it; AC-16's no-shift part is still covered by T-UI-4 and T-E2E-3. |
