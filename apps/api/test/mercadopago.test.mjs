@@ -63,3 +63,69 @@ test('a broken running balance is reported, not hidden', () => {
 test('rejects a file without the required columns', () => {
   assert.throws(() => parseReleaseReport('DATE;AMOUNT\n2026-05-01;1'), /missing columns/);
 });
+
+// ---- enrichment columns (SF-4). The fixture is made up: names, codes and keys are invented. ----
+import { readFileSync } from 'node:fs';
+
+const enriched = readFileSync(new URL('./fixtures/release-enriched.csv', import.meta.url), 'utf8');
+const byRef = (transactions) => Object.fromEntries(transactions.map((t) => [t.source_ref.split('#')[1], t]));
+
+test('T-ENR-4 an enriched report gives each operation its merchant, recipient key and category; money received shows the sender name', () => {
+  const { transactions, check } = parseReleaseReport(enriched, { file: 'release-2026-05.csv' });
+  const t = byRef(transactions);
+  assert.equal(check.closingMatches, true);
+  assert.equal(check.monthNetMatches, true);
+  // the first non-empty value of the operation's rows counts
+  assert.deepEqual([t['111'].merchant, t['111'].recipient_key, t['111'].category], ['Made-up Cafe', 'a'.repeat(32), 'Dining out']);
+  // money received: the sender's name from the report
+  assert.equal(t['222'].kind, 'inflow');
+  assert.deepEqual([t['222'].merchant, t['222'].recipient_key, t['222'].category], ['Ana Example', 'b'.repeat(32), 'Uncategorized']);
+  // a payout: no name, only its key; transfers keep their category
+  assert.deepEqual([t['444'].kind, t['444'].merchant, t['444'].recipient_key, t['444'].category], ['transfer_out', '', 'c'.repeat(32), 'Uncategorized']);
+  // interest keeps its category and has no enrichment
+  assert.deepEqual([t['333'].category, t['333'].merchant, t['333'].recipient_key], ['Interest', '', '']);
+  // no code: the merchant name rule decides
+  assert.equal(t['666'].category, 'Subscriptions & software');
+  // no enrichment: the Mercado Libre rule still applies
+  assert.deepEqual([t['888'].category, t['888'].merchant], ['Shopping', '']);
+  assert.equal(t['777'].category, 'Uncategorized');
+});
+
+test('T-ENR-5 an enriched expense still Uncategorized gets needs_review; a categorized one does not', () => {
+  const t = byRef(parseReleaseReport(enriched, { file: 'release-2026-05.csv' }).transactions);
+  assert.deepEqual(t['777'].flags, ['needs_review']);
+  for (const ref of ['111', '666', '888', '999']) assert.deepEqual(t[ref].flags, [], ref);
+  // payouts and money received keep their own review flag, once
+  assert.deepEqual(t['222'].flags, ['needs_review']);
+  assert.deepEqual(t['444'].flags, ['needs_review']);
+});
+
+test('T-ENR-6 a file without SF_ columns parses as before', () => {
+  const t = byRef(parseReleaseReport(report, { file: 'may.csv' }).transactions);
+  for (const x of Object.values(t)) assert.deepEqual([x.merchant, x.recipient_key], ['', '']);
+  assert.deepEqual(Object.values(t).map((x) => [x.kind, x.category, x.flags]), [
+    ['expense', 'Uncategorized', []], // no enrichment: no review flag for the purchase, as before
+    ['inflow', 'Uncategorized', ['needs_review']],
+    ['interest', 'Interest', []],
+    ['transfer_out', 'Uncategorized', ['needs_review']],
+  ]);
+});
+
+test('T-ENR-6 a file without SUB_UNIT parses, and a cleaned value with spaces where ";" was imports', () => {
+  const dropSubUnit = (text) => text.split('\n').map((l) => l.split(';').filter((_, i) => i !== 11).join(';')).join('\n');
+  assert.equal(dropSubUnit(report).split('\n')[0].includes('SUB_UNIT'), false);
+  const plain = parseReleaseReport(report, { file: 'may.csv' }).transactions;
+  const noSub = parseReleaseReport(dropSubUnit(report), { file: 'may.csv' }).transactions;
+  // import_batch hashes the file text and description_raw names the sub unit; everything else is unchanged
+  const same = ({ description_raw: _d, import_batch: _b, ...x }) => x;
+  assert.deepEqual(noSub.map(same), plain.map(same));
+  assert.equal(byRef(noSub)['111'].description_raw, 'reserve_for_payment+payment / Mercado Pago / available_money');
+  const t = byRef(parseReleaseReport(dropSubUnit(enriched), { file: 'release-2026-05.csv' }).transactions);
+  assert.deepEqual([t['999'].merchant, t['999'].category], ['Kiosco El Sol Sur', 'Groceries']);
+});
+
+test('T-ENR-6 enrichment values of the wrong shape are left out', () => {
+  const bad = enriched.replace('Made-up Shop;0000;eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', 'Made-up Shop;58120;NOT-A-KEY');
+  const t = byRef(parseReleaseReport(bad, { file: 'release-2026-05.csv' }).transactions);
+  assert.deepEqual([t['777'].recipient_key, t['777'].category], ['', 'Uncategorized']);
+});
