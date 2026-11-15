@@ -539,6 +539,27 @@ test('T-ENR-16 a second download still without the D-19 columns fails the month 
   assert.deepEqual(Object.keys(folder.store), ['release-2026-09.csv']);
 });
 
+test('T-ENR-16 with two old reports for the month, both are discarded and sync waits for the one it asked for', async () => {
+  const { clock, sleep } = fakeClock();
+  const old = (id, minute) => ({
+    id,
+    begin_date: '2026-10-01T03:00:00Z',
+    end_date: '2026-10-31T23:59:59-03:00',
+    status: 'processed',
+    generation_date: `2026-11-01T03:${minute}:00Z`,
+    file_name: `old-oct-${id}.csv`,
+  });
+  // The two listed reports are from before the config change; the one sync asks for has the D-19 columns.
+  const api = fakeMercadoPago({ clock, readyAfter: 3, existing: [old(91, '10'), old(92, '20')], serve: (ym) => (api.calls.download.at(-1).startsWith('old-') ? csv(ym) : rawCsv(ym)) });
+  const folder = memoryFolder({ 'release-2026-09.csv': enrichedCsv('2026-09') });
+  const result = await sync({ api, folder, clock, sleep, log: quiet });
+  assert.deepEqual(result.failed, []);
+  assert.deepEqual(result.fetched, ['2026-10']);
+  assert.equal(api.calls.create, 1);
+  assert.equal(api.calls.download.length, 2, 'one old report, then the new one');
+  assert.match(folder.store['release-2026-10.csv'], /SF_RECIPIENT/);
+});
+
 test('T-ENR-16 names, codes and keys reach the saved file; raw ids and the raw columns do not', async () => {
   const { clock, sleep } = fakeClock();
   const api = fakeMercadoPago({ clock });

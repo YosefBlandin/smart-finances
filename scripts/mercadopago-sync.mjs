@@ -597,7 +597,9 @@ export async function sync({
           continue;
         }
         renewed.add(ym);
-        discarded.add(report.id ?? report.file_name);
+        // Every report listed for the month now predates the request below, so none of them can hold
+        // the new columns: discard them all, or the next poll could pick an older one and fail the month.
+        for (let old = report; old; old = findReport(usable(list), ym)) discarded.add(old.id ?? old.file_name);
         const error = await requestReport(api, ym, sleep);
         if (error) fail(ym, error);
         else {
