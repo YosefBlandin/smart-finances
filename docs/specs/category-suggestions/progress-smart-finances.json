@@ -82,7 +82,7 @@
     {
       "id": "SF-6",
       "status": "done",
-      "commit": "",
+      "commit": "1651e7f",
       "evidence": [
         "tests first: npx vitest run src/screens/review/suggest/chips.test.tsx → 7 failed, e.g. Unable to find role button named Accept Groceries / Aceptar Supermercado / Use Pets",
         "verify: npm test --workspace @smart-finances/web -- src/screens/review → Test Files 3 passed, Tests 15 passed (T-UI-1 to T-UI-5 included); npm run lint --workspace @smart-finances/web → pass; tsc --noEmit clean",
@@ -93,9 +93,13 @@
     },
     {
       "id": "SF-7",
-      "status": "todo",
+      "status": "done",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "tests first: npx vitest run src/screens/review/suggest/keys.test.tsx → 5 failed, 2 passed: expected null to be 0 (no tabindex); expected [] to deeply equal [3 choices]; activeElement stayed body",
+        "verify: npm test --workspace @smart-finances/web -- src/screens/review/suggest/keys.test.tsx → Test Files 1 passed, Tests 7 passed (T-KEY-1 to T-KEY-3); npm run lint --workspace @smart-finances/web → pass; vitest src/screens → all pass",
+        "notes: row focus and blur are native listeners in the ref callback (DataTable.Row passes no onFocus, and DataTable.tsx is outside SF-7 Files); the keys hint uses review.suggest.keys with the existing .fix style, so Review.module.css is unchanged"
+      ],
       "review": ""
     },
     {
