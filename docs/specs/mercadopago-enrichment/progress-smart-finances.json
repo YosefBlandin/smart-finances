@@ -111,24 +111,38 @@
     },
     {
       "id": "SF-8",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "1db7d02",
+      "evidence": [
+        "Fail first: node --test scripts/mercadopago-sync.test.mjs: the file failed to load (cleanValue, enrichReport, HASH_KEY_FILE, loadHashKey, recipientKey not exported): tests 1, pass 0, fail 1",
+        "Verify: node --test scripts/mercadopago-sync.test.mjs: tests 23, pass 23, fail 0 (T-ENR-13 x1, T-ENR-14 x3, T-ENR-15 x4 new)",
+        "Task review (spec-reviewer, sonnet, fresh context): 0 blocker, 1 major, 4 minor. Fixed all: quoted raw header cells are now dropped too (major, new test); ID numbers written with dots are removed; the payer name is used only for money received (payment or tip adding money, or a collector-search hit), never for refunds, interest or releases (new test); a known-answer HMAC vector and a never-overwritten check pin T-ENR-14; the payout account number is hashed as the report gives it (trimmed), exactly per the Recipient key contract.",
+        "Verify after fixes: node --test scripts/mercadopago-sync.test.mjs: tests 25, pass 25, fail 0"
+      ],
+      "review": "pass"
     },
     {
       "id": "SF-9",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "9c55108",
+      "evidence": [
+        "Fail first: node --test scripts/mercadopago-sync.test.mjs: the file failed to load (searchPayments, holdsFullMonth with a file argument not there): tests 1, pass 0, fail 1",
+        "Verify: node --test scripts/mercadopago-sync.test.mjs: tests 34, pass 34, fail 0 (T-ENR-16 x4, T-ENR-17 x3, T-ENR-18 x2 new; the older sync tests now use enriched files for full months and a raw download with the D-19 columns)",
+        "Extra: node --test scripts/mercadopago-probe.test.mjs: 2 pass"
+      ],
+      "review": "n/a"
     },
     {
       "id": "SF-10",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "b85e8d3",
+      "evidence": [
+        "Fail first: node --test scripts/mercadopago-probe.test.mjs: the file failed to load (REPORT_COLUMNS not exported): tests 1, pass 0, fail 1",
+        "Verify: node --test scripts/mercadopago-probe.test.mjs scripts/mercadopago-sync.test.mjs: tests 38, pass 38, fail 0 (T-ENR-19 x2 new)",
+        "Extra: node --check scripts/mercadopago-report.mjs exit 0 (never run: it reads the token at import)",
+        "Checkpoint after SF-10: npm test exit 0 (node --test 236 pass / 0 fail; web vitest 46 files 656 pass; infra 50 pass)"
+      ],
+      "review": "n/a"
     },
     {
       "id": "SF-11",
@@ -169,6 +183,11 @@
     "SF-5: accepted edge from the review: a raw-column upload whose byte size differs from its form fails as size_mismatch before parsing, so its object is not deleted (stays until delete-all).",
     "SF-6: two existing tests outside the Files list pin what the task changes: totals.test.mjs T-ROL-2 asserted monthRows makes exactly 2 queries (now 3: the LBL prefix query the architecture names), and store.test.mjs T-KEY-1 lists every key builder (now with lblKey). Both updated, with the change marked T-ENR-8.",
     "SF-7: the API docs test (docs.test.mjs) keeps its own route list, so the new route is unchecked there until SF-13 adds the ADR 0004 row and extends that list.",
-    "Checkpoint push refused: git push -u origin feature/mercadopago-sync -> 403, Permission to YosefBlandin/smart-finances.git denied to yosefblandin-ai. The brief says gh and push are set up and to stop on failure; the branch is local only. HUMAN: give that credential write access, or push the branch yourself."
+    "Checkpoint push refused: git push -u origin feature/mercadopago-sync -> 403, Permission to YosefBlandin/smart-finances.git denied to yosefblandin-ai. The brief says gh and push are set up and to stop on failure; the branch is local only. HUMAN: give that credential write access, or push the branch yourself.",
+    "SF-9: the older sync tests treated plain files as full months; with D-16 only enriched files count, so their fixtures now use enriched files (same test file, within the task).",
+    "SF-9: sync error lines dropped every response-body excerpt (brief()) and the parser message in skipped-file lines now shows the error code only (research correction 1, AC-10).",
+    "SF-9: the hashing key is loaded through the report folder (reportFolder(dir).hashKey), so the CLI in mercadopago-report.mjs needed no change for SF-9.",
+    "SF-10: the config default in mercadopago-report.mjs before this change was not the 15 live columns (it listed EXTERNAL_REFERENCE, RECORD_TYPE, TRANSACTION_DATE, CURRENCY, OPERATION_TAGS and lacked TAXES_AMOUNT, TRANSACTION_APPROVAL_DATE, BUSINESS_UNIT, SUB_UNIT, PURCHASE_ID). REPORT_COLUMNS now follows the brief exactly; the owner should check the applied config with show-config after the HUMAN config step.",
+    "SF-10: the probe search line now says N payments read (searchPayments returns the lists, not the paging total)."
   ]
 }
