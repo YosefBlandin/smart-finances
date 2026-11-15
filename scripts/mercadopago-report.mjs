@@ -18,8 +18,12 @@
 //   node scripts/mercadopago-report.mjs schedule on|off|status # Mercado Pago's own monthly generation
 //   node scripts/mercadopago-report.mjs probe 2026-10          # does the Payments API name the other party?
 //
-// sync fetches a month again when the file on disk was generated before that month ended, and moves
-// the partial file to data/real/mercadopago/replaced/. Files it saves are named release-YYYY-MM.csv.
+// sync fetches a month again when the file on disk was generated before that month ended or has no
+// enrichment columns, and moves the old file to data/real/mercadopago/replaced/. It adds the merchant name,
+// category code and recipient key per operation (ADR 0010) and drops the payer name and payout account
+// columns before saving. Run `config` once first: sync stops until the config holds those two columns.
+// Files it saves are named release-YYYY-MM.csv. The hashing key for recipient keys is
+// data/real/mercadopago/.hashing-key (created on first use, mode 600); back it up.
 //
 // Docs: https://mercadopago.cl/developers/en/docs/reports/released-money/api
 import { spawnSync } from 'node:child_process';
@@ -27,7 +31,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { probe } from './mercadopago-probe.mjs';
-import { BASE, loadToken, mercadoPagoApi, reportFolder, sync, utcMidnightAR, YM } from './mercadopago-sync.mjs';
+import { BASE, loadToken, mercadoPagoApi, REPORT_COLUMNS, reportFolder, sync, utcMidnightAR, YM } from './mercadopago-sync.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const token = loadToken({ root });
@@ -78,8 +82,10 @@ switch (cmd) {
     show(await call('GET', `${BASE}/config`));
     break;
   case 'config': {
-    // Pass a JSON file as the 2nd argument to override. Column keys are not verified yet, so the
-    // default omits `columns` and lets the API choose; add them in a file once we see an error or the CSV.
+    // Pass a JSON file as the 2nd argument to override. The default columns are REPORT_COLUMNS in
+    // mercadopago-sync.mjs: the 15 the live report has, plus PAYER_NAME and PAYOUT_BANK_ACCOUNT_NUMBER, which
+    // sync needs to name senders and key payouts and drops before it saves a file (D-19). Apply it once before
+    // the first enriched sync; to revert, run config with a file that lists the 15 columns.
     const body = a
       ? JSON.parse(readFileSync(a, 'utf8'))
       : {
@@ -88,14 +94,8 @@ switch (cmd) {
           execute_after_withdrawal: false,
           display_timezone: 'GMT-03',
           frequency: { hour: 0, type: 'monthly', value: 1 },
-          // Keys from Mercado Pago's report field list. Card digits, bank account numbers and
-          // authorization codes are left out on purpose.
-          columns: [
-            'DATE', 'SOURCE_ID', 'EXTERNAL_REFERENCE', 'RECORD_TYPE', 'DESCRIPTION',
-            'NET_CREDIT_AMOUNT', 'NET_DEBIT_AMOUNT', 'GROSS_AMOUNT', 'MP_FEE_AMOUNT',
-            'BALANCE_AMOUNT', 'PAYMENT_METHOD', 'PAYMENT_METHOD_TYPE', 'TRANSACTION_DATE',
-            'CURRENCY', 'OPERATION_TAGS',
-          ].map((key) => ({ key })),
+          // Card digits and authorization codes are left out on purpose.
+          columns: REPORT_COLUMNS.map((key) => ({ key })),
         };
     // POST creates the config and answers 409 once one exists; PUT updates the existing one.
     const created = await call('POST', `${BASE}/config`, body);

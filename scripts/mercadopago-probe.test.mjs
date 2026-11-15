@@ -1,7 +1,9 @@
 // The probe against a fake Payments API. Names and ids are made up; the test checks none are printed.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { keyPaths, probe, summarize } from './mercadopago-probe.mjs';
+import { D19_COLUMNS, REPORT_COLUMNS } from './mercadopago-sync.mjs';
 
 const HEADER = 'DATE;SOURCE_ID;DESCRIPTION;NET_CREDIT_AMOUNT;NET_DEBIT_AMOUNT;GROSS_AMOUNT;MP_FEE_AMOUNT;TAXES_AMOUNT;PAYMENT_METHOD;TRANSACTION_APPROVAL_DATE;BUSINESS_UNIT;SUB_UNIT;BALANCE_AMOUNT;PAYMENT_METHOD_TYPE;PURCHASE_ID';
 const row = (date, id, desc, credit, debit, balance) =>
@@ -41,7 +43,7 @@ test('the probe matches searches to report operations and prints no personal val
   const out = lines.join('\n');
   assert.equal(result.found, 2);
   assert.equal(result.operations, 3);
-  assert.match(out, /you as payer: 1 payments, 1 read; report operations matched: expense 1\/1/);
+  assert.match(out, /you as payer: 1 payments read; report operations matched: expense 1\/1/);
   assert.match(out, /you as collector: .*inflow 1\/1/);
   assert.match(out, /expense \/ regular_payment: 1, 1 different descriptions/);
   assert.match(out, /filled: collector\.nickname 1, description 1, payer\.email 1, point_of_interaction\.transaction_data\.bank_info\.collector\.long_name 1, point_of_interaction\.transaction_data\.commerce\.mcc 1, point_of_interaction\.transaction_data\.commerce\.name 1/);
@@ -60,4 +62,36 @@ test('summarize groups by kind and operation type and folds odd values', () => {
   assert.deepEqual(s['expense / other'].fields, { description: 1 });
   assert.deepEqual(s['expense / other'].enums, { 'status=approved': 1 });
   assert.deepEqual([...keyPaths({ a: { b: [{ c: 'x' }] }, d: '' })].sort(), ['a', 'a.b', 'a.b[].c']);
+});
+
+test('T-ENR-19 the config default is the 15 live columns plus the payer name and payout account columns', () => {
+  assert.deepEqual(REPORT_COLUMNS, [
+    'DATE', 'SOURCE_ID', 'DESCRIPTION', 'NET_CREDIT_AMOUNT', 'NET_DEBIT_AMOUNT', 'GROSS_AMOUNT', 'MP_FEE_AMOUNT', 'TAXES_AMOUNT',
+    'PAYMENT_METHOD', 'TRANSACTION_APPROVAL_DATE', 'BUSINESS_UNIT', 'SUB_UNIT', 'BALANCE_AMOUNT', 'PAYMENT_METHOD_TYPE', 'PURCHASE_ID',
+    'PAYER_NAME', 'PAYOUT_BANK_ACCOUNT_NUMBER',
+  ]);
+  assert.deepEqual(D19_COLUMNS, ['PAYER_NAME', 'PAYOUT_BANK_ACCOUNT_NUMBER']);
+  // mercadopago-report.mjs reads the token when imported, so its config command is checked by its source.
+  const cli = readFileSync(new URL('./mercadopago-report.mjs', import.meta.url), 'utf8');
+  assert.match(cli, /columns: REPORT_COLUMNS\.map\(\(key\) => \(\{ key \}\)\)/);
+  assert.match(cli, /import \{[^}]*REPORT_COLUMNS[^}]*\} from '\.\/mercadopago-sync\.mjs'/);
+});
+
+test('T-ENR-19 probe error lines carry the code and HTTP status only, never a response body', async () => {
+  const body = '{"message":"secret detail TEST-PERSON"}';
+  const api = {
+    async get(p) {
+      if (p === '/users/me') return { status: 200, data: { id: 4242 }, text: '' };
+      return { status: 500, data: JSON.parse(body), text: body };
+    },
+  };
+  const lines = [];
+  await probe({ api, files: [{ name: 'release-2026-10.csv', text: report }], ym: '2026-10', log: (l) => lines.push(l) });
+  const out = lines.join('\n');
+  assert.match(out, /search: failed: search_failed, HTTP 500/);
+  assert.match(out, /expense: HTTP 500/);
+  assert.ok(!out.includes('secret') && !out.includes('TEST-PERSON'));
+
+  const refused = { get: async () => ({ status: 401, data: null, text: 'TEST-BODY' }) };
+  await assert.rejects(probe({ api: refused, files: [{ name: 'release-2026-10.csv', text: report }], ym: '2026-10', log: () => {} }), (e) => !e.message.includes('TEST-BODY'));
 });

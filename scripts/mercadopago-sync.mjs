@@ -231,9 +231,17 @@ export function enrichReport(text, { payments: { asPayer = [], asCollector = [] 
   return out.join(eol) + (/\r?\n$/.test(text) ? eol : '');
 }
 
-// The report columns sync needs (D-19): the sender's name for money received, the account for payout keys.
-// Sync reads them and drops them before anything is saved.
-export const D19_COLUMNS = PRIVATE_COLUMNS;
+// The report config default (D-19): the 15 columns the live report has, plus the payer name (the sender of
+// money received) and the payout bank account (the payout's recipient key). `node scripts/mercadopago-report.mjs
+// config` applies it; sync refuses to run until the config holds the last two.
+export const REPORT_COLUMNS = Object.freeze([
+  'DATE', 'SOURCE_ID', 'DESCRIPTION', 'NET_CREDIT_AMOUNT', 'NET_DEBIT_AMOUNT', 'GROSS_AMOUNT', 'MP_FEE_AMOUNT', 'TAXES_AMOUNT',
+  'PAYMENT_METHOD', 'TRANSACTION_APPROVAL_DATE', 'BUSINESS_UNIT', 'SUB_UNIT', 'BALANCE_AMOUNT', 'PAYMENT_METHOD_TYPE', 'PURCHASE_ID',
+  'PAYER_NAME', 'PAYOUT_BANK_ACCOUNT_NUMBER',
+]);
+// The columns sync needs and drops before anything is saved: exactly the ones the importer refuses (D-21).
+export const D19_COLUMNS = REPORT_COLUMNS.filter((c) => PRIVATE_COLUMNS.includes(c));
+if (D19_COLUMNS.length !== PRIVATE_COLUMNS.length) throw new Error('REPORT_COLUMNS must hold every column the importer refuses');
 const CONFIG_STEP = 'node scripts/mercadopago-report.mjs config';
 
 // Per D-19 column: present in the download or not, and how many rows fill it. Counts only, never a value.

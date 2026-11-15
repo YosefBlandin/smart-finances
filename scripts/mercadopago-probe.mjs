@@ -4,7 +4,7 @@
 //
 //   node scripts/mercadopago-report.mjs probe 2026-10
 import { parseReleaseReport } from '../apps/api/src/ingest/mercadopago.mjs';
-import { monthBounds, syncedName } from './mercadopago-sync.mjs';
+import { SearchFailed, searchPayments, syncedName } from './mercadopago-sync.mjs';
 
 // Where the other party's name or the merchant could be. Every filled field under these is counted.
 export const NAME_PREFIXES = [
@@ -26,7 +26,6 @@ const KINDS = ['expense', 'transfer_out', 'inflow', 'interest', 'refund'];
 const at = (obj, p) => p.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
 const filled = (v) => v !== undefined && v !== null && v !== '' && !(typeof v === 'object' && Object.keys(v).length === 0);
 const enumValue = (v) => (typeof v === 'string' && /^[a-z][a-z0-9_]{0,39}$/.test(v)) || /^\d{4}$/.test(String(v)) ? String(v) : 'other';
-const brief = (res) => (res.text ?? '').replace(/\s+/g, ' ').slice(0, 150);
 
 // Every filled key path down to `depth`, names only; array items fold into "[]".
 export function keyPaths(obj, depth = 4, prefix = '', out = new Set()) {
@@ -80,22 +79,8 @@ function printSummary(byKind, log) {
   }
 }
 
-async function searchAll(api, { begin, end, filter }) {
-  const results = [];
-  let total = 0;
-  for (let offset = 0; offset < 2000; offset += 50) {
-    const q = new URLSearchParams({ sort: 'date_created', criteria: 'asc', range: 'date_created', begin_date: begin, end_date: end, limit: '50', offset: String(offset) });
-    const res = await api.get(`/v1/payments/search?${q}${filter ? `&${filter}` : ''}`);
-    if (res.status !== 200) return { status: res.status, total, results, error: brief(res) };
-    total = res.data?.paging?.total ?? 0;
-    const page = res.data?.results ?? [];
-    results.push(...page);
-    if (page.length < 50 || results.length >= total) break;
-  }
-  return { status: 200, total, results };
-}
-
-export async function probe({ api, files, ym, log = console.log }) {
+// Error lines carry the code and the HTTP status only, never a response body (AC-10).
+export async function probe({ api, files, ym, log = console.log, timeout }) {
   const file =
     files.find((f) => f.name === syncedName(ym)) ??
     files.find((f) => {
@@ -113,29 +98,25 @@ export async function probe({ api, files, ym, log = console.log }) {
   log(`Report ${ym}: ${kindOf.size} operations (${reportKinds(kindOf.keys()).replace(/ \d+\//g, ' ')})`);
   log('Only counts, field names and type values are printed.\n');
 
-  const me = await api.get('/users/me');
-  if (me.status !== 200 || !me.data?.id) throw new Error(`GET /users/me answered HTTP ${me.status} ${brief(me)}`);
-  const myId = me.data.id;
-
-  // A payment can be created a few days before the report releases it, so start a week early.
-  const { first, last } = monthBounds(ym);
-  const begin = new Date(Date.parse(`${first}T00:00:00.000-03:00`) - 7 * 864e5).toISOString();
-  const end = new Date(Date.parse(`${last}T23:59:59.999-03:00`)).toISOString();
-
+  // Sync's search: you as payer and as collector, from a week before the month, 30 s per request.
   const found = new Set();
-  for (const [label, filter] of [
-    ['you as payer', `payer.id=${myId}`],
-    ['you as collector', `collector.id=${myId}`],
+  let searched = { asPayer: [], asCollector: [] };
+  try {
+    searched = await searchPayments({ api, ym, ...(timeout ? { timeout } : {}) });
+  } catch (e) {
+    if (!(e instanceof SearchFailed)) throw e;
+    // /users/me answering 401 or 403 means the token: stop, as sync does.
+    if (e.status === 401 || e.status === 403) throw new Error(`Mercado Pago refused the token (HTTP ${e.status}). Check MP_ACCESS_TOKEN.`);
+    log(`search: failed: ${e.message}`);
+  }
+  for (const [label, results] of [
+    ['you as payer', searched.asPayer],
+    ['you as collector', searched.asCollector],
   ]) {
-    const r = await searchAll(api, { begin, end, filter });
-    if (r.error) {
-      log(`search, ${label}: HTTP ${r.status} ${r.error}`);
-      continue;
-    }
-    const ids = new Set(r.results.map((p) => String(p.id)).filter((id) => kindOf.has(id)));
+    const ids = new Set(results.map((p) => String(p.id)).filter((id) => kindOf.has(id)));
     ids.forEach((id) => found.add(id));
-    log(`search, ${label}: ${r.total} payments, ${r.results.length} read; report operations matched: ${reportKinds(ids)}`);
-    printSummary(summarize(r.results, kindOf), log);
+    log(`search, ${label}: ${results.length} payments read; report operations matched: ${reportKinds(ids)}`);
+    printSummary(summarize(results, kindOf), log);
   }
 
   // A few report operations no search returned, looked up by id.
