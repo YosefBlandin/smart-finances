@@ -146,34 +146,58 @@
     },
     {
       "id": "SF-11",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "33c55e8",
+      "evidence": [
+        "Fail first: npx vitest run src/adapters src/application/data: 3 files failed, 8 tests failed (api.putLabel is not a function x7; logger accepted name, merchant, payer), label.test.ts failed to load (no ./label)",
+        "Verify: npm test --workspace @smart-finances/web -- src/adapters src/application/data src/app (run as npx vitest run in apps/web): 18 files, 396 tests pass (T-ENR-20 x8, T-ENR-21 x2 new)",
+        "Verify: npm run lint --workspace @smart-finances/web: eslint clean, prettier clean",
+        "Extra: apps/web npx tsc --noEmit exit 0; full web vitest 47 files, 666 tests pass"
+      ],
+      "review": "n/a"
     },
     {
       "id": "SF-12",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "c940117",
+      "evidence": [
+        "Order slip: the screen code was written before the tests. Fail-first was then shown by taking the SF-12 source changes out (git diff to a patch and git checkout, no stash) and running the new test: npx vitest run src/screens/label: 1 file failed (cannot resolve ./LabelForm), no tests ran; with the changes put back: 8 pass",
+        "Verify: npm test --workspace @smart-finances/web -- src/screens src/i18n (run as npx vitest run in apps/web): 4 files, 37 tests pass (T-ENR-22 x6, T-ENR-23 x3 new)",
+        "Verify: npm run lint --workspace @smart-finances/web: eslint clean, prettier clean",
+        "Extra: apps/web npx tsc --noEmit exit 0; full web vitest 48 files, 675 tests pass; the T-ENR-23 review test passed 3 runs in a row. Storybook interaction tests run in CI only (web-ui D-136), not run here."
+      ],
+      "review": "n/a"
     },
     {
       "id": "SF-13",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "9af10e1",
+      "evidence": [
+        "Fail-first: node --test apps/api/test/docs.test.mjs with the route list and the two T-ENR-24 tests added before any doc: pass 1, fail 3",
+        "Verify: node --test apps/api/test/docs.test.mjs: pass 4, fail 0",
+        "Docs: ADR 0010 (new, accepted, cites D-8, D-10 to D-21), ADR README row, ADR 0004 label item, route row and the LBL# prefix-query note, threat model v4 with 4 asset rows, boundary B14 and 6 STRIDE rows citing their tests, apps/api/README.md sync paragraph in order: config, column check, sync enriches and drops the raw columns, upload; hashing key backup",
+        "Docs are not under prettier in this repo (the existing ADR 0009 and threat model fail prettier --check too), so no formatting step"
+      ],
+      "review": "n/a"
     },
     {
       "id": "SF-14",
-      "status": "todo",
-      "commit": "",
-      "evidence": [],
-      "review": ""
+      "status": "done",
+      "commit": "1aeed5a",
+      "evidence": [
+        "Full verify before the fix: npm test exit 0 (node 238 pass, web 48 files 675 pass, infra 50 pass); npm run build --workspace @smart-finances/infra exit 0",
+        "Conformance review: fresh spec-reviewer on Sonnet, read-only, branch diff against origin/qa: CF1-3, 5, 6, 8, 10 yes; CF4 and CF9 no; CF7 unknown (the verify was still running); 5 minor findings, no blocker or major",
+        "Finding 4 (sync, two old reports): new T-ENR-16 case failed first (failed: report_without_d19_columns), fixed in 1aeed5a; node --test sync and probe: 39 pass",
+        "Findings 1 and 2 recorded as deviations for the owner; findings 3 and 5 recorded as surprises",
+        "Full verify after the fix: npm test exit 0 (node 239 pass, web 48 files 675 pass, infra 50 pass); infra build exit 0. Baseline was node 186, web 654, infra 49, all green"
+      ],
+      "review": "conformance: 5 minor, 1 fixed, 4 recorded"
     }
   ],
-  "deviations": [],
+  "deviations": [
+    "SF-4 vs AC-5 and D-6 (owner to decide): an expense still Uncategorized goes on the review list only when its file has the enrichment columns, as the SF-4 brief says (a file without them parses exactly as before). AC-5 and D-6 read wider. Rows from earlier plain uploads reach the review list once their month is synced and uploaded again with the enrichment. Code: apps/api/src/ingest/mercadopago.mjs (the enriched check). Found by the SF-14 conformance review.",
+    "SF-11 vs architecture.md Components, Web screens, Logs (owner to accept): labelRecipient logs the outcome, the person and the request id, not the first 8 characters of the key. The Logger port has no field for a key prefix and the port is outside the task Files; leaving the key out logs less. Code: apps/web/src/application/data/label.ts. Found by the SF-14 conformance review."
+  ],
   "surprises": [
     "SF-2: apps/web/src/adapters/container.test.ts also seeds a typed Transaction fixture; given recipient_key: \"\" as one of the memory adapter tests (\"their tests\").",
     "SF-2: T-ENR-2 cannot fail before FIELDS changes (sameRow compares FIELDS only); its fail-first run is after the FIELDS edit, before the sameRow fix.",
@@ -188,6 +212,14 @@
     "SF-9: sync error lines dropped every response-body excerpt (brief()) and the parser message in skipped-file lines now shows the error code only (research correction 1, AC-10).",
     "SF-9: the hashing key is loaded through the report folder (reportFolder(dir).hashKey), so the CLI in mercadopago-report.mjs needed no change for SF-9.",
     "SF-10: the config default in mercadopago-report.mjs before this change was not the 15 live columns (it listed EXTERNAL_REFERENCE, RECORD_TYPE, TRANSACTION_DATE, CURRENCY, OPERATION_TAGS and lacked TAXES_AMOUNT, TRANSACTION_APPROVAL_DATE, BUSINESS_UNIT, SUB_UNIT, PURCHASE_ID). REPORT_COLUMNS now follows the brief exactly; the owner should check the applied config with show-config after the HUMAN config step.",
-    "SF-10: the probe search line now says N payments read (searchPayments returns the lists, not the paging total)."
+    "SF-10: the probe search line now says N payments read (searchPayments returns the lists, not the paging total).",
+    "SF-11: architecture.md Web screens (Logs) asks labelRecipient to log the key prefix (first 8 characters). The web Logger port (apps/web/src/ports/logger.ts, outside SF-11 Files) carries only sub and requestId, so the line is event recipient_label, the outcome code, sub and request id. No name or key reaches the log (T-ENR-21). Widening the port is a later choice for the owner.",
+    "SF-11: labelRecipient answers a refusal with the existing review.saveFailed message key; SF-12 adds the label copy and may switch to a label key.",
+    "SF-12: reaching labelRecipient from the screens needed a prop through four files outside SF-12 Files: app/(app)/review/page.tsx, app/(app)/transactions/page.tsx, screens/transactions/Transactions.tsx and screens/transactions/List/Container.tsx (the same way chooseReview reaches Review). Prop wiring only; no behaviour beyond the task.",
+    "SF-12: on the transactions screen a label waits for the server answer (no optimistic change there; web-ui D-131 keeps optimism to the review screen), then refreshes transactions, review and totals, and totals again after 5 s.",
+    "SF-12: added a text-only test for markup in a merchant name (architecture RK-1 mitigation).",
+    "SF-12: apps/web/src/screens/review/model.ts (outside the Files list) gained applyLabel and undoLabel, the optimistic leave-and-return logic T-ENR-23 covers. Found by the SF-14 conformance review.",
+    "SF-5: scripts/ingest-local.mjs was not changed; a release report with the raw columns throws the private_columns error there (file name and column only, no value), uncaught. That refusal is tested in the importer and the parser (T-ENR-7), not at the local-ingest level.",
+    "SF-14: the conformance review found that with two pre-config reports listed for a month, sync could fail the month while its new report was still generating. Fixed in 1aeed5a (every listed report for the month is discarded), with a new T-ENR-16 case that failed first."
   ]
 }
