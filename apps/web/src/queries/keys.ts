@@ -46,6 +46,8 @@ export const dataKeys = {
   review: () => ['data', 'review'] as const,
   imports: () => ['data', 'imports'] as const,
   import: (id: string) => ['data', 'imports', id] as const,
+  /** The review page's history for suggestions (category-suggestions D-24): outside transactions, totals and review, so settle leaves it. */
+  history: () => ['data', 'history'] as const,
 };
 
 /**

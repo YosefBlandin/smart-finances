@@ -115,3 +115,59 @@
   overflow-wrap: anywhere;
   max-width: 46ch;
 }
+
+/* Suggestion chips (category-suggestions AC-1, AC-16): one box whether it holds chips or waits for them, so chips that
+   arrive later move nothing. 32px chips, 44px on touch screens (web-ui decision 22). */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1);
+  min-height: 32px;
+  margin-bottom: var(--s2);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 var(--s3);
+  border: 1px solid var(--control);
+  border-radius: var(--r-s);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-s);
+  cursor: pointer;
+}
+
+.chip[data-pick] {
+  font-weight: var(--w-em);
+  border-color: var(--ink);
+}
+
+.chip:hover:not(:disabled) {
+  background: var(--sunken);
+}
+
+.chip:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+@media (pointer: coarse) {
+  .chips,
+  .chip {
+    min-height: 44px;
+  }
+}
+
+/* Accept all's space while history is read (category-suggestions D-26): one small button's height. */
+.allSlot {
+  min-height: var(--target);
+}
+
+@media (pointer: coarse) {
+  .allSlot {
+    min-height: 44px;
+  }
+}

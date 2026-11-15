@@ -57,7 +57,8 @@ test('T-WSCR-17: past the person limit the limit page shows with the wait, and a
   const other = await second.newPage();
   await other.goto('/review');
   await expect(heading(other)).toHaveText('To review');
-  await expect(other.getByRole('main').getByRole('table')).toBeVisible();
+  // Its data is empty (category-suggestions SF-11), so it gets the empty state rather than the table.
+  await expect(other.getByRole('main').getByText('Nothing to review')).toBeVisible();
 
   await first.close();
   await second.close();

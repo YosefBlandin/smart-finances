@@ -15,3 +15,4 @@ Name files `NNNN-short-title.md`. A decision is revisited in a new ADR, not edit
 | [0008](0008-web-framework-and-host.md) | Web framework and host | accepted |
 | [0009](0009-sessions-and-sign-up.md) | Sessions and sign-up | accepted |
 | [0010](0010-recipient-labels.md) | Mercado Pago enrichment and recipient labels | accepted |
+| [0011](0011-in-browser-category-suggestions.md) | In-browser category suggestions | accepted |

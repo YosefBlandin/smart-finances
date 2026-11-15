@@ -37,3 +37,15 @@ export function applyLabel(reply: ReviewReply, key: string): ReviewReply {
 export function undoLabel(shown: ReviewReply, before: ReviewReply, key: string): ReviewReply {
   return before.items.filter((row) => row.recipient_key === key).reduce((list, row) => undoChoice(list, before, row.id), shown);
 }
+
+/** The list with many approvals applied at once (category-suggestions D-25): every approved row leaves it. */
+export function applyChoices(reply: ReviewReply, choices: ReviewChoice[]): ReviewReply {
+  const gone = new Set(choices.filter((c) => c.approved).map((c) => c.id));
+  const items = reply.items
+    .filter((row) => !gone.has(row.id))
+    .map((row) => {
+      const choice = choices.find((c) => c.id === row.id && c.category);
+      return choice?.category ? { ...row, category: choice.category } : row;
+    });
+  return { ...reply, items };
+}

@@ -142,7 +142,20 @@
       "bcv_rate": "Convertido a la tasa oficial venezolana",
       "summed": "Un total del mes, no compras sueltas"
     },
-    "saveFailed": "Ese cambio no se guardó. No cambió nada; inténtalo de nuevo."
+    "saveFailed": "Ese cambio no se guardó. No cambió nada; inténtalo de nuevo.",
+    "suggest": {
+      "accept": "Aceptar {category}",
+      "use": "Usar {category}",
+      "acceptAll": "{n, plural, one {Aceptar todo (# sugerencia)} other {Aceptar todo (# sugerencias)}}",
+      "confirmTitle": "¿Guardar estas sugerencias y aprobar los movimientos?",
+      "confirmLine": "{n, plural, one {# como {category}} other {# como {category}}}",
+      "save": "Guardar y aprobar",
+      "cancel": "Cancelar",
+      "saving": "{n, plural, one {Guardando # movimiento…} other {Guardando # movimientos…}}",
+      "waiting": "{s, plural, one {Demasiados cambios a la vez. Reintentando en # segundo…} other {Demasiados cambios a la vez. Reintentando en # segundos…}}",
+      "someFailed": "{n, plural, one {# movimiento no se guardó. Volvió a la lista.} other {# movimientos no se guardaron. Volvieron a la lista.}}",
+      "keys": "Enter acepta la sugerencia, 1 a 3 eligen una, las flechas pasan de un movimiento a otro."
+    }
   },
   "label": {
     "open": "Etiquetar a este destinatario",
@@ -335,6 +348,11 @@
     "transfers": "Transferencias",
     "transport": "Transporte",
     "travel": "Viajes",
+    "shopping": "Compras",
+    "pets": "Mascotas",
+    "interest": "Intereses",
+    "refunds": "Reembolsos",
+    "loans": "Préstamos",
     "uncategorized": "Sin categoría",
     "partner": "Pareja",
     "gifts": "Regalos",

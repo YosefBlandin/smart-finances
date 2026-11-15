@@ -77,3 +77,49 @@ export const SortByDate: Story = {
     await expect(header).toHaveAttribute('aria-sort', 'ascending');
   },
 };
+
+/** Rows the keyboard can focus (category-suggestions AC-10): one roving tab stop; Up and Down move it. */
+function KeyRows() {
+  const [at, setAt] = useState(0);
+  return (
+    <DataTable.Root label="Rows">
+      <DataTable.Header>
+        <DataTable.Column>Date</DataTable.Column>
+        <DataTable.Column>Place</DataTable.Column>
+      </DataTable.Header>
+      <DataTable.Body>
+        {ROWS.map((row, i) => (
+          <DataTable.Row
+            key={row.date}
+            tabIndex={i === at ? 0 : -1}
+            aria-label={row.place}
+            aria-keyshortcuts="ArrowUp ArrowDown"
+            ref={(el) => {
+              if (el && i === at && el.ownerDocument.activeElement?.closest('tbody') === el.parentElement) el.focus();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') setAt(Math.min(at + 1, ROWS.length - 1));
+              if (e.key === 'ArrowUp') setAt(Math.max(at - 1, 0));
+            }}
+          >
+            <DataTable.Cell>{row.date}</DataTable.Cell>
+            <DataTable.Cell>{row.place}</DataTable.Cell>
+          </DataTable.Row>
+        ))}
+      </DataTable.Body>
+    </DataTable.Root>
+  );
+}
+
+export const KeyboardRows: Story = {
+  render: () => <KeyRows />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const first = canvas.getByRole('row', { name: 'Verdulería Sintética' });
+    await expect(first).toHaveAttribute('tabindex', '0');
+    first.focus();
+    await userEvent.keyboard('{ArrowDown}');
+    await expect(canvas.getByRole('row', { name: 'Café Ejemplo' })).toHaveFocus();
+    await expect(first).toHaveAttribute('tabindex', '-1');
+  },
+};

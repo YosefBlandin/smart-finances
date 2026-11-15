@@ -37,17 +37,9 @@ type FixtureImport = {
 
 const stamp = (s: string) => `${s.replace(' ', 'T')}:00Z`;
 
-/**
- * The STAGE=test and Storybook data set (SF-161): fixtures/sample.json plus the adversarial rows of
- * data/synthetic/transactions.csv in fixtures/hostile.json, in the contract's shapes. Rows listed in reviewRows, and
- * every hostile row, are to review with their flags as reasons; payments-report rows are source mercadopago. A skipped
- * row keeps the importer's own words in English (D-86). Synthetic data only.
- */
-export function fixtureSeed(): Required<Seed> {
-  const toReview = new Set<string>(sample.reviewRows);
-  const rows = [...(sample.transactions as FixtureRow[]), ...(hostile.transactions as FixtureRow[])];
-  const hostileIds = new Set(hostile.transactions.map((t) => t.id));
-  const transactions = rows.map((t): Tx => ({
+/** Fixture rows as the data API answers them: a row is to review when listed, or when it is a hostile row. */
+function toTx(rows: FixtureRow[], toReview: Set<string>, hostileIds: Set<string>): Tx[] {
+  return rows.map((t): Tx => ({
     id: t.id,
     date: t.date,
     date_precision: t.date_precision === 'month' ? 'month' : 'day',
@@ -65,6 +57,40 @@ export function fixtureSeed(): Required<Seed> {
     import_batch: 'fixture',
     review: { reasons: toReview.has(t.id) || hostileIds.has(t.id) ? [...t.flags] : [], approved: false },
   }));
+}
+
+/**
+ * An extra fixture on top of the shared ones (category-suggestions SF-11, apps/web/fixtures/suggest.json): its
+ * transactions and the ids to review only. Its rows may carry a review, so the history holds the owner's choices too.
+ */
+export type ExtraFixture = {
+  transactions: (FixtureRow & { review?: { approved: boolean; category_override?: string } | null })[];
+  reviewRows: string[];
+};
+
+/**
+ * The STAGE=test and Storybook data set (SF-161): fixtures/sample.json plus the adversarial rows of
+ * data/synthetic/transactions.csv in fixtures/hostile.json, in the contract's shapes. Rows listed in reviewRows, and
+ * every hostile row, are to review with their flags as reasons; payments-report rows are source mercadopago. A skipped
+ * row keeps the importer's own words in English (D-86). Synthetic data only. An extra fixture adds its rows on top.
+ */
+export function fixtureSeed(extra?: ExtraFixture): Required<Seed> {
+  const toReview = new Set<string>([...sample.reviewRows, ...(extra?.reviewRows ?? [])]);
+  const rows = [...(sample.transactions as FixtureRow[]), ...(hostile.transactions as FixtureRow[])];
+  const hostileIds = new Set(hostile.transactions.map((t) => t.id));
+  const extraRows = (extra?.transactions ?? []).map((t): Tx => {
+    const { review, ...row } = t;
+    const [tx] = toTx([row], toReview, hostileIds);
+    return {
+      ...tx!,
+      review: {
+        ...tx!.review,
+        approved: review?.approved ?? false,
+        ...(review?.category_override ? { category_override: review.category_override } : {}),
+      },
+    };
+  });
+  const transactions = [...toTx(rows, toReview, hostileIds), ...extraRows];
   const imports = [...(sample.imports as FixtureImport[]), ...(hostile.imports as FixtureImport[])].map((i): ImportRecord => ({
     import_id: i.id,
     kind: i.kind as ImportRecord['kind'],
