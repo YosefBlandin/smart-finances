@@ -43,11 +43,13 @@ export const lastFullMonth = (nowMs) => addMonths(arDate(new Date(nowMs).toISOSt
 // Files written by sync are named for the month they hold.
 export const syncedName = (ym) => `release-${ym}.csv`;
 
-// Whether a file holds its month in full. A file sync wrote asked for the whole month after it
+// Whether a file holds its month in full. Only a file with the enrichment columns counts (D-16): a plain file
+// from before is fetched again and set aside. A file sync wrote asked for the whole month after it
 // ended. Any other file counts only if the date in Mercado Pago's file name (…-YYYY-MM-DD-HHMMSS.csv,
 // when the report was generated) is on or after the 2nd of the next month; the extra day covers not
 // knowing that stamp's time zone. A file with no such stamp counts as full.
-export function holdsFullMonth(name, month) {
+export function holdsFullMonth({ name, text }, month) {
+  if (!ENRICHMENT_COLUMNS.every((c) => headerOf(text).includes(c))) return false;
   if (name === syncedName(month)) return true;
   const stamp = name.match(/-(\d{4}-\d{2}-\d{2})-\d{6}\.csv$/)?.[1];
   return !stamp || stamp >= `${addMonths(month, 1)}-02`;
@@ -62,10 +64,11 @@ export function coverage(files) {
     try {
       month = parseReleaseReport(text, { file: name }).check.month;
     } catch (e) {
-      unreadable.push({ name, reason: e.message });
+      // The code only (private_columns, for example), never the parser's message.
+      unreadable.push({ name, reason: e.code ?? 'not a release report sync can read' });
       continue;
     }
-    if (holdsFullMonth(name, month)) full.set(month, name);
+    if (holdsFullMonth({ name, text }, month)) full.set(month, name);
     else partial.set(month, [...(partial.get(month) ?? []), name]);
   }
   return { full, partial, unreadable };
@@ -92,6 +95,14 @@ export function planSync({ files, from, to, nowMs }) {
 }
 
 // ---- enrichment (ADR 0010) ----
+
+// The report header's column names; a quoted cell counts as its name, as the importer reads it.
+export const headerOf = (text) =>
+  String(text ?? '')
+    .replace(/^\uFEFF/, '')
+    .split(/\r?\n/, 1)[0]
+    .split(';')
+    .map((c) => c.trim().replace(/^"(.*)"$/, '$1').trim());
 
 // Appended to the report header in this order; every data row of an operation carries the same values.
 export const ENRICHMENT_COLUMNS = ['SF_MERCHANT', 'SF_CATEGORY_CODE', 'SF_RECIPIENT'];
@@ -195,8 +206,8 @@ function operationValues(cellsOf, { paid, received }, hashKey) {
 export function enrichReport(text, { payments: { asPayer = [], asCollector = [] } = {}, hashKey }) {
   const eol = text.includes('\r\n') ? '\r\n' : '\n';
   const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.length > 0);
-  // Quoted header cells count as their name, as the importer reads them, so a quoted raw column is still dropped.
-  const header = (lines[0] ?? '').split(';').map((c) => c.trim().replace(/^"(.*)"$/, '$1').trim());
+  // Quoted header cells count as their name, so a quoted raw column is still dropped.
+  const header = headerOf(lines[0] ?? '');
   const dropped = new Set([...PRIVATE_COLUMNS, ...ENRICHMENT_COLUMNS]);
   const kept = header.map((name, i) => (dropped.has(name) ? -1 : i)).filter((i) => i >= 0);
   const rows = lines.slice(1).map((l) => {
@@ -218,6 +229,86 @@ export function enrichReport(text, { payments: { asPayer = [], asCollector = [] 
     out.push([...kept.map((i) => r.cells[i] ?? ''), ...extra].join(';'));
   }
   return out.join(eol) + (/\r?\n$/.test(text) ? eol : '');
+}
+
+// The report columns sync needs (D-19): the sender's name for money received, the account for payout keys.
+// Sync reads them and drops them before anything is saved.
+export const D19_COLUMNS = PRIVATE_COLUMNS;
+const CONFIG_STEP = 'node scripts/mercadopago-report.mjs config';
+
+// Per D-19 column: present in the download or not, and how many rows fill it. Counts only, never a value.
+export function columnCheck(text) {
+  const header = headerOf(text);
+  const rows = String(text).replace(/^\uFEFF/, '').split(/\r?\n/).slice(1).filter((l) => l.length > 0).map((l) => l.split(';'));
+  return D19_COLUMNS.map((column) => {
+    const i = header.indexOf(column);
+    return { column, present: i >= 0, filled: i < 0 ? 0 : rows.filter((cells) => (cells[i] ?? '').trim() !== '').length };
+  });
+}
+
+// ---- the payments search (D-17) ----
+
+// A failed or timed-out search. The message holds the code and the HTTP status only, never a response body.
+export class SearchFailed extends Error {
+  constructor(code, status) {
+    super(status ? `${code}, HTTP ${status}` : code);
+    this.name = 'SearchFailed';
+    this.code = code;
+    if (status) this.status = status;
+  }
+}
+
+export const SEARCH_TIMEOUT_MS = 30_000;
+
+// One GET with its own timeout. The signal goes to the request, so the real fetch is cancelled too, and a
+// request that ignores it still loses the race.
+async function timedGet(api, apiPath, { timeout, timeoutMs }) {
+  const signal = timeout(timeoutMs);
+  const expired = new Promise((_, reject) => {
+    const fail = () => reject(new SearchFailed('search_timeout'));
+    if (signal.aborted) fail();
+    else signal.addEventListener('abort', fail, { once: true });
+  });
+  expired.catch(() => {}); // the timer may fire after the request has answered
+  let res;
+  try {
+    res = await Promise.race([api.get(apiPath, { signal }), expired]);
+  } catch (e) {
+    if (e instanceof SearchFailed) throw e;
+    throw new SearchFailed(signal.aborted ? 'search_timeout' : 'search_failed');
+  }
+  if (res.status !== 200) throw new SearchFailed('search_failed', res.status);
+  return res;
+}
+
+async function searchAs(api, { begin, end, filter }, opts) {
+  const results = [];
+  for (let offset = 0; offset < 2000; offset += 50) {
+    const q = new URLSearchParams({ sort: 'date_created', criteria: 'asc', range: 'date_created', begin_date: begin, end_date: end, limit: '50', offset: String(offset) });
+    const res = await timedGet(api, `/v1/payments/search?${q}&${filter}`, opts);
+    const total = res.data?.paging?.total ?? 0;
+    const page = res.data?.results ?? [];
+    results.push(...page);
+    if (page.length < 50 || results.length >= total) break;
+  }
+  return results;
+}
+
+// The month's payments, searched as payer and as collector (the probe's search). A payment can be created a
+// few days before the report releases it, so the range starts a week early. Each request has a 30 s timeout;
+// any failure throws SearchFailed and the month is saved with nothing (D-17).
+export async function searchPayments({ api, ym, timeout = (ms) => AbortSignal.timeout(ms), timeoutMs = SEARCH_TIMEOUT_MS }) {
+  const opts = { timeout, timeoutMs };
+  const me = await timedGet(api, '/users/me', opts);
+  const myId = me.data?.id;
+  if (myId == null) throw new SearchFailed('search_failed', me.status);
+  const { first, last } = monthBounds(ym);
+  const begin = new Date(Date.parse(`${first}T00:00:00.000-03:00`) - 7 * 864e5).toISOString();
+  const end = new Date(Date.parse(`${last}T23:59:59.999-03:00`)).toISOString();
+  return {
+    asPayer: await searchAs(api, { begin, end, filter: `payer.id=${encodeURIComponent(myId)}` }, opts),
+    asCollector: await searchAs(api, { begin, end, filter: `collector.id=${encodeURIComponent(myId)}` }, opts),
+  };
 }
 
 // ---- the report list ----
@@ -258,11 +349,12 @@ export function findReport(list, ym) {
 
 export function mercadoPagoApi(token, fetchImpl = fetch) {
   const auth = { Authorization: `Bearer ${token}` };
-  async function call(method, suffix, body) {
+  async function call(method, suffix, body, signal) {
     const res = await fetchImpl(suffix.startsWith('https://') ? suffix : `${BASE}${suffix}`, {
       method,
       headers: { ...auth, accept: 'application/json', ...(body ? { 'content-type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
+      ...(signal ? { signal } : {}),
     });
     const text = await res.text();
     let data = null;
@@ -282,7 +374,8 @@ export function mercadoPagoApi(token, fetchImpl = fetch) {
     config: () => call('GET', '/config'),
     schedule: (on) => call(on ? 'POST' : 'DELETE', '/schedule'),
     // Any other read on api.mercadopago.com, for example '/users/me' or '/v1/payments/search?…'.
-    get: (apiPath) => call('GET', `https://api.mercadopago.com${apiPath}`),
+    // signal: an AbortSignal, so a search that hangs is cancelled (D-17).
+    get: (apiPath, { signal } = {}) => call('GET', `https://api.mercadopago.com${apiPath}`, undefined, signal),
     async download(fileName) {
       const res = await fetchImpl(`${BASE}/${encodeURIComponent(fileName)}`, { headers: auth });
       if (!res.ok) throw new Error(`downloading ${fileName} answered HTTP ${res.status}`);
@@ -310,6 +403,7 @@ export function reportFolder(dir) {
       mkdirSync(path.join(dir, sub), { recursive: true });
       renameSync(path.join(dir, name), path.join(dir, sub, path.basename(name)));
     },
+    hashKey: () => loadHashKey(dir),
   };
 }
 
@@ -344,16 +438,29 @@ export function loadToken({ env = process.env, root, read = readFileSync, stat =
 
 // ---- sync ----
 
-const brief = (res) => (res.text ?? '').replace(/\s+/g, ' ').slice(0, 200);
+// Error lines and failure reasons carry the month, a code or a short fixed text, and the HTTP status only:
+// never a response body, a parser message or a cell value (AC-10).
+const tokenRefused = (res) => new Error(`Mercado Pago refused the token (HTTP ${res.status}). Check MP_ACCESS_TOKEN.`);
 
 function reportList(res) {
-  if (res.status === 401 || res.status === 403) {
-    throw new Error(`Mercado Pago refused the token (HTTP ${res.status}). Check MP_ACCESS_TOKEN.`);
-  }
-  if (res.status !== 200) throw new Error(`listing reports answered HTTP ${res.status} ${brief(res)}`);
+  if (res.status === 401 || res.status === 403) throw tokenRefused(res);
+  if (res.status !== 200) throw new Error(`listing reports answered HTTP ${res.status}`);
   const list = Array.isArray(res.data) ? res.data : res.data?.results;
   if (!Array.isArray(list)) throw new Error('listing reports did not return a list');
   return list;
+}
+
+// Before planning: the report config must hold the D-19 columns, or every month would lack names and keys.
+// Nothing is asked for or saved until the owner applies the config (D-19).
+async function checkConfig(api) {
+  const res = await api.config();
+  if (res.status === 401 || res.status === 403) throw tokenRefused(res);
+  if (res.status !== 200) throw new Error(`reading the report config answered HTTP ${res.status}`);
+  const keys = (Array.isArray(res.data?.columns) ? res.data.columns : []).map((c) => c?.key);
+  const missing = D19_COLUMNS.filter((c) => !keys.includes(c));
+  if (missing.length) {
+    throw new Error(`The report config has no ${missing.join(' or ')} column, so sync cannot name senders or key payouts. Apply the new config first: ${CONFIG_STEP}. Then run sync again.`);
+  }
 }
 
 // HTTP 203 means "could not create it, ask again" (Mercado Pago docs).
@@ -365,28 +472,42 @@ async function requestReport(api, ym, sleep) {
       await sleep(5000);
       continue;
     }
-    return `asking for the report answered HTTP ${res.status} ${brief(res)}`.trim();
+    return `asking for the report answered HTTP ${res.status}`;
   }
 }
 
-async function saveReport({ api, folder, ym, report, replaces }) {
+// Download, check the D-19 columns, search, enrich, check, save. Returns { name, check, columns } when saved,
+// { outdated: [column] } for a report made before the config change, or { error, status? }.
+// The raw download is never saved: a file that fails its checks goes to rejected/ without the raw columns.
+async function saveReport({ api, folder, ym, report, replaces, hashKey, timeout }) {
   if (!report.file_name) return { error: 'the report is processed but the list gives no file_name' };
-  const buf = await api.download(report.file_name);
+  const raw = (await api.download(report.file_name)).toString('utf8');
+  const outdated = D19_COLUMNS.filter((c) => !headerOf(raw).includes(c));
+  if (outdated.length) return { outdated };
+  let payments;
+  try {
+    payments = await searchPayments({ api, ym, ...(timeout ? { timeout } : {}) });
+  } catch (e) {
+    if (e instanceof SearchFailed) return { error: e.code, ...(e.status ? { status: e.status } : {}), retry: true };
+    throw e;
+  }
   const name = syncedName(ym);
+  const text = enrichReport(raw, { payments, hashKey: hashKey() });
   let check;
   try {
-    check = parseReleaseReport(buf.toString('utf8'), { file: name }).check;
-  } catch (e) {
-    folder.write(`rejected/${name}`, buf);
-    return { error: `the downloaded file does not parse (${e.message}); kept in rejected/` };
+    check = parseReleaseReport(text, { file: name }).check;
+  } catch {
+    folder.write(`rejected/${name}`, Buffer.from(text));
+    return { error: 'the enriched file does not parse; kept in rejected/ without the raw columns' };
   }
   if (check.month !== ym) {
-    folder.write(`rejected/${name}`, buf);
-    return { error: `the downloaded file holds ${check.month}; kept in rejected/` };
+    folder.write(`rejected/${name}`, Buffer.from(text));
+    return { error: `the downloaded file holds ${check.month}; kept in rejected/ without the raw columns` };
   }
-  folder.write(name, buf);
+  // The old file may have the same name (a plain release-YYYY-MM.csv), so it is set aside first.
   for (const old of replaces) folder.setAside(old, 'replaced');
-  return { name, check };
+  folder.write(name, Buffer.from(text));
+  return { name, check, columns: columnCheck(raw) };
 }
 
 export async function sync({
@@ -399,7 +520,9 @@ export async function sync({
   log = console.log,
   waitMinutes = 15,
   pollSeconds = 15,
+  timeout, // (ms) => AbortSignal for each search request; tests pass a fake
 }) {
+  await checkConfig(api);
   const plan = planSync({ files: folder.read(), from, to, nowMs: clock() });
   const result = { fetched: [], failed: [], pending: [], setAside: [] };
   for (const u of plan.unreadable) log(`skipped ${u.name}: ${u.reason}`);
@@ -412,11 +535,24 @@ export async function sync({
     log(`Nothing to fetch: ${plan.start} to ${plan.end} is already downloaded in full.`);
     return result;
   }
-  log(`To fetch: ${plan.months.map((m) => (plan.replaces[m].length ? `${m} (replaces a partial file)` : m)).join(', ')}`);
+  log(`To fetch: ${plan.months.map((m) => (plan.replaces[m].length ? `${m} (replaces a partial or plain file)` : m)).join(', ')}`);
+
+  let key;
+  const hashKey = () => (key ??= folder.hashKey());
+  let columnsChecked = false;
+  const fail = (ym, reason, { status, retry } = {}) => {
+    result.failed.push({ month: ym, reason, ...(status ? { status } : {}) });
+    log(`${ym}: failed: ${reason}${status ? `, HTTP ${status}` : ''}${retry ? '; nothing saved, the next run tries again' : ''}`);
+  };
+
+  // Reports made before the config change are discarded; each month asks for a new one once (D-16).
+  const discarded = new Set();
+  const renewed = new Set();
+  const usable = (list) => list.filter((r) => !discarded.has(r.id ?? r.file_name));
 
   // Reuse a report that already exists for the month (an earlier run, or the automatic monthly
   // one) and ask only for the rest, so a re-run after a timeout does not pile up new requests.
-  let list = reportList(await api.list());
+  let list = usable(reportList(await api.list()));
   const waiting = new Set();
   for (const ym of plan.months) {
     const found = findReport(list, ym);
@@ -425,10 +561,8 @@ export async function sync({
       continue;
     }
     const error = await requestReport(api, ym, sleep);
-    if (error) {
-      result.failed.push({ month: ym, reason: error });
-      log(`${ym}: ${error}`);
-    } else {
+    if (error) fail(ym, error);
+    else {
       waiting.add(ym);
       log(`${ym}: report requested`);
     }
@@ -438,24 +572,41 @@ export async function sync({
   const deadline = started + waitMinutes * 60 * 1000;
   let lastNote = started;
   while (waiting.size) {
-    list = reportList(await api.list());
+    list = usable(reportList(await api.list()));
     for (const ym of [...waiting]) {
       const report = findReport(list, ym);
       const state = report ? reportState(report) : 'pending'; // just requested, not listed yet
       if (state === 'pending') continue;
       waiting.delete(ym);
-      const saved =
-        state === 'failed'
-          ? { error: `Mercado Pago marked the report ${report.status}` }
-          : await saveReport({ api, folder, ym, report, replaces: plan.replaces[ym] });
-      if (saved.error) {
-        result.failed.push({ month: ym, reason: saved.error });
-        log(`${ym}: ${saved.error}`);
+      if (state === 'failed') {
+        fail(ym, `Mercado Pago marked the report ${report.status}`);
+        continue;
+      }
+      const saved = await saveReport({ api, folder, ym, report, replaces: plan.replaces[ym], hashKey, timeout });
+      if (saved.outdated) {
+        if (renewed.has(ym)) {
+          fail(ym, 'report_without_d19_columns', { retry: true });
+          continue;
+        }
+        renewed.add(ym);
+        discarded.add(report.id ?? report.file_name);
+        const error = await requestReport(api, ym, sleep);
+        if (error) fail(ym, error);
+        else {
+          waiting.add(ym);
+          log(`${ym}: the report was made before the config change (no ${saved.outdated.join(', no ')}); asked for a new one`);
+        }
+      } else if (saved.error) {
+        fail(ym, saved.error, saved);
       } else {
         result.fetched.push(ym);
         const c = saved.check;
         const ok = c.balanceBreaks === 0 && c.closingMatches && c.monthNetMatches;
         log(`${ym}: saved ${saved.name}, ${c.operations} operations, balance checks ${ok ? 'pass' : 'FAIL'}`);
+        if (!columnsChecked) {
+          columnsChecked = true;
+          for (const col of saved.columns) log(`column check: ${col.column} ${col.present ? `present, ${col.filled} rows filled` : 'missing'}`);
+        }
       }
     }
     if (!waiting.size || clock() >= deadline) break;
