@@ -116,7 +116,7 @@
     {
       "id": "SF-9",
       "status": "done",
-      "commit": "",
+      "commit": "a77a000",
       "evidence": [
         "tests first: npx vitest run src/screens/review/suggest/pool.test.ts → Test Files 1 failed: Cannot find module ./pool",
         "verify: npm test --workspace @smart-finances/web -- src/screens/review/suggest/pool.test.ts → Test Files 1 passed, Tests 7 passed (T-POOL-1 to T-POOL-3); npm run lint --workspace @smart-finances/web → pass; tsc clean",
@@ -126,10 +126,16 @@
     },
     {
       "id": "SF-10",
-      "status": "todo",
+      "status": "done",
       "commit": "",
-      "evidence": [],
-      "review": ""
+      "evidence": [
+        "tests first: npx vitest run src/screens/review/suggest/accept-all.test.tsx → 13 failed (e.g. expected undefined to be \"Accept all (3 suggestions)\"; Cannot find module ./suggest/AcceptAll before the file existed)",
+        "verify: npm test --workspace @smart-finances/web -- src/screens/review → Test Files 7 passed, Tests 52 passed (T-ALL-1 to T-ALL-7 plus applyChoices); eslint src/screens/review → clean; tsc --noEmit (apps/web) → clean",
+        "approach: Review.tsx wraps ReviewView in <div inert={running}> and passes suggest.disabled, with onChoose and onLabel ignored while running, because View.tsx is not in SF-10 Files",
+        "review (fresh spec-reviewer subagent, sonnet): no blocker or major. Minors fixed: T-ALL-5 now checks a chip is disabled and a label sends nothing during the run (the first try passed with no chip on screen; reworked so a chip shows); the wait line shows the longest wait left across the 4 saves (new T-ALL-3 test); after a partial run focus goes to the heading, not the page body (new T-ALL-3 test); T-ALL-6 checks no second settle follows",
+        "note: container.test T-WEB-14 failed once in a full web run and passed on rerun (flake, unrelated to SF-10); i18n T-WEB-5 expects 9 plurals and there are 14 since SF-5: outside every task Files, asked the planning session, file untouched"
+      ],
+      "review": "pass"
     },
     {
       "id": "SF-11",
