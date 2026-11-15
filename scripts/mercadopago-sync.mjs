@@ -4,9 +4,11 @@
 // there for the token. Network, disk and clock come in as arguments, so the tests use fakes.
 //
 // Logs carry months, file names, counts and HTTP statuses only, never amounts or report content.
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { createHmac, randomBytes } from 'node:crypto';
+import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { parseReleaseReport } from '../apps/api/src/ingest/mercadopago.mjs';
+import { PRIVATE_COLUMNS, parseReleaseReport } from '../apps/api/src/ingest/mercadopago.mjs';
+import { toCents } from '../apps/api/src/ingest/schema.mjs';
 
 export const BASE = 'https://api.mercadopago.com/v1/account/release_report';
 
@@ -87,6 +89,135 @@ export function planSync({ files, from, to, nowMs }) {
   const replaces = Object.fromEntries(months.map((m) => [m, partial.get(m) ?? []]));
   const stale = [...partial].filter(([m]) => full.has(m)).flatMap(([, names]) => names);
   return { start, end, months, replaces, stale, unreadable };
+}
+
+// ---- enrichment (ADR 0010) ----
+
+// Appended to the report header in this order; every data row of an operation carries the same values.
+export const ENRICHMENT_COLUMNS = ['SF_MERCHANT', 'SF_CATEGORY_CODE', 'SF_RECIPIENT'];
+const MERCHANT_LIMIT = 80;
+
+// Every ';', '"', line break and other control character becomes a space, runs of spaces become one, and the
+// value is trimmed and cut to the limit, so a cleaned value can never break the report's ';' format (AC-9).
+export function cleanValue(value, limit = MERCHANT_LIMIT) {
+  return String(value ?? '')
+    .replace(/[;"\u0000-\u001f\u007f-\u009f]/g, ' ')
+    .replace(/ {2,}/g, ' ')
+    .trim()
+    .slice(0, limit)
+    .trimEnd();
+}
+
+// An email address or a phone or ID number (7 digits or more, single spaces, dots or dashes allowed between
+// them) inside a name is removed before cleaning, so neither reaches a saved file (AC-10).
+const CONTACTS = [/[^\s@;"]+@[^\s@;"]+/g, /\+?\d(?:[\s.-]?\d){6,}/g];
+const withoutContacts = (value) => CONTACTS.reduce((v, re) => v.replace(re, ' '), String(value ?? ''));
+
+// The hashing key (D-11, D-12): 32 random bytes as hex, next to the reports, created on first use with mode 600.
+// data/* is git-ignored, so it never reaches git. Losing it means relabeling (RK-2).
+export const HASH_KEY_FILE = '.hashing-key';
+
+const holdsEnrichment = (dir) =>
+  existsSync(dir) &&
+  readdirSync(dir, { withFileTypes: true }).some(
+    (e) => e.isFile() && e.name.endsWith('.csv') && readFileSync(path.join(dir, e.name), 'utf8').split(/\r?\n/, 1)[0].includes('SF_RECIPIENT'),
+  );
+
+export function loadHashKey(dir, { warn = console.warn } = {}) {
+  const file = path.join(dir, HASH_KEY_FILE);
+  if (existsSync(file)) {
+    const hex = readFileSync(file, 'utf8').trim();
+    if (!/^[0-9a-f]{64}$/.test(hex)) throw new Error(`${file} is not 64 hex characters; restore it from your backup`);
+    if (statSync(file).mode & 0o077) warn(`${file} can be read by other users on this machine; run: chmod 600 ${file}`);
+    return Buffer.from(hex, 'hex');
+  }
+  const enrichedBefore = holdsEnrichment(dir);
+  mkdirSync(dir, { recursive: true });
+  const key = randomBytes(32);
+  writeFileSync(file, `${key.toString('hex')}\n`, { mode: 0o600, flag: 'wx' });
+  chmodSync(file, 0o600); // the umask can only drop bits; this makes the mode exact
+  if (enrichedBefore) {
+    warn(`created a new hashing key at ${file} while enriched reports already exist: their recipients get other keys, so old labels will not match new rows. Back this file up.`);
+  }
+  return key;
+}
+
+// The recipient key (Contracts "Recipient key"): HMAC-SHA256 over "mp:<payments user id>" or
+// "bank:<payout account number>", lowercase hex, first 32 characters. The raw id never leaves this function.
+export function recipientKey(hashKey, kind, id) {
+  if (kind !== 'mp' && kind !== 'bank') throw new Error(`bad recipient kind ${JSON.stringify(kind)}: must be mp or bank`);
+  const value = String(id ?? '').trim();
+  if (!value) throw new Error('a recipient key needs a non-empty id');
+  return createHmac('sha256', hashKey).update(`${kind}:${value}`).digest('hex').slice(0, 32);
+}
+
+// The row type that decides what an operation is, strongest first (as the importer reads it).
+const PRIORITY = ['payout', 'refund', 'payment', 'tip', 'asset_management', 'reserve_for_payout', 'reserve_for_payment'];
+
+const at = (obj, p) => p.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
+const firstFilled = (...values) => values.map((v) => (v == null ? '' : String(v).trim())).find((v) => v !== '') ?? '';
+
+// The three enrichment values of one operation. A purchase or payment you made takes the merchant and category
+// code from the payer search and the key of its collector. Money received takes the sender's name from the
+// report and the key of the payer from the collector search. A payout takes the key of its bank account.
+// The report's payer name is used only for money received (a payment found in the collector search, or a
+// payment or tip that adds money): on your own payments, refunds and interest it is your name.
+function operationValues(cellsOf, { paid, received }, hashKey) {
+  const id = cellsOf[0].SOURCE_ID;
+  const first = (column) => firstFilled(...cellsOf.map((c) => c[column]));
+  const net = cellsOf.reduce((s, c) => s + toCents(c.NET_CREDIT_AMOUNT || '0') - toCents(c.NET_DEBIT_AMOUNT || '0'), 0);
+  const main = PRIORITY.find((type) => cellsOf.some((c) => c.DESCRIPTION === type));
+  const payment = paid.get(id);
+  const incoming = received.get(id);
+  let merchant = '';
+  let code = '';
+  let party;
+  if (main === 'payout') {
+    const account = first('PAYOUT_BANK_ACCOUNT_NUMBER');
+    if (account) party = ['bank', account];
+  } else if (payment) {
+    merchant = firstFilled(at(payment, 'point_of_interaction.transaction_data.commerce.name'), payment.description, at(payment, 'additional_info.items.0.title'));
+    code = firstFilled(at(payment, 'point_of_interaction.transaction_data.commerce.mcc'));
+    party = at(payment, 'collector.id') == null ? undefined : ['mp', at(payment, 'collector.id')];
+  } else if (incoming || ((main === 'payment' || main === 'tip') && net > 0)) {
+    merchant = first('PAYER_NAME');
+    party = at(incoming, 'payer.id') == null ? undefined : ['mp', at(incoming, 'payer.id')];
+  }
+  return [
+    cleanValue(withoutContacts(merchant)),
+    /^\d{4}$/.test(code) ? code : '',
+    party && String(party[1]).trim() ? recipientKey(hashKey, ...party) : '',
+  ];
+}
+
+// The report text with the three enrichment columns appended and the raw columns (PAYER_NAME,
+// PAYOUT_BANK_ACCOUNT_NUMBER) dropped (D-10, D-21). payments: the month's payer and collector searches.
+export function enrichReport(text, { payments: { asPayer = [], asCollector = [] } = {}, hashKey }) {
+  const eol = text.includes('\r\n') ? '\r\n' : '\n';
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.length > 0);
+  // Quoted header cells count as their name, as the importer reads them, so a quoted raw column is still dropped.
+  const header = (lines[0] ?? '').split(';').map((c) => c.trim().replace(/^"(.*)"$/, '$1').trim());
+  const dropped = new Set([...PRIVATE_COLUMNS, ...ENRICHMENT_COLUMNS]);
+  const kept = header.map((name, i) => (dropped.has(name) ? -1 : i)).filter((i) => i >= 0);
+  const rows = lines.slice(1).map((l) => {
+    const cells = l.split(';');
+    return { cells, named: Object.fromEntries(header.map((name, i) => [name, (cells[i] ?? '').trim()])) };
+  });
+
+  const ids = { paid: new Map(asPayer.map((p) => [String(p.id), p])), received: new Map(asCollector.map((p) => [String(p.id), p])) };
+  const groups = new Map();
+  for (const r of rows) {
+    const id = r.named.SOURCE_ID;
+    if (id) groups.set(id, [...(groups.get(id) ?? []), r.named]);
+  }
+  const values = new Map([...groups].map(([id, group]) => [id, operationValues(group, ids, hashKey)]));
+
+  const out = [[...kept.map((i) => header[i]), ...ENRICHMENT_COLUMNS].join(';')];
+  for (const r of rows) {
+    const extra = values.get(r.named.SOURCE_ID) ?? ['', '', ''];
+    out.push([...kept.map((i) => r.cells[i] ?? ''), ...extra].join(';'));
+  }
+  return out.join(eol) + (/\r?\n$/.test(text) ? eol : '');
 }
 
 // ---- the report list ----

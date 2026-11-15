@@ -1,13 +1,22 @@
 // Runs sync against a fake Mercado Pago, an in-memory folder and a fake clock. Report data is made up.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { parseReleaseReport } from '../apps/api/src/ingest/mercadopago.mjs';
 import {
+  HASH_KEY_FILE,
+  cleanValue,
+  enrichReport,
   findReport,
   lastFullMonth,
+  loadHashKey,
   loadToken,
   mercadoPagoApi,
   monthBounds,
   planSync,
+  recipientKey,
   reportState,
   sync,
   utcMidnightAR,
@@ -274,4 +283,176 @@ test('the token comes from the environment first, then from .env.mercadopago, in
   assert.equal(loadToken({ ...opts, env: {}, root: '/elsewhere' }), null);
   files['/repo/.env.mercadopago'] = 'PUBLIC_KEY=TEST-pub\n';
   assert.throws(() => loadToken({ ...opts, env: {}, root: primary }), /has no ACCESS_TOKEN line/);
+});
+
+// ---- enrichment (T-ENR-13 to T-ENR-15) ----
+
+const RAW_HEADER = `${HEADER};PAYER_NAME;PAYOUT_BANK_ACCOUNT_NUMBER`;
+const rawRow = (date, id, desc, credit, debit, balance, payer = '', account = '') => `${row(date, id, desc, credit, debit, balance)};${payer};${account}`;
+// Made-up month: a shop purchase (held, then released), money received from a person, a payout to a bank account,
+// and an expense no search returns.
+const rawReport = [
+  RAW_HEADER,
+  rawRow('2026-10-01T00:00:00.000-03:00', '', '', '1000.00', '0.00', '1000.00'),
+  rawRow('2026-10-02T10:00:00.000-03:00', '901', 'payment', '0.00', '100.00', '900.00', 'Owner Example'),
+  rawRow('2026-10-02T10:00:00.000-03:00', '901', 'reserve_for_payment', '0.00', '0.00', '900.00', 'Owner Example'),
+  rawRow('2026-10-03T10:00:00.000-03:00', '902', 'payment', '50.00', '0.00', '950.00', 'Ana Example'),
+  rawRow('2026-10-04T10:00:00.000-03:00', '903', 'payout', '0.00', '200.00', '750.00', '', '0000003100099990000001'),
+  rawRow('2026-10-05T10:00:00.000-03:00', '904', 'payment', '0.00', '10.00', '740.00', 'Owner Example'),
+  ';;;740.00;0.00;0.00;0.00;0.00;;;;;0.00;;;;',
+].join('\n');
+const SHOP_PAYMENT = {
+  id: 901,
+  description: 'Made-up item',
+  collector: { id: 7777001, email: 'shop@example.com' },
+  payer: { id: 4242, email: 'owner@example.com', phone: { number: '1155550000' } },
+  point_of_interaction: { transaction_data: { commerce: { name: 'Made-up Cafe; Bar\n"Centro"', mcc: '5812' } } },
+};
+const RECEIVED_PAYMENT = { id: 902, payer: { id: 8888002, email: 'ana@example.com', identification: { number: '20123456789' } }, collector: { id: 4242 } };
+const HASH_KEY = Buffer.alloc(32, 7);
+const cellsOf = (text) => {
+  const [head, ...lines] = text.split('\n');
+  const names = head.split(';');
+  return lines.map((l) => Object.fromEntries(l.split(';').map((v, i) => [names[i], v])));
+};
+
+test('T-ENR-13 cleaning turns separators, quotes, line breaks and control characters into single spaces, trims and cuts', () => {
+  assert.equal(cleanValue('  Made-up;Cafe "Centro"\r\nBar\tSur\u0000x  '), 'Made-up Cafe Centro Bar Sur x');
+  assert.equal(cleanValue('a'.repeat(100)), 'a'.repeat(80));
+  assert.equal(cleanValue(`${'b'.repeat(79)} c`), 'b'.repeat(79), 'a cut never leaves a trailing space');
+  assert.equal(cleanValue(undefined), '');
+  assert.equal(cleanValue(12345), '12345');
+  assert.equal(cleanValue('x\u007fy\u0085z'), 'x y z');
+});
+
+test('T-ENR-14 recipientKey is 32 hex characters, stable for one hashing key and different across keys and parties', () => {
+  const k = recipientKey(HASH_KEY, 'mp', '7777001');
+  assert.match(k, /^[0-9a-f]{32}$/);
+  assert.equal(recipientKey(HASH_KEY, 'mp', 7777001), k);
+  assert.notEqual(recipientKey(Buffer.alloc(32, 8), 'mp', '7777001'), k);
+  assert.notEqual(recipientKey(HASH_KEY, 'mp', '7777002'), k);
+  assert.notEqual(recipientKey(HASH_KEY, 'bank', '7777001'), k, 'a bank account and a user id never share a key');
+  // Known answer: HMAC-SHA256 over "mp:7777001" with 32 bytes of 7, first 32 hex characters. A change here
+  // would orphan every stored label.
+  assert.equal(k, 'f1feb6fcab7f6cef4e4281b1107e6748');
+  assert.throws(() => recipientKey(HASH_KEY, 'other', '1'), /kind/);
+  assert.throws(() => recipientKey(HASH_KEY, 'mp', ''), /empty/);
+});
+
+test('T-ENR-14 loadHashKey creates a key file with mode 600 once, then reads it back; a bad file is refused', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'mp-key-'));
+  try {
+    const warnings = [];
+    const first = loadHashKey(dir, { warn: (w) => warnings.push(w) });
+    assert.equal(first.length, 32);
+    const file = path.join(dir, HASH_KEY_FILE);
+    assert.equal(statSync(file).mode & 0o777, 0o600);
+    assert.match(readFileSync(file, 'utf8'), /^[0-9a-f]{64}\n?$/);
+    assert.deepEqual(loadHashKey(dir, { warn: (w) => warnings.push(w) }), first);
+    assert.deepEqual(warnings, [], 'a new key with no enriched files on disk needs no warning');
+
+    writeFileSync(file, 'not a key');
+    assert.throws(() => loadHashKey(dir), /not 64 hex characters/);
+    assert.equal(readFileSync(file, 'utf8'), 'not a key', 'a bad key file is never overwritten');
+    assert.doesNotMatch(String((() => { try { loadHashKey(dir); } catch (e) { return e.message; } })()), /not a key/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('T-ENR-14 a new hashing key next to enriched files warns that old labels will not match', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'mp-key-'));
+  try {
+    writeFileSync(path.join(dir, 'release-2026-09.csv'), `${HEADER};SF_MERCHANT;SF_CATEGORY_CODE;SF_RECIPIENT\n`);
+    const warnings = [];
+    loadHashKey(dir, { warn: (w) => warnings.push(w) });
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /new hashing key/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('T-ENR-15 enrichReport appends the three columns per operation and drops the raw columns', () => {
+  const out = enrichReport(rawReport, { payments: { asPayer: [SHOP_PAYMENT], asCollector: [RECEIVED_PAYMENT] }, hashKey: HASH_KEY });
+  const [head] = out.split('\n');
+  assert.equal(head, `${HEADER};SF_MERCHANT;SF_CATEGORY_CODE;SF_RECIPIENT`);
+  const rows = cellsOf(out);
+  const byId = (id) => rows.filter((r) => r.SOURCE_ID === id);
+  for (const r of byId('901')) {
+    assert.deepEqual([r.SF_MERCHANT, r.SF_CATEGORY_CODE, r.SF_RECIPIENT], ['Made-up Cafe Bar Centro', '5812', recipientKey(HASH_KEY, 'mp', '7777001')]);
+  }
+  // Money received: the sender's name from the report, the key of the payer in the collector search.
+  assert.deepEqual(
+    [byId('902')[0].SF_MERCHANT, byId('902')[0].SF_CATEGORY_CODE, byId('902')[0].SF_RECIPIENT],
+    ['Ana Example', '', recipientKey(HASH_KEY, 'mp', '8888002')],
+  );
+  // A payout: no name, the key of the bank account.
+  assert.deepEqual([byId('903')[0].SF_MERCHANT, byId('903')[0].SF_RECIPIENT], ['', recipientKey(HASH_KEY, 'bank', '0000003100099990000001')]);
+  // An expense no search returned: the report's payer name is the owner, so it is never used for an expense.
+  assert.deepEqual([byId('904')[0].SF_MERCHANT, byId('904')[0].SF_CATEGORY_CODE, byId('904')[0].SF_RECIPIENT], ['', '', '']);
+  // Opening and totals rows carry empty cells.
+  for (const r of [rows[0], rows.at(-1)]) assert.deepEqual([r.SF_MERCHANT, r.SF_CATEGORY_CODE, r.SF_RECIPIENT], ['', '', '']);
+  assert.ok(rows.every((r) => Object.keys(r).length === 18));
+});
+
+test('T-ENR-15 the enriched file holds no raw id, account number, email, phone or ID number, and imports as the same month', () => {
+  const out = enrichReport(rawReport, { payments: { asPayer: [SHOP_PAYMENT], asCollector: [RECEIVED_PAYMENT] }, hashKey: HASH_KEY });
+  for (const secret of ['PAYER_NAME', 'PAYOUT_BANK_ACCOUNT_NUMBER', 'Owner Example', '7777001', '8888002', '4242', '0000003100099990000001', 'example.com', '1155550000', '20123456789']) {
+    assert.ok(!out.includes(secret), `the enriched file must not hold ${secret}`);
+  }
+  const parsed = parseReleaseReport(out, { file: 'release-2026-10.csv' });
+  assert.equal(parsed.check.month, '2026-10');
+  assert.ok(parsed.check.closingMatches && parsed.check.monthNetMatches);
+  const shop = parsed.transactions.find((t) => t.source_ref.endsWith('#901'));
+  assert.deepEqual([shop.merchant, shop.category], ['Made-up Cafe Bar Centro', 'Dining out']);
+  assert.equal(parsed.transactions.find((t) => t.source_ref.endsWith('#902')).merchant, 'Ana Example');
+});
+
+test('T-ENR-15 a merchant made only of an email or a phone number is left empty; contact details inside a name are removed', () => {
+  const pay = (id, name) => ({ id, collector: { id: 1 }, point_of_interaction: { transaction_data: { commerce: { name } } } });
+  const one = (name) =>
+    cellsOf(
+      enrichReport(
+        [HEADER, row('2026-10-01T00:00:00.000-03:00', '', '', '10.00', '0.00', '10.00'), row('2026-10-02T10:00:00.000-03:00', '5', 'payment', '0.00', '1.00', '9.00'), ';;;9.00;0.00;0.00;0.00;0.00;;;;;0.00;;'].join('\n'),
+        { payments: { asPayer: [pay(5, name)], asCollector: [] }, hashKey: HASH_KEY },
+      ),
+    )[1].SF_MERCHANT;
+  assert.equal(one('someone@example.com'), '');
+  assert.equal(one('+54 11 5555-0000'), '');
+  assert.equal(one('Made-up Shop someone@example.com 11 5555 0000'), 'Made-up Shop');
+  assert.equal(one('Made-up 24 Kiosk'), 'Made-up 24 Kiosk', 'short numbers in a shop name stay');
+  assert.equal(one('Made-up Shop 12.345.678 x'), 'Made-up Shop x', 'an ID number written with dots is removed');
+});
+
+test('T-ENR-15 the description, then the first item title, stand in for a missing commerce name; a bad code is left out', () => {
+  const base = [HEADER, row('2026-10-01T00:00:00.000-03:00', '', '', '10.00', '0.00', '10.00'), row('2026-10-02T10:00:00.000-03:00', '5', 'payment', '0.00', '1.00', '9.00'), ';;;9.00;0.00;0.00;0.00;0.00;;;;;0.00;;'].join('\n');
+  const first = (payment) => cellsOf(enrichReport(base, { payments: { asPayer: [payment], asCollector: [] }, hashKey: HASH_KEY }))[1];
+  assert.equal(first({ id: '5', description: 'Made-up Store', additional_info: { items: [{ title: 'Made-up item' }] } }).SF_MERCHANT, 'Made-up Store');
+  assert.equal(first({ id: 5, additional_info: { items: [{ title: 'Made-up item' }] } }).SF_MERCHANT, 'Made-up item');
+  const odd = first({ id: 5, point_of_interaction: { transaction_data: { commerce: { mcc: '58123' } } } });
+  assert.deepEqual([odd.SF_CATEGORY_CODE, odd.SF_RECIPIENT], ['', '']);
+  // A file without the raw columns still enriches.
+  assert.equal(cellsOf(enrichReport(base, { payments: { asPayer: [], asCollector: [] }, hashKey: HASH_KEY }))[1].SF_MERCHANT, '');
+});
+
+test('T-ENR-15 quoted raw header cells are still dropped', () => {
+  const quoted = rawReport.replace('PAYER_NAME;PAYOUT_BANK_ACCOUNT_NUMBER', '"PAYER_NAME";" PAYOUT_BANK_ACCOUNT_NUMBER"');
+  const out = enrichReport(quoted, { payments: { asPayer: [SHOP_PAYMENT], asCollector: [RECEIVED_PAYMENT] }, hashKey: HASH_KEY });
+  for (const raw of ['PAYER_NAME', 'PAYOUT_BANK_ACCOUNT_NUMBER', 'Owner Example', '0000003100099990000001']) assert.ok(!out.includes(raw), `must not hold ${raw}`);
+  assert.equal(out.split('\n')[0], `${HEADER};SF_MERCHANT;SF_CATEGORY_CODE;SF_RECIPIENT`);
+});
+
+test('T-ENR-15 the payer name is used only for money received, never for a refund, interest or a release', () => {
+  const report = [
+    RAW_HEADER,
+    rawRow('2026-10-01T00:00:00.000-03:00', '', '', '100.00', '0.00', '100.00'),
+    rawRow('2026-10-02T10:00:00.000-03:00', '71', 'refund', '30.00', '0.00', '130.00', 'Owner Example'),
+    rawRow('2026-10-03T10:00:00.000-03:00', '72', 'asset_management', '1.00', '0.00', '131.00', 'Owner Example'),
+    rawRow('2026-10-04T10:00:00.000-03:00', '73', 'reserve_for_payment', '5.00', '0.00', '136.00', 'Owner Example'),
+    rawRow('2026-10-05T10:00:00.000-03:00', '74', 'payment', '9.00', '0.00', '145.00', 'Ana Example'),
+    ';;;145.00;0.00;0.00;0.00;0.00;;;;;0.00;;;;',
+  ].join('\n');
+  const rows = cellsOf(enrichReport(report, { payments: { asPayer: [], asCollector: [] }, hashKey: HASH_KEY }));
+  assert.deepEqual(rows.slice(1, -1).map((r) => [r.SOURCE_ID, r.SF_MERCHANT]), [['71', ''], ['72', ''], ['73', ''], ['74', 'Ana Example']]);
 });
