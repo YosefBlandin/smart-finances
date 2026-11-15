@@ -86,3 +86,15 @@ test('T-ENR-24 the threat model names the new assets and the owner-machine bound
     assert.match(text, pattern);
   }
 });
+
+test('T-DOC-11 ADR 0011 is accepted, cites its decisions, has a Model gate section, is listed, and the threat model is v5', () => {
+  const text = read('adr/0011-in-browser-category-suggestions.md');
+  assert.match(text, /^Status: accepted/m);
+  for (const id of ['D-7', 'D-17', 'D-22', 'D-23']) assert.ok(cites(text, id), `0011 cites ${id}`);
+  assert.match(text, /^## Model gate$/m, '0011 has a Model gate section');
+  const index = read('adr/README.md').split('\n');
+  assert.match(index.find((line) => line.includes('0011') && line.startsWith('|')) ?? '', /\baccepted\b/, 'README lists 0011 as accepted');
+  const threats = read('threat-model.md');
+  assert.match(threats, /^Status: v5\b/m, 'the threat model status line says v5');
+  for (const pattern of [/history examples/i, /model file/i, /integrity/i, /suggest module/i]) assert.match(threats, pattern);
+});

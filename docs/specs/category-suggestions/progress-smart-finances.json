@@ -14,7 +14,7 @@
     {
       "id": "SF-0",
       "status": "done",
-      "commit": "",
+      "commit": "808cb94",
       "evidence": [
         "git status clean at start; HEAD e0df576 on top of origin/qa e8da84b; drift.mjs: 22 references, 8 NEW, 14 OK",
         "npm ci at worktree root: ok",
@@ -26,9 +26,13 @@
     },
     {
       "id": "SF-1",
-      "status": "todo",
+      "status": "done",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "tests first: node --test apps/api/test/docs.test.mjs → pass 4, fail 1: T-DOC-11 failed with ENOENT: no such file or directory, open docs/adr/0011-in-browser-category-suggestions.md",
+        "verify: node --test apps/api/test/docs.test.mjs → pass 5, fail 0 (T-DOC-11 included)",
+        "ADR 0011 status accepted, cites D-7, D-8, D-15, D-17, D-22, D-23 and has a Model gate section (pending SF-12); README row accepted; threat model status v5 with history examples and the model file as assets, boundary B15 with five STRIDE rows, abuse case AC13, LLM03 row"
+      ],
       "review": ""
     },
     {
