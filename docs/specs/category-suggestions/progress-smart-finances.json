@@ -71,7 +71,7 @@
     {
       "id": "SF-5",
       "status": "done",
-      "commit": "",
+      "commit": "cd5077f",
       "evidence": [
         "tests first: npx vitest run src/ui/patterns/DataTable src/screens/review/messages.test.ts → 3 failed: T-MSG-1 expected [] to deeply equal [accept, acceptAll, …]; T-MSG-1 shopping: expected undefined to be Shopping; T-ROW-1 unable to find role row named Row one",
         "verify: npm test --workspace @smart-finances/web -- src/ui/patterns/DataTable src/screens/review/messages.test.ts → Test Files 2 passed, Tests 7 passed; npm run lint --workspace @smart-finances/web → pass; tsc clean",
@@ -81,9 +81,14 @@
     },
     {
       "id": "SF-6",
-      "status": "todo",
+      "status": "done",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "tests first: npx vitest run src/screens/review/suggest/chips.test.tsx → 7 failed, e.g. Unable to find role button named Accept Groceries / Aceptar Supermercado / Use Pets",
+        "verify: npm test --workspace @smart-finances/web -- src/screens/review → Test Files 3 passed, Tests 15 passed (T-UI-1 to T-UI-5 included); npm run lint --workspace @smart-finances/web → pass; tsc --noEmit clean",
+        "full web suite after SF-6: 717 passed, 1 failed (T-WEB-5 plural count, see surprises; not caused by SF-6)",
+        "notes: chips sit above the picker and Approve; one box for chips and the hidden placeholder (min-height 32px, 44px on coarse pointers); choices, approvals of an already categorized row and labels each add one session example, taken out again on a refusal"
+      ],
       "review": ""
     },
     {
@@ -145,6 +150,7 @@
   ],
   "deviations": [],
   "surprises": [
-    "SF-0: the Lighthouse LCP budget (2500 ms) already fails on all six money pages on this machine before any change (2.6 to 2.9 s simulated). T-LH-1 checks script size and CLS only, so it is recorded, not fixed."
+    "SF-0: the Lighthouse LCP budget (2500 ms) already fails on all six money pages on this machine before any change (2.6 to 2.9 s simulated). T-LH-1 checks script size and CLS only, so it is recorded, not fixed.",
+    "SF-5: the existing T-WEB-5 test in apps/web/src/i18n/i18n.test.ts pins the number of plural messages at 9; the five contract plurals make it 14, so the full web suite has 1 failure. The file is outside every task’s Files: asked the planning session (2026-11-15) before editing it; not changed."
   ]
 }

@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { useReview } from '@/queries/data';
+import { useHistory, useReview } from '@/queries/data';
 import { dataKeys, type ReviewReply } from '@/queries/keys';
 import { StateBlock } from '@/ui/patterns/StateBlock/StateBlock';
 import type { RecipientLabel } from '../label/LabelForm';
 import { applyChoice, applyLabel, undoChoice, undoLabel } from './model';
 import styles from './Review.module.css';
-import { ReviewView, type ReviewChoice } from './View';
+import { useSuggestions } from './suggest/useSuggestions';
+import { CHOICE_SOURCE, ReviewView, type ReviewChoice } from './View';
 
 // The review island (SF-166; D-131): the server prefetched the rows. A choice shows at once (the row takes its category,
 // or leaves the list when approved), then the server action saves it; a refusal puts that row back as it was, leaving
@@ -31,12 +32,16 @@ export type ReviewProps = {
 export const MUTATION = ['review-choice'] as const;
 /** After a saved label, the totals are asked again once the API's rebuild has had time to run (D-13). */
 export const LABEL_TOTALS_AGAIN_MS = 5_000;
+const UNCATEGORIZED = 'Uncategorized';
 
 export function Review({ choose, label }: ReviewProps) {
   const t = useTranslations();
   const client = useQueryClient();
   const router = useRouter();
   const query = useReview();
+  // Suggestions (category-suggestions AC-1, AC-11): history read once per visit, plus every choice and label made here.
+  const history = useHistory(query.data?.items);
+  const suggestions = useSuggestions(query.data?.items, history);
   const [failed, setFailed] = useState(false);
   const mutation = useMutation({
     mutationKey: MUTATION,
@@ -49,12 +54,17 @@ export function Review({ choose, label }: ReviewProps) {
       await client.cancelQueries({ queryKey: dataKeys.review() });
       const before = client.getQueryData<ReviewReply>(dataKeys.review());
       if (before) client.setQueryData<ReviewReply>(dataKeys.review(), applyChoice(before, choice));
-      return { before };
+      // The choice teaches the other rows at once (AC-11): its category, or the row's own when it is approved as is.
+      const row = before?.items.find((r) => r.id === choice.id);
+      const category = choice.category ?? row?.category;
+      const token = row && category && category !== UNCATEGORIZED ? suggestions.add(row.id, row, category) : undefined;
+      return { before, token };
     },
     onError: (_error, choice, context) => {
       // Only this choice comes back; another choice still in flight stays shown.
       const before = context?.before;
       if (before) client.setQueryData<ReviewReply>(dataKeys.review(), (shown) => (shown ? undoChoice(shown, before, choice.id) : before));
+      if (context?.token !== undefined) suggestions.remove(context.token);
       setFailed(true);
     },
     onSettled: () => settle(),
@@ -71,11 +81,23 @@ export function Review({ choose, label }: ReviewProps) {
       await client.cancelQueries({ queryKey: dataKeys.review() });
       const before = client.getQueryData<ReviewReply>(dataKeys.review());
       if (before) client.setQueryData<ReviewReply>(dataKeys.review(), applyLabel(before, saved.key));
-      return { before };
+      // A label teaches the rows with its key and name too (AC-11).
+      const kind = before?.items.find((r) => r.recipient_key === saved.key)?.kind ?? 'expense';
+      const labelled = {
+        id: `label:${saved.key}`,
+        source: CHOICE_SOURCE,
+        merchant: saved.name,
+        recipient_key: saved.key,
+        kind,
+        category: saved.category,
+      };
+      const token = suggestions.add(labelled.id, labelled, saved.category);
+      return { before, token };
     },
     onError: (_error, saved, context) => {
       const before = context?.before;
       if (before) client.setQueryData<ReviewReply>(dataKeys.review(), (shown) => (shown ? undoLabel(shown, before, saved.key) : before));
+      if (context?.token !== undefined) suggestions.remove(context.token);
       setFailed(true);
     },
     onSuccess: () => {
@@ -117,6 +139,7 @@ export function Review({ choose, label }: ReviewProps) {
     <ReviewView
       rows={query.data.items}
       failed={failed}
+      suggest={suggestions.state}
       onChoose={(choice) => mutation.mutate(choice)}
       onLabel={
         label

@@ -11,6 +11,8 @@ import { Note } from '@/ui/primitives/Note/Note';
 import { LabelControl, type LabelResult, type RecipientLabel } from '../label/LabelForm';
 import { categoryName, lang } from '../overview/text';
 import styles from './Review.module.css';
+import { ChipsPlaceholder, SuggestionChips } from './suggest/Chips';
+import type { SuggestState } from './suggest/useSuggestions';
 
 // The rows to review (SF-166; F-11): each with its date, what it is (the place, the original text as it arrived, the
 // source and category), why it is here (the importer's flag and a plain reason), the exact amount (D-23) and what you
@@ -33,9 +35,11 @@ export type ReviewViewProps = {
   onChoose: (choice: ReviewChoice) => void;
   /** Saves a recipient label; rows with a recipient key offer it when given. */
   onLabel?: (label: RecipientLabel) => Promise<LabelResult>;
+  /** Category suggestions for payments rows (category-suggestions AC-1); without it, rows show as before. */
+  suggest?: Pick<SuggestState, 'byRow' | 'settled' | 'modelPending'> & { disabled?: boolean };
 };
 
-export function ReviewView({ rows, failed, onChoose, onLabel }: ReviewViewProps) {
+export function ReviewView({ rows, failed, onChoose, onLabel, suggest }: ReviewViewProps) {
   const t = useTranslations();
   const locale = lang(useLocale());
   const day = new Intl.DateTimeFormat(INTL[locale], { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
@@ -43,6 +47,23 @@ export function ReviewView({ rows, failed, onChoose, onLabel }: ReviewViewProps)
   const reason = (flag: string) => (t.has(`review.reasons.${flag}`) ? t(`review.reasons.${flag}`) : '');
   const options = (current: string) =>
     [...CATEGORIES, ...(CATEGORIES.includes(current) ? [] : [current])].map((c) => ({ id: c, label: categoryName(t, c) }));
+  // Chips above the picker; a hidden placeholder keeps their space until history settles, and on rows with no pick
+  // while a model can still arrive, so nothing moves when chips appear (AC-16, D-26).
+  const chips = (row: ReviewRow) => {
+    if (!suggest) return null;
+    if (!suggest.settled) return <ChipsPlaceholder />;
+    const suggestion = suggest.byRow.get(row.id);
+    if (suggestion) {
+      return (
+        <SuggestionChips
+          suggestion={suggestion}
+          disabled={suggest.disabled}
+          onPick={(category) => onChoose({ id: row.id, date: row.date, category, approved: true })}
+        />
+      );
+    }
+    return suggest.modelPending ? <ChipsPlaceholder /> : null;
+  };
   return (
     <div className={styles.screen}>
       {failed ? (
@@ -91,6 +112,7 @@ export function ReviewView({ rows, failed, onChoose, onLabel }: ReviewViewProps)
                 </span>
               </DataTable.Cell>
               <DataTable.Cell>
+                {row.source === CHOICE_SOURCE ? chips(row) : null}
                 {row.source === CHOICE_SOURCE ? (
                   <div className={styles.actions}>
                     <SelectField
