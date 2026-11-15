@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { MonthInfo } from '@/ui/patterns/MonthPicker/MonthPicker';
+import type { LabelResult, RecipientLabel } from '../label/LabelForm';
 import { FiltersView } from './Filters/View';
 import { ListContainer } from './List/Container';
 import { addMonths, toggleSort, writeAddress, type Address } from './model';
@@ -12,7 +13,7 @@ import styles from './Transactions.module.css';
 // kept in the address through the history API, which Next.js keeps in step with its router, so the server is not asked
 // to render again. Free text lives only in this component's state and the form.
 
-export type TransactionsProps = { address: Address; now: string };
+export type TransactionsProps = { address: Address; now: string; label?: (label: RecipientLabel) => Promise<LabelResult> };
 
 /** The months the picker offers: three years up to now (and the shown month). */
 function pickerMonths(month: string, now: string): MonthInfo[] {
@@ -22,7 +23,7 @@ function pickerMonths(month: string, now: string): MonthInfo[] {
   return months.map((m) => ({ month: m, hasData: true, hasRate: true }));
 }
 
-export function Transactions({ address: first, now }: TransactionsProps) {
+export function Transactions({ address: first, now, label }: TransactionsProps) {
   const [address, setAddress] = useState(first);
   const [q, setQ] = useState('');
   const change = (next: Address) => {
@@ -32,7 +33,7 @@ export function Transactions({ address: first, now }: TransactionsProps) {
   return (
     <div className={styles.screen}>
       <FiltersView address={address} months={pickerMonths(address.month, now)} q={q} onChange={change} onSearch={setQ} />
-      <ListContainer address={address} q={q} onSort={(by) => change(toggleSort(address, by))} />
+      <ListContainer address={address} q={q} onSort={(by) => change(toggleSort(address, by))} label={label} />
     </div>
   );
 }

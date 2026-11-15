@@ -18,6 +18,7 @@ const STORED = [
   ['sTx', 'sTxD'],
   ['sFiles', 'sFilesD'],
   ['sChoices', 'sChoicesD'],
+  ['sLabels', 'sLabelsD'],
   ['sRates', 'sRatesD'],
   ['sTotals', 'sTotalsD'],
 ] as const;

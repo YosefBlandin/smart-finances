@@ -3,13 +3,15 @@ import { formatAmount } from '@/i18n/format';
 import type { Transaction } from '@/queries/keys';
 import { DataTable } from '@/ui/patterns/DataTable/DataTable';
 import { Button } from '@/ui/primitives/Button/Button';
+import { LabelControl, type LabelResult, type RecipientLabel } from '../../label/LabelForm';
 import { categoryName, lang } from '../../overview/text';
 import type { Address } from '../model';
 import styles from '../Transactions.module.css';
 
 // The list (AC-6, AC-9): exactly the rows the data route sent, single transactions in exact cents (D-23). Date and
 // amount headers sort; the next page comes by the cursor, with a spinner only in its button (D-128). Imported text
-// (place, original text) renders only as text, the original in Chivo Mono (D-16).
+// (place, original text) renders only as text, the original in Chivo Mono (D-16). A row with a recipient key offers
+// Label this recipient under its place (mercadopago-enrichment D-22).
 
 export type ListViewProps = {
   rows: Transaction[];
@@ -19,11 +21,13 @@ export type ListViewProps = {
   loadingNext: boolean;
   onSort: (by: Address['sort']) => void;
   onNext: () => void;
+  /** Saves a recipient label; rows with a recipient key offer it when given. */
+  onLabel?: (label: RecipientLabel) => Promise<LabelResult>;
 };
 
 const INTL = { en: 'en-US', es: 'es-AR' } as const;
 
-export function ListView({ rows, address, pageSize, hasNext, loadingNext, onSort, onNext }: ListViewProps) {
+export function ListView({ rows, address, pageSize, hasNext, loadingNext, onSort, onNext, onLabel }: ListViewProps) {
   const t = useTranslations();
   const locale = lang(useLocale());
   const day = new Intl.DateTimeFormat(INTL[locale], { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
@@ -52,7 +56,16 @@ export function ListView({ rows, address, pageSize, hasNext, loadingNext, onSort
                   {row.date_precision === 'month' ? t('transactions.wholeMonth') : day.format(new Date(`${row.date}T00:00:00Z`))}
                 </span>
               </DataTable.Cell>
-              <DataTable.Cell>{row.merchant || t('overview.noName')}</DataTable.Cell>
+              <DataTable.Cell>
+                {row.recipient_key && onLabel ? (
+                  <>
+                    <span>{row.merchant || t('overview.noName')}</span>
+                    <LabelControl recipientKey={row.recipient_key} name={row.merchant} category={row.category} onSave={onLabel} />
+                  </>
+                ) : (
+                  row.merchant || t('overview.noName')
+                )}
+              </DataTable.Cell>
               <DataTable.Cell raw>{row.description_raw}</DataTable.Cell>
               <DataTable.Cell>{categoryName(t, row.category)}</DataTable.Cell>
               <DataTable.Cell>

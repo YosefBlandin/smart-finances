@@ -1,0 +1,48 @@
+/* Label this recipient (mercadopago-enrichment D-22): a plain form under its row's button, set apart by space and a fine
+   rule, never a card (web-ui D-12, D-21); tokens only (D-22). */
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+/* A text button: the row's own controls stay the main action. */
+.open {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--t-s);
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--line);
+  max-width: 28rem;
+}
+
+.title {
+  margin: 0;
+  font-weight: var(--w-head);
+}
+
+.lead {
+  margin: 0;
+  font-size: var(--t-s);
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
