@@ -90,16 +90,18 @@ status: draft
 - Tests first: none
 - Do:
   - The worktree and branch exist; check `git status` is clean and `git log -1` is on top of origin/qa.
+  - Run `npm ci` at the worktree root first (approved: it installs the lockfile's packages; the worktree has no node_modules).
   - Run the full verify once, and `npm run lhci --workspace @smart-finances/web`, before any change.
-- Verify: `npm test; npm run build --workspace @smart-finances/infra` → each result recorded under baseline, red or green; the Lighthouse script size for /review recorded too
+- Verify: `npm test; npm run build --workspace @smart-finances/infra` → each result recorded under baseline, red or green (typecheck: "in next build", the web workspace has no separate typecheck); the /review script size from Lighthouse recorded under baseline.lighthouse
 - Done when: the baseline in progress-smart-finances.json is filled and the worktree is clean
 
 ### SF-1 · ADR 0011 and threat model v5
 - Implements: D-7, D-22, D-23 · After: SF-0 · Judgment: normal
 - Files: smart-finances:docs/adr/0011-in-browser-category-suggestions.md (new), docs/adr/README.md, docs/threat-model.md
-- Tests first: none (docs)
-- Do: write the ADR (context, the decisions above, the model gate and its outcome left as "pending SF-12"); add the ADR to the README index; bump the threat model to v5 with the items in architecture.md "Records before code".
-- Verify: `node --test apps/api/test/docs.test.mjs` → pass
+- Files (test): apps/api/test/docs.test.mjs
+- Tests first: T-DOC-1
+- Do: write the ADR with Status accepted (context, the decisions above, and a "Model gate" section saying "pending SF-12", which SF-12 fills in); add it to the README index as accepted; change the threat model's status line to v5 and add the items in architecture.md "Records before code".
+- Verify: `node --test apps/api/test/docs.test.mjs` → pass, T-DOC-1 included
 - Done when: verify is green and the ADR names D-7, D-17, D-22 and D-23
 
 ### SF-2 · Move the payments rules to contracts
@@ -114,23 +116,23 @@ status: draft
 - Implements: AC-1, AC-2, AC-5, AC-11, AC-12, AC-15, AC-20, D-9, D-11, D-17, D-18 · After: SF-2 · Judgment: normal
 - Files: smart-finances:apps/web/src/domain/suggest.ts (new), apps/web/src/domain/suggest.test.ts (new)
 - Tests first: T-SUG-1 to T-SUG-10
-- Do: architecture.md Components "Suggest module" and Contracts "Suggest module"; import `merchantCategory` from `@smart-finances/contracts/rules`; synthetic names only.
+- Do: architecture.md Components "Suggest module" and Contracts "Suggest module"; import `merchantCategory` from `@smart-finances/contracts/rules`; declare `SuggestRow` and `HistoryRow` in the module (domain may not import screens); synthetic names only.
 - Verify: `npm test --workspace @smart-finances/web -- src/domain/suggest.test.ts` and `npm run lint --workspace @smart-finances/web` → pass
 - Done when: verify is green
 
 ### SF-4 · History query
 - Implements: D-24, D-26, AC-14 · After: SF-3 · Judgment: normal
 - Files: smart-finances:apps/web/src/queries/data.ts#useHistory (new), smart-finances:apps/web/src/queries/keys.ts#dataKeys, apps/web/src/queries/history.test.tsx (new)
-- Tests first: T-HIST-1 to T-HIST-3
+- Tests first: T-HIST-1 to T-HIST-4
 - Do: architecture.md Components "History read" and Contracts "History read"; return examples with `complete`, never raw rows.
 - Verify: `npm test --workspace @smart-finances/web -- src/queries/history.test.tsx` and lint → pass
 - Done when: verify is green
 
 ### SF-5 · Row pass-through and messages
-- Implements: AC-10, AC-19 · After: SF-0 · Judgment: normal
+- Implements: AC-10, AC-19 · After: SF-1 · Judgment: normal
 - Files: smart-finances:apps/web/src/ui/patterns/DataTable/DataTable.tsx#DataTable, apps/web/src/ui/patterns/DataTable/DataTable.test.tsx, apps/web/src/ui/patterns/DataTable/DataTable.stories.tsx, apps/web/messages/en.json, apps/web/messages/es.json, apps/web/src/screens/review/messages.test.ts (new)
 - Tests first: T-ROW-1, T-MSG-1
-- Do: architecture.md Components "Review island and view" (Keyboard bullet) and Contracts "Messages"; words follow the smart-finances-ui voice; ICU plurals as in `overview.todoReview`.
+- Do: architecture.md Components "Review island and view" (Keyboard bullet) and Contracts "Messages" (exact en and es text, and the five category names missing from both files).
 - Verify: `npm test --workspace @smart-finances/web -- src/ui/patterns/DataTable src/screens/review/messages.test.ts` and lint → pass
 - Done when: verify is green
 
@@ -159,10 +161,10 @@ status: draft
 - Done when: verify is green and the reviewer has no blocker
 
 ### SF-9 · Save pool
-- Implements: D-25, AC-8 · After: SF-0 · Judgment: high
+- Implements: D-25, AC-8 · After: SF-1 · Judgment: high
 - Files: smart-finances:apps/web/src/screens/review/suggest/pool.ts#saveAll (new), apps/web/src/screens/review/suggest/pool.test.ts (new)
 - Tests first: T-POOL-1 to T-POOL-3
-- Do: architecture.md Components "Review island and view", Accept all runner bullets; fake timers for the 20 s and retry waits; errors carry ids and counts only.
+- Do: architecture.md Contracts "Save pool" and Components "Review island and view", Accept all runner bullets; fake timers for the 20 s and retry waits; errors carry ids and counts only.
 - Verify: `npm test --workspace @smart-finances/web -- src/screens/review/suggest/pool.test.ts` and lint → pass
 - Done when: verify is green and the reviewer has no blocker
 
@@ -176,27 +178,28 @@ status: draft
 
 ### SF-11 · Stories, test person and e2e
 - Implements: AC-6, AC-7, AC-11, AC-13 to AC-16, AC-19, AC-20 · After: SF-10 · Judgment: normal
-- Files: apps/web/src/screens/review/Review.stories.tsx, smart-finances:apps/web/src/adapters/container.ts#E2E_PEOPLE, apps/web/fixtures/suggest.json (new), apps/web/e2e/suggest.spec.ts (new), apps/web/e2e/hostile.spec.ts, apps/web/e2e/a11y.spec.ts
+- Files: apps/web/src/screens/review/Review.stories.tsx, smart-finances:apps/web/src/adapters/container.ts#E2E_PEOPLE, smart-finances:apps/web/src/adapters/memory/data-api.ts#fixtureSeed, apps/web/fixtures/suggest.json (new), apps/web/e2e/suggest.spec.ts (new), and any existing e2e spec under apps/web/e2e that opens /review (a11y, hostile, limit, overview, review-rates, shell) where its person's data mode changes
 - Tests first: T-E2E-1 to T-E2E-6
-- Do: architecture.md Cross-cutting "Tests and the test-stage limit" and the stories bullet in "Review island and view"; the Lighthouse person's data must also show chips.
-- Verify: `npm run e2e --workspace @smart-finances/web -- e2e/suggest.spec.ts e2e/hostile.spec.ts e2e/a11y.spec.ts` and `npm run test-storybook --workspace @smart-finances/web` → pass (T-E2E-1 prints its time; a miss is recorded, not a failure)
+- Do: architecture.md Cross-cutting "Tests and the test-stage limit" and the stories bullet in "Review island and view"; change test expectations only where a person's data mode changed, never to hide a failure.
+- Verify: `npm run e2e --workspace @smart-finances/web` (the whole suite) and `npm run test-storybook --workspace @smart-finances/web` → pass (T-E2E-1 prints its time; a miss is recorded, not a failure)
 - Done when: verify is green
 
 ### SF-12 · Model gate: evaluation and converter
 - Implements: AC-17, D-12, D-22 · After: SF-3 and the SF-12 HUMAN need · Judgment: high
-- Files: apps/web/fixtures/suggest-eval.json (new), scripts/suggest-model.mjs (new), scripts/suggest-model.test.mjs (new), apps/web/src/domain/suggest-model.eval.test.ts (new), package.json (root test script)
+- Files: apps/web/fixtures/suggest-eval.json (new), scripts/suggest-model.mjs (new), scripts/suggest-model.test.mjs (new), apps/web/src/domain/suggest-model.eval.test.ts (new), package.json (root test script), docs/adr/0011-in-browser-category-suggestions.md
 - Tests first: T-MOD-1
 - Do:
-  - Commit the evaluation set first, alone: at least 30 synthetic names that `merchantCategory` misses, plus at least 40 synthetic history examples (architecture.md Components "Static model").
-  - Write the converter (Contracts "Model file"); it reads the files under ~/.cache/smart-finances/suggest-model and writes its output there, never into the repo.
-  - Run T-MOD-1 for D = 64, 128, 256; record each size and score in progress.
+  - First, read the model's current revision: `curl -s https://huggingface.co/api/models/sentence-transformers/static-similarity-mrl-multilingual-v1` (its `sha` and `siblings`). Tell the owner the revision, the two file names (the static-embedding weights and tokenizer.json) and their sizes, and wait for the HUMAN need above. Pin that revision in the converter.
+  - Commit the evaluation set first, alone (this task is two commits): at least 30 synthetic names that `merchantCategory` misses, plus at least 40 synthetic history examples (architecture.md Components "Static model").
+  - Write the converter (Contracts "Model file"); it reads the files under ~/.cache/smart-finances/suggest-model and writes its output there, never into the repo. It exports its tokenizer and embedding so the eval test uses the same code; the browser copy in SF-13 is kept in step by T-MOD-4. Its own test uses a tiny synthetic table, no downloaded file; add it to the root `npm test` list.
+  - The eval test skips (not fails) when the downloaded files are absent; it reads D from `SUGGEST_DIMS`. Run T-MOD-1 for D = 64, 128, 256; record each size and score in progress and in the ADR's "Model gate" section.
   - Pass (bar met at a size of 30 MB or less): continue to SF-13 with the smallest passing D. Miss: record the numbers in the ADR and progress, skip SF-13, and keep the converter and evaluation set without any model file.
 - Verify: `node --test scripts/suggest-model.test.mjs` and `npm test --workspace @smart-finances/web -- src/domain/suggest-model.eval.test.ts` → pass, scores printed
 - Done when: verify is green, the outcome is in progress and the ADR, and the reviewer has no blocker
 
 ### SF-13 · Model loader (only if SF-12 passed)
 - Implements: AC-16, AC-17, D-22, D-23, D-26 · After: SF-12, SF-11 · Judgment: normal
-- Files: smart-finances:apps/web/src/screens/review/suggest/model.ts#loadModel (new), smart-finances:apps/web/src/screens/review/suggest/model.ts#MODEL_SHA384 (new), apps/web/src/screens/review/suggest/suggest-model.bin (new), apps/web/src/screens/review/suggest/NOTICE-suggest-model.txt (new), apps/web/src/screens/review/suggest/model.test.ts (new)
+- Files: apps/web/next.config.ts (only if the build does not emit the file from `new URL(..., import.meta.url)` on its own), smart-finances:apps/web/src/screens/review/suggest/model.ts#loadModel (new), smart-finances:apps/web/src/screens/review/suggest/model.ts#MODEL_SHA384 (new), apps/web/src/screens/review/suggest/suggest-model.bin (new), apps/web/src/screens/review/suggest/NOTICE-suggest-model.txt (new), apps/web/src/screens/review/suggest/model.test.ts (new)
 - Tests first: T-MOD-2 to T-MOD-4
 - Do: architecture.md Components "Static model" and Contracts "Model file"; dynamic import from the island; run `npm run build --workspace @smart-finances/web` and record the size of .next/static/media and of the build output.
 - Verify: `npm test --workspace @smart-finances/web -- src/screens/review/suggest/model.test.ts` and `npm run e2e --workspace @smart-finances/web -- e2e/suggest.spec.ts` → pass
@@ -206,7 +209,7 @@ status: draft
 - Implements: AC-18 · After: SF-13 (or SF-12 when the model missed) · Judgment: normal
 - Files: none beyond fixes inside earlier tasks' files
 - Tests first: T-LH-1
-- Do: run the full verify and Lighthouse; ask for the conformance review; push the branch; open a draft PR into qa with the PR body below.
+- Do: run the full verify and Lighthouse (T-LH-1 is that run; record its numbers); start a fresh read-only reviewer for the conformance review (the spec-reviewer agent, given this brief, test-matrix.md and the diff against origin/qa) and log it in review.md Conformance review; fix or record its findings; push the branch; `gh pr create --draft --base qa --head feature/category-suggestions` with the PR body below, then reread the body against "PR body" yourself.
 - Verify: `npm test; npm run build --workspace @smart-finances/infra` and `npm run lhci --workspace @smart-finances/web` → pass
 - Done when: the draft PR is open and its body is checked
 

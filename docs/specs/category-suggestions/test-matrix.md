@@ -13,6 +13,7 @@ status: draft
 <!-- unit and int rows, grouped by PR. Keep the check terse: one line, no Given/When/Then. When the change classifies a set (routes, keys, types), add one coverage test that pins the count, so a new member fails CI until someone classifies it. -->
 | Test | Traces | Task | Level | Gate | Check |
 |---|---|---|---|---|---|
+| T-DOC-1 | D-7, D-22, D-23 | SF-1 | unit | G-merge | ADR 0011 exists with status accepted, names D-7, D-17, D-22 and D-23 and has a Model gate section; the README lists it; the threat model status line says v5. |
 | T-RULE-1 | D-15, AC-1 | SF-2 | unit | G-merge | The contracts `merchantCategory` gives the same answer as before for every code and name case in the existing API tests. |
 | T-RULE-2 | D-15, RK-6 | SF-2 | unit | G-merge | The API module's `merchantCategory`, `CODE_CATEGORIES` and `NAME_RULES` are the same objects as the contracts exports. |
 | T-SUG-1 | AC-1, D-17 | SF-3 | unit | G-merge | Levels rank key, then name, then rules, then shared words, then model; the first level with a match gives the pick. |
@@ -28,6 +29,7 @@ status: draft
 | T-HIST-1 | D-24, RK-3 | SF-4 | int | G-merge | History makes four 3-month reads with limit 200, at most 3 pages each, so at most 12 requests. |
 | T-HIST-2 | D-24 | SF-4 | int | G-merge | One failing range gives complete false and keeps the other ranges' examples. |
 | T-HIST-3 | D-24, D-26, AC-14 | SF-4 | int | G-merge | Settle's invalidations do not refetch history; unmounting removes the query; a second mount reads again. |
+| T-HIST-4 | AC-9, D-24 | SF-4 | int | G-merge | An empty or failed review list starts no history read. |
 | T-ROW-1 | AC-10 | SF-5 | unit | G-merge | DataTable.Row passes tabIndex, key handlers, aria attributes and a ref to its row element. |
 | T-MSG-1 | AC-19 | SF-5 | unit | G-merge | Every review.suggest key exists in en and es with the same arguments and plural forms; Spanish has names for Shopping, Pets, Interest, Refunds and Loans. |
 | T-UI-1 | AC-1, AC-2, AC-19 | SF-6 | unit | G-merge | A row with a pick shows the pick and its others as buttons named by category, in en and in es. |

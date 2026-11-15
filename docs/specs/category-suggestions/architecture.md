@@ -33,12 +33,13 @@ chip tap / Accept all ── chooseReview {category, approved:true} ─► API P
 - Serves AC-1 and AC-12 (rules are the third level, below the owner's own rows).
 
 ### History read (D-24)
+- The read starts only once the review list has loaded with at least one payments row; an empty or failed list reads no history.
 - `smart-finances:apps/web/src/queries/data.ts#useHistory (new)` reads `GET /api/data/transactions` (route `smart-finances:apps/web/src/app/api/data/transactions/route.ts#GET`, unchanged) for the 12 months ending with the current month. It makes four parallel 3-month reads with `limit=200`, follows each read's cursor for at most 3 pages, and merges the results.
 - Its key is `smart-finances:apps/web/src/queries/keys.ts#dataKeys` `.history() (new)` = `['data', 'history']`. That key is outside the `transactions`, `totals` and `review` keys, so `smart-finances:apps/web/src/screens/review/Review.tsx#Review` settle does not refetch it.
 - Query options: `staleTime: Infinity`, `retry: 1`, no refetch on focus or reconnect, and `gcTime: 0`. The island also removes the query when it unmounts. Every visit to the review page therefore reads history again, and that read already holds the choices saved on earlier visits (D-26).
 - Each range is read and kept on its own. The query returns the merged examples with `complete: false` when any range failed after its retry. A range that reaches its 3-page cap keeps its newest 600 rows, and that still counts as complete.
 - The page's server render does not read history. `router.refresh()` after every save re-runs the server page, so a server-side history read would repeat on every save and spend the request limit (research fact on the person limit).
-- Reply rows are parsed with the existing `GET /transactions` schema in `smart-finances:packages/contracts/src/routes.mjs#ROUTES` and reduced at once to examples (Contracts, "Suggest module"). The raw rows are not kept in the query cache: the query function returns the examples.
+- Reply rows are typed with the existing `GET /transactions` reply type (`TransactionsPage` in keys.ts) through `getJson`, like `useReview`, with no runtime schema parse in the browser (it would pull the route schemas into the page script), and reduced at once to examples (Contracts, "Suggest module"). The raw rows are not kept in the query cache: the query function returns the examples.
 - Serves AC-1, AC-11, AC-12 and AC-15.
 
 ### Suggest module (D-17, D-18)
@@ -52,7 +53,7 @@ chip tap / Accept all ── chooseReview {category, approved:true} ─► API P
   5. the model, when ready.
 - Within levels 1, 2 and 4, owner examples are ranked before rule examples. Rule examples count only when that level has no owner example. Inside each group the most frequent category wins, then the most recent (AC-12, D-11).
 - A row gets a `pick` only from levels 1 to 5 matching that row's own key or name. `others` are the next distinct categories from lower matches, then the owner's most used categories for the same `kind`. There are at most 2, all different from the pick. `Uncategorized` and the row's current category are never offered when that category is `Uncategorized`. A row with no pick gets no others (AC-2, AC-5).
-- `suggest` covers only rows whose `source` is `smart-finances:apps/web/src/screens/review/View.tsx#CHOICE_SOURCE` (D-9).
+- `suggest` covers only rows whose `source` is `'mercadopago'`, the same value as `smart-finances:apps/web/src/screens/review/View.tsx#CHOICE_SOURCE` (D-9). The web lint rule lets `src/domain` import only domain code and the contracts package, so the module declares its own row type (Contracts) and the literal.
 - Serves AC-1, AC-2, AC-5, AC-11, AC-12, AC-15 and AC-20.
 
 ### Review island and view
@@ -143,9 +144,22 @@ type Example = { key: string; name: string; category: string; owner: boolean; ki
 type Index = { byKey: Map<string, Example[]>; byName: Map<string, Example[]>; byToken: Map<string, Example[]>; byKind: Map<string, Map<string, number>> };
 type Level = 'key' | 'name' | 'rule' | 'words' | 'model';
 type Suggestion = { pick: string; others: string[]; level: Level }; // others.length <= 2, all distinct from pick
+type SuggestRow = { id: string; source: string; merchant: string; recipient_key: string; kind: string; category: string };
+type HistoryRow = SuggestRow & { date: string; review: { approved: boolean; category_override?: string } };
 type ModelScorer = (row: { name: string }) => { category: string; score: number }[];
-function suggest(rows: ReviewRow[], index: Index, model?: ModelScorer): Map<string, Suggestion>; // keyed by row id; rows without a pick are absent
-function addChoice(index: Index, row: ReviewRow, category: string): Index; // returns a new index, owner: true
+function examplesFrom(rows: HistoryRow[]): Example[];
+function suggest(rows: SuggestRow[], index: Index, model?: ModelScorer): Map<string, Suggestion>; // keyed by row id; rows without a pick are absent
+function addChoice(index: Index, row: SuggestRow, category: string): Index; // returns a new index, owner: true
+```
+
+### Save pool (D-25)
+```ts
+type SaveResult = { ok: true } | { ok: false; messageKey: string; retryAfterSeconds?: number };
+function saveAll(
+  choices: { id: string; date: string; category: string; approved: true }[],
+  choose: (c: { id: string; date: string; category: string; approved: true }) => Promise<SaveResult>,
+  opts?: { concurrency?: number /* 4 */; timeoutMs?: number /* 20_000 */; maxRetryWaitS?: number /* 60 */; onWait?: (secondsLeft: number) => void },
+): Promise<string[]>; // the failed ids; never rejects; resolves after every call settles
 ```
 
 ### Model file (D-22; only if the gate passes)
@@ -157,15 +171,23 @@ function addChoice(index: Index, row: ReviewRow, category: string): Index; // re
 - A unit test hashes the committed file and compares the result with `MODEL_SHA384`. It also fails when the file is over 30 MB.
 
 ### Messages (AC-19)
-- New keys under `review.suggest`:
-  - `accept` ("Accept {category}") and `use` ("Use {category}");
-  - `acceptAll`: the visible label is the glossary term "Accept all", with an ICU plural count ("Accept all ({n})");
-  - `confirmTitle`, and `confirmLine`, an ICU plural for "{n} as {category}";
-  - `save` and `cancel`;
-  - `saving`, with the remaining wait;
-  - `someFailed`, an ICU plural for "{n} didn't save. They're back on the list.";
-  - `keys`, the screen-reader hint.
-- Each key exists in both languages, with ICU plural forms where it has a count, as in `overview.todoReview`. The final wording follows the smart-finances-ui voice rules.
+New keys under `review.suggest`, with ICU plurals as in `overview.todoReview`. Spanish uses "tú", like the rest of es.json.
+
+| Key | en | es |
+|---|---|---|
+| accept | Accept {category} | Aceptar {category} |
+| use | Use {category} | Usar {category} |
+| acceptAll | {n, plural, one {Accept all (# suggestion)} other {Accept all (# suggestions)}} | {n, plural, one {Aceptar todo (# sugerencia)} other {Aceptar todo (# sugerencias)}} |
+| confirmTitle | Save these suggestions and approve the rows? | ¿Guardar estas sugerencias y aprobar los movimientos? |
+| confirmLine | {n, plural, one {# as {category}} other {# as {category}}} | {n, plural, one {# como {category}} other {# como {category}}} |
+| save | Save and approve | Guardar y aprobar |
+| cancel | Cancel | Cancelar |
+| saving | {n, plural, one {Saving # row…} other {Saving # rows…}} | {n, plural, one {Guardando # movimiento…} other {Guardando # movimientos…}} |
+| waiting | {s, plural, one {Too many saves at once. Trying again in # second…} other {Too many saves at once. Trying again in # seconds…}} | {s, plural, one {Demasiados cambios a la vez. Reintentando en # segundo…} other {Demasiados cambios a la vez. Reintentando en # segundos…}} |
+| someFailed | {n, plural, one {# row didn't save. It's back on the list.} other {# rows didn't save. They're back on the list.}} | {n, plural, one {# movimiento no se guardó. Volvió a la lista.} other {# movimientos no se guardaron. Volvieron a la lista.}} |
+| keys | Enter accepts the suggestion, 1 to 3 pick one, the arrow keys move between rows. | Enter acepta la sugerencia, 1 a 3 eligen una, las flechas pasan de un movimiento a otro. |
+
+Category names missing from both files today, under `categories`: shopping "Shopping" / "Compras", pets "Pets" / "Mascotas", interest "Interest" / "Intereses", refunds "Refunds" / "Reembolsos", loans "Loans" / "Préstamos".
 
 ## Alternatives
 
@@ -192,7 +214,7 @@ function addChoice(index: Index, row: ReviewRow, category: string): Index; // re
 ## States and exits
 | State | Entered when | Exits when | On failure or timeout |
 |---|---|---|---|
-| History loading | Review island mounts with rows | All four reads settle → History ready, or History partial | A range fails after 1 retry → History partial |
+| History loading | The review list has loaded with at least one payments row | All four reads settle → History ready, or History partial | A range fails after 1 retry → History partial |
 | History ready | All ranges read (a range at its page cap counts as read) | Page left: the query is removed (gcTime 0) | n/a |
 | History partial | At least one range failed | Page left: the query is removed | Suggestions use the ranges that were read, plus the rules and the model; Accept all is hidden this visit; no message; no further reads this visit |
 | Model idle | History settled and the gate shipped a model | Browser idle or 2 s → Model loading | n/a |
@@ -206,16 +228,12 @@ function addChoice(index: Index, row: ReviewRow, category: string): Index; // re
 ## Cross-cutting
 - **Security and permissions:** no new route, action or permission. Every save goes through the existing guarded money action for the session's person. No script policy change and no WebAssembly (D-7). If shipped, the model file comes from the app's own origin with a build hash and a `fetch` integrity check. Shop names stay untrusted text: React renders them as text, and the suggest module only compares cleaned tokens (AC-20). The threat model v5 records the new asset and data.
 - **Personal data and logs:** history examples (shop names, recipient keys and categories) live only in page memory. The query is removed when the page is left (D-26, AC-14). Nothing is written to browser storage beyond the normal HTTP cache for the model (D-8). There are no new log lines, analytics or RUM events, and no row text in any request beyond today's reads (AC-13). Errors thrown by the new code carry ids and counts only, never row text, because browser monitoring reports script errors. A unit test with hostile rows checks this.
-- **Tests and the test-stage limit:** under the test stage a person may make 5 data requests a minute, so the e2e tests for chips, timing and Accept all use a new person in `smart-finances:apps/web/src/adapters/container.ts#E2E_PEOPLE`.
-  - That person's data is `'uncounted'`, like the Lighthouse person.
-  - Its synthetic fixtures hold 60 payments review rows and 12 months of history.
-  - The Lighthouse person's fixtures must also make chips render on /review.
-  - The limiter itself is tested in unit tests with an injected limiter at 120 (RK-3, RK-9).
-- **Performance and cost:** at most 12 history requests a visit. Matching 60 rows against a few hundred examples is well under 50 ms. Suggestions appear after one parallel round trip (AC-15). The new script stays small: the suggest module, the chips and the rules, with the model loader as a dynamic import, keeps the review page under 204,800 bytes (AC-18). The model download of up to 30 MB happens only on the review page, after idle (D-8, AC-16).
-- **Deploy and infrastructure:** one PR, nothing new in infrastructure. The API changes only by re-exporting the moved rules, with the same behaviour and tests. The web build must emit the model file as a hashed static asset; the task checks the size of the production build output against Amplify's limits.
-- **Observability:** none new. A failed history or model load leaves the screen working as today.
-- **Old clients:** an open tab on the old build keeps working: no API or action contract changes.
-
+- **Tests and the test-stage limit:** under the test stage a person may make 5 data requests a minute.
+  - A new E2E data mode `'suggest'` in `smart-finances:apps/web/src/adapters/container.ts#E2E_PEOPLE` seeds the shared fixtures plus `apps/web/fixtures/suggest.json` and leaves the person uncounted. `fixtureSeed` in `smart-finances:apps/web/src/adapters/memory/data-api.ts#fixtureSeed` takes the extra fixture as an optional argument; the default stays as it is. suggest.json has the same shape as sample.json (`transactions`, `reviewRows`): 60 synthetic payments review rows and 12 months of synthetic history, with made-up shop names and keys.
+  - A new person `suggest` uses that mode for the e2e tests for chips, timing and Accept all.
+  - Every existing person whose spec opens /review with fixture data and does not test the limit gets data `'uncounted'`. The limit people keep counting; any of them that opens /review gets `'empty'` data, so /review still makes one counted read per load (an empty list reads no history). The whole e2e suite runs before the PR.
+  - Stories seed `dataKeys.history()` in their QueryClient with examples built from suggest.json by `examplesFrom`; partial and loading states seed `complete: false` or no data.
+  - The limiter itself is tested in unit tests with a counting fake at 120 (RK-3, RK-9).
 ## Risks
 | RK | Risk | Likelihood | Impact | Mitigation or acceptance | Owner |
 |---|---|---|---|---|---|
