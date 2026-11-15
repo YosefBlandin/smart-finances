@@ -12,12 +12,14 @@ export const STATUS = {
 };
 
 export class HttpError extends Error {
-  constructor(code, message = code) {
+  // retryAfter: whole seconds until the request can succeed, sent as Retry-After when known.
+  constructor(code, message = code, { retryAfter } = {}) {
     if (!Object.hasOwn(STATUS, code)) throw new Error(`unknown error code: ${code}`);
     super(message);
     this.name = 'HttpError';
     this.code = code;
     this.status = STATUS[code];
+    if (retryAfter !== undefined) this.retryAfter = retryAfter;
   }
 }
 
@@ -29,15 +31,18 @@ export function personOf(event) {
   return sub;
 }
 
-export const reply = (status, body) => ({
+export const reply = (status, body, headers = {}) => ({
   statusCode: status,
-  headers: { 'content-type': 'application/json' },
+  headers: { 'content-type': 'application/json', ...headers },
   body: JSON.stringify(body),
 });
 
 // Unexpected errors become a bare 500: their messages can hold keys or stored text.
 export function fail(err) {
-  if (err instanceof HttpError) return reply(err.status, { error: { code: err.code, message: err.message } });
+  if (err instanceof HttpError) {
+    const headers = err.retryAfter === undefined ? {} : { 'retry-after': String(err.retryAfter) };
+    return reply(err.status, { error: { code: err.code, message: err.message } }, headers);
+  }
   return reply(500, { error: { code: 'internal', message: 'internal error' } });
 }
 

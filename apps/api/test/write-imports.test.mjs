@@ -274,3 +274,18 @@ test('T-REC-5 undo of an import that never arrived, or of an undo record, gets c
   await w.drain();
   assert.equal((await w.call('POST /imports/{id}/undo', { pathParameters: { id: undo.body.import_id } })).status, 409);
 });
+
+test('T-API-1 POST /imports after a delete-all is a conflict with Retry-After until the quiet window ends', async () => {
+  const { store, handler } = setup();
+  const call = () => handler(httpEvent(A, 'POST /imports', { body: { source: 'csv', file_name: 'a.csv', size: 10 } }));
+  // A finished erase: quiet until 40 minutes and 0.5 s from now, so the wait rounds up to whole seconds.
+  await store.put({ pk: `U#${A}`, sk: 'ERASED', erased_at: new Date(T0 - 25 * 60_000).toISOString(), quiet_until: new Date(T0 + 40 * 60_000 + 500).toISOString() });
+  const quiet = await call();
+  assert.deepEqual([quiet.statusCode, JSON.parse(quiet.body).error.code], [409, 'conflict']);
+  assert.equal(quiet.headers['retry-after'], String(40 * 60 + 1));
+  // An erase that has not finished has no end yet: no Retry-After.
+  await store.put({ pk: `U#${A}`, sk: 'ERASED', erased_at: new Date(T0 - 60_000).toISOString() });
+  const erasing = await call();
+  assert.equal(erasing.statusCode, 409);
+  assert.equal(erasing.headers['retry-after'], undefined);
+});
