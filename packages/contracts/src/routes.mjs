@@ -74,6 +74,10 @@ const ImportRecord = ImportItem.extend({
 });
 const Accepted = z.object({ import_id: z.string().min(1) });
 
+// ---- recipient labels (D-13; mercadopago-enrichment Contracts "PUT /recipients/{key}/label") ----
+const LabelCategory = z.enum(CATEGORIES.filter((c) => c !== 'Uncategorized'));
+const Label = z.object({ recipient_key: z.string().regex(/^[0-9a-f]{32}$/), name: z.string().min(1).max(80), category: LabelCategory, updated_at: Timestamp });
+
 // ---- the routes ----
 export const ROUTES = {
   'GET /health': { reply: z.object({ message: z.string(), stage: z.string() }) },
@@ -121,4 +125,9 @@ export const ROUTES = {
   'POST /totals/rebuild': { reply: z.object({ months: z.number().int().min(0) }) },
   'GET /export': { contentType: 'text/csv', columns: FIELDS, reply: z.string() },
   'DELETE /data': { request: z.object({ confirm: z.literal('DELETE') }), reply: z.object({ deleted: z.object({ items: z.number().int().min(0), files: z.number().int().min(0) }) }) },
+  // The key is the path's 32 lowercase hex characters; a name of 1 to 80 characters after trim.
+  'PUT /recipients/{key}/label': {
+    request: z.object({ name: z.string().trim().min(1).max(80), category: LabelCategory }),
+    reply: z.object({ label: Label }),
+  },
 };

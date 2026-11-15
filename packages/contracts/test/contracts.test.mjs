@@ -157,3 +157,16 @@ test('T-WEB-17 the import sources and their check load without zod, and routes r
   const pkg = JSON.parse(readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8'));
   assert.equal(pkg.exports['./sources'], './src/sources.mjs');
 });
+
+test('T-ENR-11 PUT /recipients/{key}/label takes a name of 1 to 80 characters after trim and a category other than Uncategorized', () => {
+  const route = ROUTES['PUT /recipients/{key}/label'];
+  assert.ok(route, 'the route has a schema');
+  assert.deepEqual(route.request.parse({ name: '  Made-up Name  ', category: 'Groceries' }), { name: 'Made-up Name', category: 'Groceries' });
+  assert.ok(route.request.safeParse({ name: 'x'.repeat(80), category: 'Transport' }).success);
+  for (const bad of [{ name: '', category: 'Groceries' }, { name: '  ', category: 'Groceries' }, { name: 'x'.repeat(81), category: 'Groceries' }, { name: 'X', category: 'Uncategorized' }, { name: 'X', category: 'Nope' }, {}]) {
+    assert.equal(route.request.safeParse(bad).success, false, JSON.stringify(bad));
+  }
+  for (const category of CATEGORIES.filter((c) => c !== 'Uncategorized')) assert.ok(route.request.safeParse({ name: 'X', category }).success, category);
+  assert.ok(route.reply.safeParse({ label: { recipient_key: 'a'.repeat(32), name: 'X', category: 'Groceries', updated_at: '2026-11-14T00:00:00.000Z' } }).success);
+  assert.equal(route.reply.safeParse({ label: { recipient_key: 'a'.repeat(32), name: 'X', category: 'Groceries' } }).success, false);
+});

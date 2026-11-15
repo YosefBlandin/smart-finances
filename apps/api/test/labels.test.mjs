@@ -187,3 +187,73 @@ test('T-ENR-10 a rebuild that read the first label and finishes after the second
   assert.deepEqual(storedTotals(await w.totals(A)), expectedTotals(items));
   assert.equal(storedTotals(await w.totals(A))['2026-10'].expense.Transport.ARS, -1000);
 });
+
+// ---- PUT /recipients/{key}/label (SF-7, Contracts) ----
+import { createWriteHandler } from '../src/handlers/write.mjs';
+
+function route(over = {}) {
+  const w = world();
+  const write = createWriteHandler({ store: w.store, now: () => T0, ulid: () => 'x', parserFunction: 'parser-fn', rollupFunction: 'rollup-fn', ...over });
+  const label = async (sub, key, body) => {
+    const res = await write(httpEvent(sub, 'PUT /recipients/{key}/label', { pathParameters: { key }, body }));
+    return { status: res.statusCode, body: JSON.parse(res.body) };
+  };
+  return { ...w, label };
+}
+async function captureLogs(fn) {
+  const lines = [];
+  const [log, error] = [console.log, console.error];
+  console.log = (...a) => lines.push(a.join(' '));
+  console.error = (...a) => lines.push(a.join(' '));
+  try {
+    return { out: await fn(), lines };
+  } finally {
+    [console.log, console.error] = [log, error];
+  }
+}
+
+test('T-ENR-11 PUT label answers 200 with the label and asks the rollup for one full rebuild', async () => {
+  const w = route();
+  await w.put(A, row('2026-10-02', -1000, { recipient_key: K }));
+  const { out: res, lines } = await captureLogs(() => w.label(A, K, { name: '  Made-up Landlord ', category: 'Housing & utilities' }));
+  assert.equal(res.status, 200);
+  assert.ok(ROUTES['PUT /recipients/{key}/label'].reply.safeParse(res.body).success);
+  assert.deepEqual(res.body, { label: { recipient_key: K, name: 'Made-up Landlord', category: 'Housing & utilities', updated_at: new Date(T0).toISOString() } });
+  assert.deepEqual(w.store.invocations, [{ functionName: 'rollup-fn', payload: { sub: A, months: 'all' } }]);
+  assert.equal((await w.list(A))[Object.keys(await w.list(A))[0]].category, 'Housing & utilities');
+  assert.equal(lines.length, 1, 'one log line');
+  assert.doesNotMatch(lines.join('\n'), /Landlord|Housing/);
+});
+
+test('T-ENR-11 PUT label refuses a bad key with not_found, a bad body with bad_request, and the erase window with conflict', async () => {
+  const w = route();
+  for (const key of ['A'.repeat(32), 'a'.repeat(31), 'a'.repeat(33), 'g'.repeat(32), `${'a'.repeat(31)}#`]) {
+    const res = await w.label(A, key, { name: 'X', category: 'Groceries' });
+    assert.deepEqual([res.status, res.body.error.code], [404, 'not_found'], key);
+  }
+  for (const body of [undefined, {}, { name: '', category: 'Groceries' }, { name: '   ', category: 'Groceries' }, { name: 'x'.repeat(81), category: 'Groceries' }, { name: 'X', category: 'Uncategorized' }, { name: 'X', category: 'Not a category' }, { name: 'X' }, { category: 'Groceries' }, { name: 5, category: 'Groceries' }]) {
+    const res = await w.label(A, K, body);
+    assert.deepEqual([res.status, res.body.error.code], [400, 'bad_request'], JSON.stringify(body));
+  }
+  assert.equal((await w.label(A, K, { name: `  ${'x'.repeat(80)}  `, category: 'Groceries' })).status, 200, '80 after trim is fine');
+  await w.store.put({ pk: `U#${A}`, sk: 'ERASED', erased_at: new Date(T0 - 1).toISOString() });
+  const res = await w.label(A, OTHER, { name: 'X', category: 'Groceries' });
+  assert.deepEqual([res.status, res.body.error.code], [409, 'conflict']);
+  assert.equal((await readLabels(w.store, A)).has(OTHER), false);
+  assert.equal(w.store.invocations.length, 1, 'only the accepted write asked for a rebuild');
+  const anon = await createWriteHandler({ store: w.store })(httpEvent(null, 'PUT /recipients/{key}/label', { pathParameters: { key: K }, body: { name: 'X', category: 'Groceries' } }));
+  assert.equal(anon.statusCode, 401);
+});
+
+test('T-ENR-11 an invoke error after the label is stored still answers 200 and logs rebuild_not_started', async () => {
+  const w = route();
+  w.store.invokeAsync = async () => {
+    throw new Error('throttled');
+  };
+  const { out: res, lines } = await captureLogs(() => w.label(A, K, { name: 'Made-up Cafe', category: 'Dining out' }));
+  assert.equal(res.status, 200);
+  assert.equal((await readLabels(w.store, A)).get(K).name, 'Made-up Cafe');
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /rebuild_not_started/);
+  assert.doesNotMatch(lines[0], /Made-up|throttled/);
+});

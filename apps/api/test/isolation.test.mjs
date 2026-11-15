@@ -45,6 +45,7 @@ const SERVED_BY = {
   'POST /totals/rebuild': 'write',
   'GET /export': 'read',
   'DELETE /data': 'delete',
+  'PUT /recipients/{key}/label': 'write',
 };
 
 function world() {
@@ -67,12 +68,12 @@ function world() {
   return { store, call, parser, rollup };
 }
 
-test('T-AUTH-3 every one of the 15 routes is covered here', () => {
-  assert.equal(Object.keys(ROUTES).length, 15);
+test('T-AUTH-3 every one of the 16 routes is covered here (T-ENR-11: the label route)', () => {
+  assert.equal(Object.keys(ROUTES).length, 16);
   assert.deepEqual(Object.keys(SERVED_BY).sort(), Object.keys(ROUTES).sort());
 });
 
-test('T-AUTH-3 person B sees and changes none of person A\'s rows, imports, choices, rates, totals or files, on all 15 routes', async () => {
+test('T-AUTH-3 person B sees and changes none of person A\'s rows, imports, choices, rates, totals or files, on all 16 routes', async () => {
   const w = world();
   // Person A, seeded through the handlers: an import (write handler, then the parser on an
   // Object Created event), a review choice, a rate and the month's totals.
@@ -87,11 +88,14 @@ test('T-AUTH-3 person B sees and changes none of person A\'s rows, imports, choi
   const row = listed.body.items[0];
   assert.equal((await w.call(A, 'PUT /transactions/{id}/review', { pathParameters: { id: row.id }, body: { date: row.date, category: 'Groceries' } })).status, 200);
   assert.equal((await w.call(A, 'PUT /rates/{month}', { pathParameters: { month: '2026-05' }, body: { ars_per_usd: 1000 } })).status, 200);
+  const recipient = 'a'.repeat(32);
+  assert.equal((await w.call(A, 'PUT /recipients/{key}/label', { pathParameters: { key: recipient }, body: { name: 'Made-up A', category: 'Groceries' } })).status, 200);
   await w.rollup({ sub: A, months: 'all' });
   assert.equal((await w.call(A, 'GET /totals', { queryStringParameters: { from: '2026-05', to: '2026-05' } })).body.months.length, 1);
 
   const snapshot = () => JSON.stringify({ items: [...w.store.items.entries()].sort(), objects: [...w.store.objects.keys()].sort() });
   const before = snapshot();
+  const invokedBefore = w.store.invocations.length;
   assert.ok(before.includes(`U#${A}`) && before.includes(`uploads/${A}/`));
   const seen = new Set();
   const asB = async (routeKey, opts) => {
@@ -120,11 +124,13 @@ test('T-AUTH-3 person B sees and changes none of person A\'s rows, imports, choi
   assert.equal(repair.status, 404, 'B has no such period; 202 would mean it reached A');
   assert.deepEqual((await asB('POST /totals/rebuild')).body, { months: 0 });
   assert.equal((await asB('PUT /rates/{month}', { pathParameters: { month: '2026-05' }, body: { ars_per_usd: 5 } })).status, 200);
+  // The same recipient key in B's partition is B's own label; A's stays as it was.
+  assert.equal((await asB('PUT /recipients/{key}/label', { pathParameters: { key: recipient }, body: { name: 'Made-up B', category: 'Transport' } })).status, 200);
   const bForm = await asB('POST /imports', { body: { source: 'csv', file_name: 'b.csv', size: 10 } });
   assert.equal(bForm.status, 201);
   assert.match(bForm.body.upload.fields.key, new RegExp(`^uploads/${B}/`));
   assert.deepEqual((await asB('GET /rates')).body, { items: [{ month: '2026-05', ars_per_usd: 5 }] });
-  for (const { payload } of w.store.invocations) assert.equal(payload.sub, B, 'every async invoke is for B');
+  for (const { payload } of w.store.invocations.slice(invokedBefore)) assert.equal(payload.sub, B, 'every async invoke made by B\'s calls is for B');
 
   // B's delete-all removes only B's items and files.
   w.store.putObject(bForm.body.upload.fields.key, 'x');

@@ -5,6 +5,7 @@ import { checkImportRequest, SOURCES } from '@smart-finances/contracts/routes';
 import { abandonReconcile, createImport, Erasing, FORM_SECONDS, inEraseWindow, startRepair, startUndo } from '../store/imports.mjs';
 import { erasedKey } from '../store/keys.mjs';
 import { createRepo } from '../store/repo.mjs';
+import { putLabel } from '../store/labels.mjs';
 import { putRate } from '../store/rates.mjs';
 import { putReview } from '../store/review.mjs';
 import { monthsWithData } from '../store/totals.mjs';
@@ -124,6 +125,27 @@ async function chooseReview(deps, sub, event) {
   return reply(200, out);
 }
 
+const RECIPIENT = /^[0-9a-f]{32}$/;
+
+// PUT /recipients/{key}/label (D-13): one label write with the erase check, then one full rebuild, since the
+// rollup stream ignores LBL items. A refused invoke still answers 200: reads already show the label, and the next
+// label write, review choice or POST /totals/rebuild recomputes. One log line with the outcome; never the name.
+async function putRecipientLabel(deps, sub, event) {
+  const key = event.pathParameters?.key;
+  if (typeof key !== 'string' || !RECIPIENT.test(key)) throw new HttpError('not_found', 'no such recipient');
+  const body = checked('PUT /recipients/{key}/label', jsonBody(event));
+  const out = await putLabel(deps.store, sub, key, body, { now: deps.now() });
+  if (out.error) throw new HttpError('conflict', 'your data is being deleted; try again later');
+  let outcome = 'saved';
+  try {
+    await deps.store.invokeAsync(deps.rollupFunction, { sub, months: 'all' });
+  } catch {
+    outcome = 'rebuild_not_started';
+  }
+  console.log(JSON.stringify({ msg: 'write', route: 'PUT /recipients/{key}/label', outcome }));
+  return reply(200, out);
+}
+
 const ROUTE_HANDLERS = {
   'POST /imports': requestImport,
   'POST /imports/{id}/undo': undoImport,
@@ -131,6 +153,7 @@ const ROUTE_HANDLERS = {
   'POST /totals/rebuild': rebuildTotals,
   'PUT /rates/{month}': setRate,
   'PUT /transactions/{id}/review': chooseReview,
+  'PUT /recipients/{key}/label': putRecipientLabel,
 };
 
 export function createWriteHandler({
