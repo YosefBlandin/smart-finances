@@ -8,7 +8,8 @@
     "./fields": "./src/fields.mjs",
     "./categories": "./src/categories.mjs",
     "./routes": "./src/routes.mjs",
-    "./sources": "./src/sources.mjs"
+    "./sources": "./src/sources.mjs",
+    "./rules": "./src/rules.mjs"
   },
   "scripts": {
     "test": "node --test test/*.test.mjs"

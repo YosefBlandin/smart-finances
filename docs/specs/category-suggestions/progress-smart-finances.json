@@ -27,7 +27,7 @@
     {
       "id": "SF-1",
       "status": "done",
-      "commit": "",
+      "commit": "7a03cb1",
       "evidence": [
         "tests first: node --test apps/api/test/docs.test.mjs → pass 4, fail 1: T-DOC-11 failed with ENOENT: no such file or directory, open docs/adr/0011-in-browser-category-suggestions.md",
         "verify: node --test apps/api/test/docs.test.mjs → pass 5, fail 0 (T-DOC-11 included)",
@@ -37,10 +37,14 @@
     },
     {
       "id": "SF-2",
-      "status": "todo",
+      "status": "done",
       "commit": "",
-      "evidence": [],
-      "review": ""
+      "evidence": [
+        "tests first: node --test packages/contracts/test/rules.test.mjs apps/api/test/merchants.test.mjs → fail 2: ERR_MODULE_NOT_FOUND packages/contracts/src/rules.mjs; ERR_PACKAGE_PATH_NOT_EXPORTED ./rules not defined by exports of @smart-finances/contracts",
+        "verify: node --test packages/contracts/test/rules.test.mjs apps/api/test/merchants.test.mjs apps/api/test/*.test.mjs → tests 195, pass 195, fail 0; node --test packages/contracts/test/*.test.mjs → pass 18, fail 0",
+        "review (fresh spec-reviewer subagent, sonnet): no findings; rules, codes and guard byte-identical apart from the header comment, the ./categories.mjs import and the guard message; browser-safe; API Lambda bundling resolves the workspace package as before"
+      ],
+      "review": "pass"
     },
     {
       "id": "SF-3",

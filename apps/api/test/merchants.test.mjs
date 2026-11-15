@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CATEGORIES } from '@smart-finances/contracts/categories';
+import * as shared from '@smart-finances/contracts/rules';
 import { CODE_CATEGORIES, NAME_RULES, merchantCategory } from '../src/ingest/merchants.mjs';
 
 test('T-ENR-3 a known category code maps to its category, before any name rule', () => {
@@ -41,4 +42,12 @@ test('T-ENR-3 every mapped category is in the shared list, never Uncategorized',
     assert.ok(re instanceof RegExp);
     assert.ok(CATEGORIES.includes(category) && category !== 'Uncategorized', `${re} -> ${category}`);
   }
+});
+
+// T-RULE-2 (category-suggestions D-15, RK-6): the API module re-exports the contracts copy, so the importer and the
+// browser use one set of rules.
+test('T-RULE-2 the API module exports the same objects as @smart-finances/contracts/rules', () => {
+  assert.equal(merchantCategory, shared.merchantCategory);
+  assert.equal(CODE_CATEGORIES, shared.CODE_CATEGORIES);
+  assert.equal(NAME_RULES, shared.NAME_RULES);
 });
