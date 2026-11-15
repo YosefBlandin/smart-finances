@@ -14,6 +14,7 @@ Since the payments report gained shop names (ADR 0010), the review list gets abo
 - **D-17**: Suggestion levels, strongest first: same recipient key, same cleaned shop name, import rules, shared words, model; within a level the owner's own rows beat rule-categorized rows.
 - **D-22**: If the model ships: a static multilingual model cut to Latin-script tokens, at most 256 dimensions, int8, as one hashed built file from the app's own address with an integrity check, loaded after idle on the review page only and run on the main thread in small chunks.
 - **D-23**: If the model meets the bar, its converted file (at most 30 MB) is committed to the public repo with its licence notice.
+- **D-30**: After the lock the owner chose not to download the upstream model: no model is built, measured or shipped in this PR. Suggestions come from history and the import rules only (the D-7 fallback); the evaluation set, converter and loader are not built. Supersedes D-22 and D-23, which stay here as the design a later change would start from.
 
 ## What it looks like
 - **History.** On each visit, the review island reads the person's last 12 months through the existing transactions data route, four 3-month ranges of at most 3 pages each, and keeps only examples (cleaned shop name, recipient key, category, whether the owner chose it) in page memory. The query is removed when the page is left (D-24).
@@ -33,12 +34,12 @@ Since the payments report gained shop names (ADR 0010), the review list gets abo
 - **A transformer encoder**: tens of MB more and a runtime the script policy does not allow.
 
 ## Model gate
-Pending SF-12: the evaluation on synthetic shop names that the rules miss, against the bar of D-12 (the right category among the 3 shown for at least 8 of 10, the pick for at least 6 of 10), with the size of the converted file at each tried dimension.
+No model was built or measured (D-30). After the lock the owner chose not to download the upstream model, so there is no evaluation set, converter, loader or model file, and the bar of D-12 was never run. Suggestions come from history and the import rules only, the D-7 fallback; the model level of D-17 is simply never reached. A later change may revisit it, starting from architecture.md "Static model" and D-22 and D-23 above, with its own download approval and its own measured gate.
 
 ## Trade-offs
 - At first many rows have no suggestion: history and rules only know shops seen before (RK-1). Each choice and label teaches the page at once.
 - Accept all cannot be undone, so it asks first and shows a per-category tally.
-- If the model ships, the file stays in git history for good, even after a revert (D-23).
+- No model ships (D-30), so nothing large enters git history; rows the history and rules cannot place get no suggestion.
 
 ## What would change the decision
 - Suggestions on too few rows after a month on qa (T-MAN-1), with a model that missed the bar: revisit a larger model, which would need a new script policy decision.

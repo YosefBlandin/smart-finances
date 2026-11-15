@@ -98,3 +98,21 @@ test('T-DOC-11 ADR 0011 is accepted, cites its decisions, has a Model gate secti
   assert.match(threats, /^Status: v5\b/m, 'the threat model status line says v5');
   for (const pattern of [/history examples/i, /model file/i, /integrity/i, /suggest module/i]) assert.match(threats, pattern);
 });
+
+test('T-MOD-1 ADR 0011 records that no model was built (D-30), and the tree holds no model file, converter or loader', () => {
+  const text = read('adr/0011-in-browser-category-suggestions.md');
+  const gate = text.split(/^## Model gate$/m)[1]?.split(/^## /m)[0] ?? '';
+  assert.ok(cites(gate, 'D-30'), 'the Model gate section cites D-30');
+  assert.match(gate, /no model was built/i, 'the Model gate section says no model was built');
+  assert.doesNotMatch(gate, /pending/i, 'the Model gate section is filled in');
+  const root = new URL('../../../', import.meta.url);
+  for (const path of [
+    'apps/web/fixtures/suggest-eval.json',
+    'apps/web/src/domain/suggest-model.ts',
+    'apps/web/src/screens/review/suggest/model.ts',
+    'apps/web/src/screens/review/suggest/suggest-model.bin',
+    'scripts/suggest-model.mjs',
+  ]) {
+    assert.equal(fs.existsSync(new URL(path, root)), false, `${path} is not in the tree`);
+  }
+});

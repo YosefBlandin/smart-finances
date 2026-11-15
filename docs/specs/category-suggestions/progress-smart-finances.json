@@ -1,7 +1,7 @@
 {
   "spec": "category-suggestions",
   "repo": "smart-finances",
-  "brief": "pr-smart-finances.md@locked-v1",
+  "brief": "pr-smart-finances.md@locked-v2",
   "tool": "Claude Code 2.1.325 (desktop app, claude-desktop entrypoint)",
   "model": "claude-opus-5-5",
   "baseline": {
@@ -154,18 +154,23 @@
     },
     {
       "id": "SF-12",
-      "status": "blocked",
+      "status": "done",
       "commit": "",
       "evidence": [
-        "stop point: waiting for the owner to approve the download (HUMAN need). Revision read 2026-11-15 from the Hugging Face model API: sentence-transformers/static-similarity-mrl-multilingual-v1 sha b68f4122911bcffcd6e1f695f2d99cd6788972d8 (last changed 2026-08-01, apache-2.0); 0_StaticEmbedding/model.safetensors 433,680,480 bytes (sha256 8245ab78ee71dded845a82d2270fcb9e785b29dad0e1619f69d5390c47d9ba00); 0_StaticEmbedding/tokenizer.json 2,563,370 bytes; destination ~/.cache/smart-finances/suggest-model, outside the repo. Nothing downloaded."
+        "brief locked-v2 (D-30): the owner chose not to download the model; nothing was downloaded. Earlier in this task, before D-30: the revision was read from the Hugging Face model API (sha b68f4122911bcffcd6e1f695f2d99cd6788972d8; model.safetensors 433,680,480 bytes; tokenizer.json 2,563,370 bytes) and the task waited for the owner",
+        "tests first: node --test apps/api/test/docs.test.mjs → T-MOD-1 failed: AssertionError: the Model gate section cites D-30",
+        "verify: node --test apps/api/test/docs.test.mjs → pass 6, fail 0 (T-MOD-1 and T-DOC-11 pass)",
+        "ADR 0011: Model gate filled (no model built or measured, D-30, the D-7 fallback, a later change may revisit from architecture.md Static model); D-30 added to the decisions; the trade-off about the file in git history now says no model ships"
       ],
       "review": ""
     },
     {
       "id": "SF-13",
-      "status": "todo",
+      "status": "skipped",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "skipped: retired by D-30 (brief locked-v2)"
+      ],
       "review": ""
     },
     {
