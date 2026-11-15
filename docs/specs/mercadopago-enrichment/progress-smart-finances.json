@@ -168,6 +168,7 @@
     "SF-5: sync (scripts/mercadopago-sync.mjs) calls parseReleaseReport on the raw download; once the D-19 config is applied, that raw file holds PAYER_NAME and will now throw private_columns. SF-8/SF-9 must drop the raw columns before any parse (architecture: the result must parse before it is saved).",
     "SF-5: accepted edge from the review: a raw-column upload whose byte size differs from its form fails as size_mismatch before parsing, so its object is not deleted (stays until delete-all).",
     "SF-6: two existing tests outside the Files list pin what the task changes: totals.test.mjs T-ROL-2 asserted monthRows makes exactly 2 queries (now 3: the LBL prefix query the architecture names), and store.test.mjs T-KEY-1 lists every key builder (now with lblKey). Both updated, with the change marked T-ENR-8.",
-    "SF-7: the API docs test (docs.test.mjs) keeps its own route list, so the new route is unchecked there until SF-13 adds the ADR 0004 row and extends that list."
+    "SF-7: the API docs test (docs.test.mjs) keeps its own route list, so the new route is unchecked there until SF-13 adds the ADR 0004 row and extends that list.",
+    "Checkpoint push refused: git push -u origin feature/mercadopago-sync -> 403, Permission to YosefBlandin/smart-finances.git denied to yosefblandin-ai. The brief says gh and push are set up and to stop on failure; the branch is local only. HUMAN: give that credential write access, or push the branch yourself."
   ]
 }
