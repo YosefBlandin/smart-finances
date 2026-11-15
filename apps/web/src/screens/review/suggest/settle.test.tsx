@@ -137,7 +137,8 @@ describe('T-SET-2: the request limit', () => {
     const counted = choose.mock.calls.length + requests.length + 2 * nav.refresh.mock.calls.length + 12;
     expect(choose).toHaveBeenCalledTimes(60);
     expect(counted).toBeLessThanOrEqual(120);
-  });
+    // 60 renders of the island: about 5 s on a busy machine, so it gets its own headroom (SF-14 conformance finding).
+  }, 20_000);
 });
 
 describe('T-SET-1: labels', () => {

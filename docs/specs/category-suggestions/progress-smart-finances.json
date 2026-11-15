@@ -141,7 +141,7 @@
     {
       "id": "SF-11",
       "status": "done",
-      "commit": "",
+      "commit": "3f480cc",
       "evidence": [
         "tests first: with container.ts and data-api.ts set aside, npx playwright test e2e/suggest.spec.ts → 6 failed (T-E2E-2 to 6: expect(locator).toBeVisible()/toHaveCount failed; T-E2E-1: no chips in 30 s), since the suggest people did not exist",
         "verify: npm run e2e --workspace @smart-finances/web → 115 passed (3.3m), exit 0; CHROME_PATH=<installed Chrome> npm run test-storybook --workspace @smart-finances/web → Test Suites 23 passed, Tests 264 passed, exit 0 (Playwright headless shell not installed; the repo test-runner config takes CHROME_PATH, nothing downloaded). First storybook run: NoPick failed (2 rows still pick at the rule level with no history); the story now checks a no-pick row instead",
@@ -176,13 +176,15 @@
     {
       "id": "SF-14",
       "status": "in_progress",
-      "commit": "",
+      "commit": "d7bbd3c",
       "evidence": [
         "T-LH-1 first run (npm run lhci): exit 1, LCP budget only (as at the baseline). /review medians: script 170278 bytes (baseline 164349, budget 204800), CLS 0.0759 (baseline 0.0003, budget 0.1), LCP 2778 ms. The 0.0758 shift was the review wrapper pushed down when Accept all appeared after history settled",
         "fix (inside SF-10 and SF-6 files): Review.tsx keeps Accept all’s space (div[data-all=placeholder], aria-hidden, Review.module.css .allSlot at the small button height) while history is read on a list with payments rows. Tests first: new T-ALL-1 no-shift test failed (expected null not to be null), then accept-all.test.tsx 20 passed",
         "T-LH-1 after the fix: exit 1, LCP budget only. Medians: /overview LCP 2767 CLS 0.0000 script 169808; /transactions 2766, 0.0001, 172780; /review 2558, 0.0331, 170337; /imports 2767, 0.0024, 167401; /rates 2617, 0.0001, 164497; /data 2616, 0.0007, 150728. /review First Load JS 148 kB (baseline 142 kB). The remaining 0.033 on /review is table rows: payments rows with no pick give up their kept space once suggestions settle (D-26: until the model is ready or off; D-30 means off) or chips wrap",
         "full verify before the fix: npm test → node pass 248 fail 0, web Test Files 57 passed Tests 755 passed, infra pass 50 fail 0, exit 0; npm run build --workspace @smart-finances/infra → exit 0",
-        "after the fix: npm test --workspace @smart-finances/web → 757 passed; npm run lint → pass; npm run e2e → 115 passed (T-E2E-1 929 ms in the full run); test-storybook (CHROME_PATH) → 264 passed"
+        "after the fix: npm test --workspace @smart-finances/web → 757 passed; npm run lint → pass; npm run e2e → 115 passed (T-E2E-1 929 ms in the full run); test-storybook (CHROME_PATH) → 264 passed",
+        "conformance review (fresh spec-reviewer subagent, sonnet): pass with findings, no blocker or major. Tasks 14 of 14 (SF-13 skipped), test ids 46 of 46, one off-brief change (the recorded T-WEB-5 deviation). Minors fixed: docs/threat-model.md (SF-1 file) notes no model ships (D-30) and cites T-MOD-1 instead of T-MOD-2/3; shas filled; T-SET-2 timeout 20 s (SF-8 file); full verify re-run. Recorded: T-SUG-9 load sensitivity (surprises). Logged in review.md",
+        "final full verify after the fixes: npm test → node pass 248 fail 0, web Test Files 57 passed Tests 757 passed, infra pass 50 fail 0, exit 0; npm run build --workspace @smart-finances/infra → exit 0; npm run lint (web) → pass; node --test apps/api/test/docs.test.mjs → pass 6"
       ],
       "review": ""
     }
@@ -193,10 +195,17 @@
       "what": "one line outside Files: a coverage count that pins plural messages; approved by the planning session",
       "detail": "apps/web/src/i18n/i18n.test.ts T-WEB-5: expect(count).toBe(9) became toBe(14), with a comment naming category-suggestions SF-5; the five new plurals are the review.suggest messages architecture.md Contracts \"Messages\" specifies. No decision changed; the brief stays locked-v1.",
       "status": "resolved"
+    },
+    {
+      "task": "SF-11",
+      "what": "architecture.md Tests and the test-stage limit names one suggest person; six suggest-* people are used, one per e2e test",
+      "detail": "playwright runs fullyParallel and T-E2E-4 and T-E2E-5 change the data, so each test needs its own copy. No decision changed.",
+      "status": "resolved"
     }
   ],
   "surprises": [
     "SF-0: the Lighthouse LCP budget (2500 ms) already fails on all six money pages on this machine before any change (2.6 to 2.9 s simulated). T-LH-1 checks script size and CLS only, so it is recorded, not fixed.",
-    "SF-5: the existing T-WEB-5 test in apps/web/src/i18n/i18n.test.ts pins the number of plural messages at 9; the five contract plurals make it 14, so the full web suite has 1 failure. The file is outside every task’s Files: asked the planning session (2026-11-15) before editing it; not changed. Resolved 2026-11-15: the planning session approved the one-line change (see deviations)."
+    "SF-5: the existing T-WEB-5 test in apps/web/src/i18n/i18n.test.ts pins the number of plural messages at 9; the five contract plurals make it 14, so the full web suite has 1 failure. The file is outside every task’s Files: asked the planning session (2026-11-15) before editing it; not changed. Resolved 2026-11-15: the planning session approved the one-line change (see deviations).",
+    "SF-11/SF-14: under heavy machine load from other sessions (load average 20 to 35), T-SET-2 ran 5.0 to 5.2 s against the 5 s test timeout and T-SUG-9 took 100 ms against its 50 ms budget; both pass at normal load (full runs 755 and 757). T-SET-2 now has a 20 s timeout (SF-14, inside SF-8 files); T-SUG-9 keeps the 50 ms budget test-matrix.md pins."
   ]
 }

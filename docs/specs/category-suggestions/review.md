@@ -50,6 +50,7 @@ status: executing
 <!-- Before each draft PR: a fresh reviewer compares the diff with the brief and its test ids. A finding that needs a decision becomes a deviation, not an edit. -->
 | Brief | Date | Tasks matched | Test ids found | Off-brief changes | Verdict |
 |---|---|---|---|---|---|
+| pr-smart-finances.md@locked-v2 | 2026-11-15 | 14 of 14, SF-13 skipped (D-30) | 46 of 46 (T-LH-1 is the Lighthouse run) | 1: apps/web/src/i18n/i18n.test.ts T-WEB-5 9 → 14 (recorded deviation, approved by the planning session) | pass with findings: 4 minor, none blocking. Fixed: threat model v5 notes no model ships (D-30) and drops T-MOD-2/3; progress shas filled; T-SET-2 gets a 20 s timeout; full verify re-run after the last code commit. Recorded, not changed: T-SUG-9's 50 ms budget (pinned by test-matrix.md) can miss under heavy machine load |
 
 ## Outcome
 <!-- At G-close. One line per AC: pass, fail or partial, and where it was verified, for example: - AC-1: pass, T-E2E-1 on production. Then the merge sha per repo. -->
