@@ -127,9 +127,10 @@ test('T-ROL-2 both month queries are consistent reads; a transaction conflict is
     return realQuery(q);
   };
   await recomputeMonth(store, A, '2026-05', { now: T0 });
-  assert.equal(seen.length, 2);
+  // the month's rows and choices, plus the person's labels (T-ENR-8: one small prefix query)
+  assert.equal(seen.length, 3);
   assert.ok(seen.every((q) => q.consistent === true));
-  assert.deepEqual(seen.map((q) => q.between[0].slice(0, 4)).sort(), ['OVR#', 'TXN#']);
+  assert.deepEqual(seen.map((q) => (q.between ? q.between[0] : q.prefix).slice(0, 4)).sort(), ['LBL#', 'OVR#', 'TXN#']);
 
   store.transact = async () => {
     const err = new Error('cancelled');

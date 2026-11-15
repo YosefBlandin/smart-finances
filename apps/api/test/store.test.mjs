@@ -5,7 +5,7 @@ import { ConditionFailed, createMemoryStore } from '../src/store/memory.mjs';
 import { ConditionFailed as RepoConditionFailed, createRepo } from '../src/store/repo.mjs';
 import { S3Client } from '@aws-sdk/client-s3';
 
-const { erasedKey, impKey, monthRange, ovrKey, perKey, personPk, PREFIX, rateKey, sumKey, txnKey, uploadKey } = keys;
+const { erasedKey, impKey, lblKey, monthRange, ovrKey, perKey, personPk, PREFIX, rateKey, sumKey, txnKey, uploadKey } = keys;
 
 // One builder per item kind in ADR 0004 "Table items". A new kind must be added here on purpose.
 const BUILDERS = {
@@ -16,14 +16,15 @@ const BUILDERS = {
   rateKey: (sub) => rateKey(sub, '2026-03'),
   sumKey: (sub) => sumKey(sub, '2026-03'),
   erasedKey: (sub) => erasedKey(sub),
+  lblKey: (sub) => lblKey(sub, 'a'.repeat(32)),
 };
 
 test('T-KEY-1 every key kind is built from the person and its parts, and never collides across people', () => {
-  assert.equal(Object.keys(BUILDERS).length, 7);
+  assert.equal(Object.keys(BUILDERS).length, 8);
   assert.deepEqual(
     Object.keys(keys).filter((name) => name.endsWith('Key') && name !== 'uploadKey').sort(),
     Object.keys(BUILDERS).sort(),
-    'the module exports exactly the 7 item key builders',
+    'the module exports exactly the 8 item key builders',
   );
   assert.deepEqual(Object.keys(keys).sort(), [...Object.keys(BUILDERS), 'PREFIX', 'monthRange', 'personPk', 'uploadKey', 'uploadPrefix'].sort());
 
@@ -36,6 +37,11 @@ test('T-KEY-1 every key kind is built from the person and its parts, and never c
   assert.deepEqual(BUILDERS.rateKey('sub-a'), { pk: 'U#sub-a', sk: 'RATE#2026-03' });
   assert.deepEqual(BUILDERS.sumKey('sub-a'), { pk: 'U#sub-a', sk: 'SUM#2026-03' });
   assert.deepEqual(BUILDERS.erasedKey('sub-a'), { pk: 'U#sub-a', sk: 'ERASED' });
+  // T-ENR-8: one label per recipient key, which must be 32 lowercase hex characters
+  assert.deepEqual(BUILDERS.lblKey('sub-a'), { pk: 'U#sub-a', sk: `LBL#${'a'.repeat(32)}` });
+  for (const bad of ['', 'A'.repeat(32), 'a'.repeat(31), `${'a'.repeat(31)}#`, `${'a'.repeat(31)}/`, undefined]) {
+    assert.throws(() => lblKey('sub-a', bad), /recipient key/);
+  }
   assert.equal(uploadKey('sub-a', '01JAAAAAAAAAAAAAAAAAAAAAAA'), 'uploads/sub-a/01JAAAAAAAAAAAAAAAAAAAAAAA');
   assert.equal(keys.uploadPrefix('sub-a'), 'uploads/sub-a/');
   assert.ok(uploadKey('sub-a', 'x').startsWith(keys.uploadPrefix('sub-a')));

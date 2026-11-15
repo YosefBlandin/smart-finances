@@ -2,6 +2,7 @@
 // read for the asked months, the choices applied, and then filtered, sorted and paged here.
 import { FIELDS } from '@smart-finances/contracts/fields';
 import { PREFIX, personPk } from './keys.mjs';
+import { labelOf, readLabels, withLabel } from './labels.mjs';
 import { categoryOf, monthRows } from './totals.mjs';
 
 // The flags that put a row on the review list (Values: "Review reasons").
@@ -48,13 +49,15 @@ export function selectRows(rows, { category, kind, q, sort, order }) {
   return rows.filter(hit).sort((a, b) => sign * COMPARE[sort](a, b));
 }
 
-// Every row of the person with its review choice, oldest first (export, review list).
+// Every row of the person with its review choice and its recipient's label folded in (D-18), oldest first
+// (export, review list).
 export async function allRows(store, sub) {
   const pk = personPk(sub);
-  const [rows, choices] = await Promise.all([
+  const [rows, choices, labels] = await Promise.all([
     store.query({ pk, prefix: PREFIX.TXN, consistent: true }),
     store.query({ pk, prefix: PREFIX.OVR, consistent: true }),
+    readLabels(store, sub),
   ]);
   const bySk = new Map(choices.items.map((c) => [c.sk.slice(PREFIX.OVR.length), c]));
-  return rows.items.map((row) => ({ row, choice: bySk.get(row.sk.slice(PREFIX.TXN.length)) }));
+  return rows.items.map((row) => withLabel(row, bySk.get(row.sk.slice(PREFIX.TXN.length)), labelOf(labels, row)));
 }

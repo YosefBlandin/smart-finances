@@ -308,3 +308,23 @@ test('T-ROL-2 a rollup that meets a running erase writes nothing without failing
   assert.deepEqual(await w.rollup(month), { months: 1 });
   assert.equal((await w.store.get(sumKey(A, '2026-03'))).computed_at, 0, 'nothing written in the window');
 });
+
+test('T-ENR-9 delete-all removes recipient labels, rows with merchant names and uploaded objects', async () => {
+  const { putLabel } = await import('../src/store/labels.mjs');
+  const { lblKey, txnKey } = await import('../src/store/keys.mjs');
+  const w = world();
+  await seed(w, A);
+  await seed(w, B);
+  const key = 'c'.repeat(32);
+  await w.store.put({ ...txnKey(A, '2026-03-05', '00000000000000bb'), id: '00000000000000bb', date: '2026-03-05', merchant: 'Made-up Person', recipient_key: key, source: 'mercadopago', kind: 'expense', amount: -100, currency: 'ARS' });
+  assert.ok((await putLabel(w.store, A, key, { name: 'Made-up Person', category: 'Family' }, { now: T0 })).label);
+  assert.ok((await putLabel(w.store, B, key, { name: 'Made-up Other', category: 'Gifts' }, { now: T0 })).label);
+  assert.ok(w.objects(A).length > 0);
+  w.tick(MIN);
+  assert.equal((await w.erase(A)).status, 202);
+  assert.deepEqual(w.partition(A).map((i) => i.sk), ['ERASED']);
+  assert.equal(await w.store.get(lblKey(A, key)), undefined);
+  assert.deepEqual(w.objects(A), []);
+  assert.doesNotMatch(JSON.stringify(w.partition(A)), /Made-up Person/);
+  assert.equal((await w.store.get(lblKey(B, key))).name, 'Made-up Other', 'the other person keeps theirs');
+});

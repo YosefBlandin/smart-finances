@@ -6,23 +6,27 @@
 // again at once, so a lost erase check re-reads the marker and recomputes if it is gone.
 import { eraseCheck } from './imports.mjs';
 import { erasedKey, monthRange, PREFIX, personPk, sumKey } from './keys.mjs';
+import { labelOf, readLabels, withLabel } from './labels.mjs';
 import { ConditionFailed } from './memory.mjs';
 
 // The part of a TXN# or OVR# sort key after its prefix, <date>#<id>, so a choice finds its row.
 const rowKey = (sk, prefix) => sk.slice(prefix.length);
 
-// Rows of one month, each with its review choice (or none), as stored.
+// Rows of one month, each with its review choice (or none) and its recipient's label folded in (D-18), so
+// reads and totals apply a label the same way.
 export async function monthRows(store, sub, from, to = from) {
   const pk = personPk(sub);
-  const [rows, choices] = await Promise.all([
+  const [rows, choices, labels] = await Promise.all([
     store.query({ pk, between: monthRange(PREFIX.TXN, from, to), consistent: true }),
     store.query({ pk, between: monthRange(PREFIX.OVR, from, to), consistent: true }),
+    readLabels(store, sub),
   ]);
   const bySk = new Map(choices.items.map((c) => [rowKey(c.sk, PREFIX.OVR), c]));
-  return rows.items.map((row) => ({ row, choice: bySk.get(rowKey(row.sk, PREFIX.TXN)) }));
+  return rows.items.map((row) => withLabel(row, bySk.get(rowKey(row.sk, PREFIX.TXN)), labelOf(labels, row)));
 }
 
-// The category a row counts under: the review choice's, when it set one.
+// The category a row counts under: the review choice's, when it set one. A label reaches here folded into the
+// choice (monthRows), so its category beats the choice's and the row's.
 export const categoryOf = (row, choice) => choice?.category ?? row.category;
 
 // { kind: { category: { currency: cents } } }
