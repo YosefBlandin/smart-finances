@@ -26,6 +26,8 @@ status: draft
 | D-9 | Every payments report row on the review list gets a suggestion, money sent and received included; notes and workbook rows do not. | 2-way | user, 2026-11-15 (Q-3, default B) | accepted |
 | D-10 | Design for 20 to 60 review rows a month. | 2-way | user, 2026-11-15 (Q-4, default B) | accepted |
 | D-11 | Suggestions learn from rows the person approved, recategorized or labelled, and from rows the import rules categorized; the person's own choices weigh more. | 2-way | user, 2026-11-15 (Q-5, default B) | accepted |
+| D-12 | The model's accuracy bar: on synthetic shop names the rules cannot place, the right category is among the 3 shown for at least 8 of 10, and is the top suggestion for at least 6 of 10. | 2-way | user, 2026-11-15 | accepted |
+| D-13 | At DP2 the owner approved AC-1 to AC-20 and the no-gos in intent.md. | 2-way | user, 2026-11-15 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:
