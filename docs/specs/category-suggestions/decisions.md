@@ -28,6 +28,16 @@ status: draft
 | D-11 | Suggestions learn from rows the person approved, recategorized or labelled, and from rows the import rules categorized; the person's own choices weigh more. | 2-way | user, 2026-11-15 (Q-5, default B) | accepted |
 | D-12 | The model's accuracy bar: on synthetic shop names the rules cannot place, the right category is among the 3 shown for at least 8 of 10, and is the top suggestion for at least 6 of 10. | 2-way | user, 2026-11-15 | accepted |
 | D-13 | At DP2 the owner approved AC-1 to AC-20 and the no-gos in intent.md. | 2-way | user, 2026-11-15 | accepted |
+| D-14 | Tier stays L although D-7 removed the script policy change: a model file kept in the public repo would be a one-way door (D-23). | 2-way | design, 2026-11-15 | proposed |
+| D-15 | The payments import rules (category codes and shop name rules) move to the shared contracts package; the API module re-exports them unchanged, so the browser and the importer use one copy. | 2-way | design, 2026-11-15 | proposed |
+| D-16 | History is read in the browser once per visit through the existing transactions data route: the last 12 months in four parallel 3-month reads, 200 rows a page, at most 3 pages each; it is never re-read after a save. | 2-way | design, 2026-11-15 | proposed |
+| D-17 | Suggestion levels, strongest first: same recipient key, same cleaned shop name, import rules, shared words, model; within a level the owner's own rows beat rule-categorized rows. | 2-way | design, 2026-11-15 | proposed |
+| D-18 | A row gets a suggestion only from a match on its own key or name; the other likely categories come from weaker matches, then from the owner's most used categories for that kind of row. | 2-way | design, 2026-11-15 | proposed |
+| D-19 | One tap sends the existing review choice with the category and the approval together; no API change. | 2-way | design, 2026-11-15 | proposed |
+| D-20 | Accept all is one client action: a confirmation snapshot, all rows leave at once, saves go 4 at a time, a save refused with a wait of 60 s or less is retried once, and the list is asked again once at the end. No bulk route or bulk action. | 2-way | design, 2026-11-15 | proposed |
+| D-21 | Suggestions show only after the history read settles, in space kept for them; model results only fill rows with no suggestion; everything lives in page memory and goes when the page is left. | 2-way | design, 2026-11-15 | proposed |
+| D-22 | If the model ships: a static multilingual model cut to Latin-script tokens, at most 256 dimensions, int8, as one hashed built file from the app's own address with an integrity check, loaded after idle on the review page only and run on the main thread in small chunks. | 2-way | design, 2026-11-15 | proposed |
+| D-23 | If the model meets the bar, its converted file (at most 30 MB) is committed to the public repo with its licence notice. | 1-way | design, 2026-11-15 | proposed |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:
@@ -41,3 +51,14 @@ status: draft
 **Cost / accepted risk**: events written before the release have no page type until they expire.
 **Confirm by**: a staging check that one page open writes exactly one new event.
 -->
+
+### D-23 options
+**Options**
+- A. Do nothing: no model; suggestions come from history and rules only (the D-7 fallback).
+- B. Commit the converted file, at most 30 MB, with its licence notice; the build serves it as a hashed asset. ✓
+- C. Convert at build time from a pinned upstream file with a checksum; nothing large in the repo, but every build downloads from an outside host and fails when it is down.
+- D. Git LFS: keeps clones small, but Amplify builds need LFS set up, and that is unchecked.
+
+**Why**: B adds no outside host to builds and needs no new build setup; the file only lands if the measured bar and size pass (D-7, D-12).
+**Cost / accepted risk**: up to 30 MB stays in git history for good, even after a revert; every fresh clone downloads it. Removing it later needs a history rewrite.
+**Confirm by**: the gate task records the file size and the evaluation result in the PR body; a test fails if the file is over 30 MB.
