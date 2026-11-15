@@ -39,6 +39,8 @@ status: executing
 | D-22 | The label control shows on every review and transactions row with a recipient key, so labeled rows stay reachable for relabeling. | 2-way | design, 2026-11-14 (lens review) | accepted |
 | D-23 | At DP3 the owner signed D-8 with the cost in its options block, confirmed that a label's category beats a row's earlier choice (D-18), and accepted D-10 to D-22 in bulk. | 2-way | user, 2026-11-14 | accepted |
 | D-24 | At DP4 the owner approved the plan in pr-smart-finances.md and kept D-4: commit on the feature branch, push it, open a draft PR into qa. | 2-way | user, 2026-11-14 | accepted |
+| D-25 | Narrows D-6 and AC-5: an expense still Uncategorized goes on the review list only when its file has the enrichment columns; a plain file parses as before, and older months join the list once synced and uploaded again. Accepts the SF-4 deviation in progress-smart-finances.json. | 2-way | user, 2026-11-15 | accepted |
+| D-26 | The label route's log carries the outcome, the person and the request id, with no key prefix, because the Logger port has no field for it. Accepts the SF-11 deviation in progress-smart-finances.json. | 2-way | user, 2026-11-15 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:
