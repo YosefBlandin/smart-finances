@@ -2,7 +2,7 @@
 spec: category-suggestions
 ticket: none
 tier: L
-status: draft
+status: locked-v1
 refs: smart-finances@e8da84b
 door: 1-way
 appetite: 1 week; one PR, all parts at once, gaps of minutes are fine

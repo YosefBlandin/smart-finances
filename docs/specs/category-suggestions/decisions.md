@@ -2,7 +2,7 @@
 spec: category-suggestions
 ticket: none
 tier: L
-status: draft
+status: locked-v1
 ---
 # In-browser category suggestions with one-tap approval: decisions
 
@@ -43,6 +43,7 @@ status: draft
 | D-26 | Suggestions show only after the history read settles, in space kept for them. Rows with no suggestion keep that space until the model is ready or off. Model results only fill rows with no suggestion, and nothing outlives the page. Supersedes D-21. | 2-way | design, 2026-11-15 (lens review) | accepted |
 | D-27 | After single choices and labels, the list is refetched once, 2 s after the last one, so fast tapping stays within the request limit. | 2-way | design, 2026-11-15 (lens review) | accepted |
 | D-28 | At DP3 the owner signed D-23 (commit the model file if it meets the bar) and accepted D-14, D-15, D-17 to D-19, D-22 and D-24 to D-27 in bulk; the feature door becomes 1-way because of D-23. | 2-way | user, 2026-11-15 | accepted |
+| D-29 | At DP4 the owner approved the plan in pr-smart-finances.md and release.md and kept D-5: commit on the feature branch, push it, open a draft PR into qa. | 2-way | user, 2026-11-15 | accepted |
 
 ## Options
 <!-- Only for 1-way or stakeholder decisions: one block each, headed with the decision id and "options". Mark the chosen option with ✓ and always include "do nothing". Confirm by names a test (in words at design, by id once handoff writes it) or a concrete check. Two-way design decisions need the row only. Example block:

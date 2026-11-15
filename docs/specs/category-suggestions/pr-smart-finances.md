@@ -2,7 +2,7 @@
 spec: category-suggestions
 ticket: none
 tier: L
-status: draft
+status: locked-v1
 ---
 # In-browser category suggestions with one-tap approval: brief for smart-finances
 
