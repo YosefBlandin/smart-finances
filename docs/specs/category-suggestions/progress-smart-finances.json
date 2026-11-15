@@ -49,7 +49,7 @@
     {
       "id": "SF-3",
       "status": "done",
-      "commit": "",
+      "commit": "71c6f8d",
       "evidence": [
         "tests first: npx vitest run src/domain/suggest.test.ts → Test Files 1 failed, no tests (the module ./suggest did not exist yet)",
         "verify: npm test --workspace @smart-finances/web -- src/domain/suggest.test.ts → Test Files 1 passed, Tests 19 passed (T-SUG-1 to T-SUG-10); npm run lint --workspace @smart-finances/web → eslint clean, all files use Prettier code style; tsc --noEmit -p apps/web clean",
@@ -59,9 +59,13 @@
     },
     {
       "id": "SF-4",
-      "status": "todo",
+      "status": "done",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "tests first: npx vitest run src/queries/history.test.tsx → 6 failed: TypeError: historyRanges is not a function; expected undefined to be 200 (HISTORY_LIMIT missing)",
+        "verify: npm test --workspace @smart-finances/web -- src/queries/history.test.tsx → Test Files 1 passed, Tests 6 passed (T-HIST-1 to T-HIST-4); npm run lint --workspace @smart-finances/web → pass; tsc --noEmit clean",
+        "notes: each range is retried once inside the query function and a range that still fails is left out (complete false), so the query itself never fails; the hook removes the query on unmount; reads start only when the list holds a mercadopago row"
+      ],
       "review": ""
     },
     {

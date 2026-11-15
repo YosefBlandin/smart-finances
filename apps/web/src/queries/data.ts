@@ -1,6 +1,8 @@
 'use client';
 
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { examplesFrom, SUGGEST_SOURCE, type Example, type HistoryRow } from '@/domain/suggest';
 import {
   dataKeys,
   FINAL_IMPORT_STATUSES,
@@ -189,5 +191,88 @@ export function useImport(id: string | undefined, poll: ImportPoll = {}) {
     },
     retry: retryable,
     retryDelay,
+  });
+}
+
+/** History read for suggestions (category-suggestions D-24): page size and the page cap per 3-month range. */
+export const HISTORY_LIMIT = 200;
+export const HISTORY_MAX_PAGES = 3;
+/** What the history query keeps: examples only, never raw rows; complete is false when a range failed after its retry. */
+export type History = { examples: Example[]; complete: boolean };
+
+const month = (year: number, index: number) => {
+  const d = new Date(Date.UTC(year, index, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+};
+
+/** The 12 months ending with today's month, as four 3-month ranges, newest first. */
+export function historyRanges(today: Date): { from: string; to: string }[] {
+  const y = today.getFullYear();
+  const m = today.getMonth();
+  return [0, 1, 2, 3].map((i) => ({ from: month(y, m - 3 * i - 2), to: month(y, m - 3 * i) }));
+}
+
+async function readRange(range: { from: string; to: string }, signal: AbortSignal): Promise<HistoryRow[]> {
+  const rows: HistoryRow[] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < HISTORY_MAX_PAGES; page += 1) {
+    const reply = await getJson<TransactionsPage>(
+      dataPath('/api/data/transactions', { from: range.from, to: range.to, limit: HISTORY_LIMIT, cursor }),
+      signal,
+    );
+    for (const t of reply.items) {
+      rows.push({
+        id: t.id,
+        source: t.source,
+        merchant: t.merchant,
+        recipient_key: t.recipient_key,
+        kind: t.kind,
+        category: t.category,
+        date: t.date,
+        review: {
+          approved: t.review.approved,
+          ...(t.review.category_override !== undefined ? { category_override: t.review.category_override } : {}),
+        },
+      });
+    }
+    cursor = reply.cursor ?? undefined;
+    if (!cursor) break;
+  }
+  return rows;
+}
+
+/** One range, retried once on any failure; a range that still fails gives null and the others are kept. */
+async function readRangeOnce(range: { from: string; to: string }, signal: AbortSignal): Promise<HistoryRow[] | null> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return await readRange(range, signal);
+    } catch (err) {
+      if (signal.aborted) throw err;
+    }
+  }
+  return null;
+}
+
+/**
+ * The person's last 12 months as suggestion examples (category-suggestions D-24, D-26): read once per visit to the
+ * review page, only when the list holds a payments row; four ranges in parallel, each kept on its own. The query is
+ * never stale, never refetched on focus or reconnect, and removed when the page that reads it unmounts.
+ */
+export function useHistory(rows: { source: string }[] | undefined, today: Date = new Date()) {
+  const client = useQueryClient();
+  const enabled = Boolean(rows?.some((row) => row.source === SUGGEST_SOURCE));
+  useEffect(() => () => client.removeQueries({ queryKey: dataKeys.history() }), [client]);
+  return useQuery({
+    queryKey: dataKeys.history(),
+    queryFn: async ({ signal }): Promise<History> => {
+      const ranges = await Promise.all(historyRanges(today).map((range) => readRangeOnce(range, signal)));
+      return { examples: examplesFrom(ranges.flatMap((r) => r ?? [])), complete: ranges.every((r) => r !== null) };
+    },
+    enabled,
+    staleTime: Infinity,
+    gcTime: 0,
+    retry: 1,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
