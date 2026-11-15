@@ -75,7 +75,8 @@
       "evidence": [
         "tests first: npx vitest run src/ui/patterns/DataTable src/screens/review/messages.test.ts → 3 failed: T-MSG-1 expected [] to deeply equal [accept, acceptAll, …]; T-MSG-1 shopping: expected undefined to be Shopping; T-ROW-1 unable to find role row named Row one",
         "verify: npm test --workspace @smart-finances/web -- src/ui/patterns/DataTable src/screens/review/messages.test.ts → Test Files 2 passed, Tests 7 passed; npm run lint --workspace @smart-finances/web → pass; tsc clean",
-        "messages: review.suggest (11 keys, exact contract text) in en and es; categories shopping, pets, interest, refunds, loans added before uncategorized in both; DataTable story KeyboardRows added (runs with test-storybook at SF-11)"
+        "messages: review.suggest (11 keys, exact contract text) in en and es; categories shopping, pets, interest, refunds, loans added before uncategorized in both; DataTable story KeyboardRows added (runs with test-storybook at SF-11)",
+        "follow-up: T-WEB-5 count 9 → 14 (deviation, approved by the planning session); npx vitest run src/i18n/i18n.test.ts → Tests 24 passed"
       ],
       "review": ""
     },
@@ -153,9 +154,11 @@
     },
     {
       "id": "SF-12",
-      "status": "todo",
+      "status": "blocked",
       "commit": "",
-      "evidence": [],
+      "evidence": [
+        "stop point: waiting for the owner to approve the download (HUMAN need). Revision read 2026-11-15 from the Hugging Face model API: sentence-transformers/static-similarity-mrl-multilingual-v1 sha b68f4122911bcffcd6e1f695f2d99cd6788972d8 (last changed 2026-08-01, apache-2.0); 0_StaticEmbedding/model.safetensors 433,680,480 bytes (sha256 8245ab78ee71dded845a82d2270fcb9e785b29dad0e1619f69d5390c47d9ba00); 0_StaticEmbedding/tokenizer.json 2,563,370 bytes; destination ~/.cache/smart-finances/suggest-model, outside the repo. Nothing downloaded."
+      ],
       "review": ""
     },
     {
@@ -173,9 +176,16 @@
       "review": ""
     }
   ],
-  "deviations": [],
+  "deviations": [
+    {
+      "task": "SF-5",
+      "what": "one line outside Files: a coverage count that pins plural messages; approved by the planning session",
+      "detail": "apps/web/src/i18n/i18n.test.ts T-WEB-5: expect(count).toBe(9) became toBe(14), with a comment naming category-suggestions SF-5; the five new plurals are the review.suggest messages architecture.md Contracts \"Messages\" specifies. No decision changed; the brief stays locked-v1.",
+      "status": "resolved"
+    }
+  ],
   "surprises": [
     "SF-0: the Lighthouse LCP budget (2500 ms) already fails on all six money pages on this machine before any change (2.6 to 2.9 s simulated). T-LH-1 checks script size and CLS only, so it is recorded, not fixed.",
-    "SF-5: the existing T-WEB-5 test in apps/web/src/i18n/i18n.test.ts pins the number of plural messages at 9; the five contract plurals make it 14, so the full web suite has 1 failure. The file is outside every task’s Files: asked the planning session (2026-11-15) before editing it; not changed."
+    "SF-5: the existing T-WEB-5 test in apps/web/src/i18n/i18n.test.ts pins the number of plural messages at 9; the five contract plurals make it 14, so the full web suite has 1 failure. The file is outside every task’s Files: asked the planning session (2026-11-15) before editing it; not changed. Resolved 2026-11-15: the planning session approved the one-line change (see deviations)."
   ]
 }
